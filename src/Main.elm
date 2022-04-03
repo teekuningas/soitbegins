@@ -64,7 +64,7 @@ view model =
                  [ width (Tuple.first viewportSize)
                  , height (Tuple.second viewportSize)
                  , style "display" "block"
-                 , style "height" "90vh"
+                 , style "height" "80vh"
                  , style "width" "100vw"
                  , id "webgl-canvas"
                  , Pointer.onUp (PointerEventMsg << Up)
