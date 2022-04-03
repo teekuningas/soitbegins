@@ -47,7 +47,7 @@ heroUnif model =
       Mat4.makePerspective 45 aspect 0.01 100
 
   , camera = 
-      Mat4.makeLookAt (vec3 0 0 15) (vec3 0 0 0) (vec3 0 1 0)
+      Mat4.makeLookAt (vec3 0 0 15) (vec3 0 2 0) (vec3 0 1 0)
 
   , scale =
       Mat4.scale (vec3 1 1 1) Mat4.identity
@@ -71,19 +71,27 @@ fireUnif model =
 
 controllerUnif : Model -> Uniforms
 controllerUnif model =
+  let xscale = ((toFloat model.canvasDimensions.width) /
+                (toFloat (Tuple.first viewportSize)))
+      yscale = ((toFloat model.canvasDimensions.height) /
+                (toFloat (Tuple.second viewportSize)))
+  in
   { rotation = Mat4.identity
 
   , location = 
-      Mat4.translate (vec3 1.5 -1 0) Mat4.identity
+      Mat4.translate (vec3 7 -5 0) Mat4.identity
+
+  -- , perspective = 
+  --     Mat4.makePerspective 45 1 0.01 100
 
   , perspective = 
-      Mat4.makePerspective 45 1 0.01 100
+      Mat4.makeOrtho -10 10 -10 10 0.01 10
 
   , camera = 
       Mat4.makeLookAt (vec3 0 0 5) (vec3 0 0 0) (vec3 0 1 0)
 
   , scale =
-      Mat4.scale (vec3 0.5 0.5 0.5) Mat4.identity
+      Mat4.scale (vec3 (1/xscale) (1/yscale) 1) Mat4.identity
 
   , shade = 0.5 } 
 
