@@ -7811,20 +7811,11 @@ var $author$project$World$fireUnif = function (model) {
 				$elm_explorations$linear_algebra$Math$Matrix4$identity)
 		});
 };
-var $author$project$Common$viewportSize = _Utils_Tuple2(600, 600);
-var $author$project$Main$fixOffset = F2(
-	function (offset, viewport) {
-		return {
-			x: $elm$core$Basics$round((offset.x * $author$project$Common$viewportSize.a) / viewport.width),
-			y: $elm$core$Basics$round((offset.y * $author$project$Common$viewportSize.b) / viewport.height)
-		};
-	});
 var $author$project$World$fragmentShader = {
 	src: '\n    precision mediump float;\n    uniform float shade;\n    varying vec3 vcolor;\n    void main () {\n      gl_FragColor = shade * vec4(vcolor, 1.0);\n    }\n  ',
 	attributes: {},
 	uniforms: {shade: 'shade'}
 };
-var $elm$core$String$fromFloat = _String_fromNumber;
 var $elm$html$Html$Attributes$height = function (n) {
 	return A2(
 		_VirtualDom_attribute,
@@ -8114,6 +8105,7 @@ var $author$project$World$vertexShader = {
 	attributes: {color: 'color', position: 'position'},
 	uniforms: {camera: 'camera', location: 'location', perspective: 'perspective', rotation: 'rotation', scale: 'scale'}
 };
+var $author$project$Common$viewportSize = _Utils_Tuple2(600, 600);
 var $elm$html$Html$Attributes$width = function (n) {
 	return A2(
 		_VirtualDom_attribute,
@@ -8132,32 +8124,7 @@ var $author$project$Main$view = function (model) {
 				_List_fromArray(
 					[
 						$elm$html$Html$text(
-						'Elapsed: ' + $elm$core$String$fromFloat(model.elapsed))
-					])),
-				A2(
-				$elm$html$Html$div,
-				_List_Nil,
-				_List_fromArray(
-					[
-						$elm$html$Html$text(
 						'Canvas dimensions: ' + $elm$core$Debug$toString(model.canvasDimensions))
-					])),
-				A2(
-				$elm$html$Html$div,
-				_List_Nil,
-				_List_fromArray(
-					[
-						$elm$html$Html$text(
-						'Pointer offset: ' + $elm$core$Debug$toString(model.pointerOffset))
-					])),
-				A2(
-				$elm$html$Html$div,
-				_List_Nil,
-				_List_fromArray(
-					[
-						$elm$html$Html$text(
-						'Fixed: ' + $elm$core$Debug$toString(
-							A2($author$project$Main$fixOffset, model.pointerOffset, model.canvasDimensions)))
 					])),
 				A2(
 				$elm$html$Html$div,
