@@ -56,10 +56,7 @@ fixOffset offset viewport = { x = round (toFloat (offset.x * (Tuple.first viewpo
 view : Model -> Html Msg
 view model =
   div [] 
-    [ div [] [text ("Elapsed: " ++ (String.fromFloat model.elapsed))]
     , div [] [text ("Canvas dimensions: " ++ (Debug.toString model.canvasDimensions))]
-    , div [] [text ("Pointer offset: " ++ (Debug.toString model.pointerOffset))]
-    , div [] [text ("Fixed: " ++ (Debug.toString (fixOffset model.pointerOffset model.canvasDimensions)))]
     , div [] [ WebGL.toHtml
                  [ width (Tuple.first viewportSize)
                  , height (Tuple.second viewportSize)
