@@ -1,4 +1,9 @@
-module Common exposing (Model)
+module Common exposing (Model, viewportSize)
+
+
+viewportSize : (Int, Int)
+viewportSize = (600, 600)
+
 
 type alias Model =
   { location : { x : Float, y: Float, z: Float }
