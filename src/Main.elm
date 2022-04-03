@@ -36,7 +36,7 @@ type Msg = TimeDelta Float
 
 
 viewportSize : (Int, Int)
-viewportSize = (600, 400)
+viewportSize = (600, 600)
 
 
 init : () -> (Model, Cmd Msg)
@@ -68,6 +68,8 @@ view model =
                  [ width (Tuple.first viewportSize)
                  , height (Tuple.second viewportSize)
                  , style "display" "block"
+                 , style "height" "100%"
+                 , style "max-height" "90vh"
                  , style "width" "100%"
                  , id "webgl-canvas"
                  , Pointer.onUp (PointerEventMsg << Up)
