@@ -7810,7 +7810,7 @@ var $author$project$World$fireUnif = function (model) {
 				$elm_explorations$linear_algebra$Math$Matrix4$identity)
 		});
 };
-var $author$project$Main$viewportSize = _Utils_Tuple2(600, 400);
+var $author$project$Main$viewportSize = _Utils_Tuple2(600, 600);
 var $author$project$Main$fixOffset = F2(
 	function (offset, viewport) {
 		return {
@@ -8170,6 +8170,8 @@ var $author$project$Main$view = function (model) {
 								$elm$html$Html$Attributes$width($author$project$Main$viewportSize.a),
 								$elm$html$Html$Attributes$height($author$project$Main$viewportSize.b),
 								A2($elm$html$Html$Attributes$style, 'display', 'block'),
+								A2($elm$html$Html$Attributes$style, 'height', '100%'),
+								A2($elm$html$Html$Attributes$style, 'max-height', '90vh'),
 								A2($elm$html$Html$Attributes$style, 'width', '100%'),
 								$elm$html$Html$Attributes$id('webgl-canvas'),
 								$mpizenberg$elm_pointer_events$Html$Events$Extra$Pointer$onUp(
