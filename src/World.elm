@@ -2,7 +2,7 @@ module World exposing (heroMesh, fireMesh, controllerMesh,
                        heroUnif, controllerUnif, fireUnif,
                        vertexShader, fragmentShader)
 
-import Common exposing (Model)
+import Common exposing (Model, viewportSize)
 
 import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector3 as Vec3 exposing (vec3, Vec3)
@@ -31,6 +31,9 @@ type alias MeshList = List (Vertex, Vertex, Vertex)
 
 heroUnif : Model -> Uniforms
 heroUnif model =
+  let aspect = ((toFloat model.canvasDimensions.width) / 
+                (toFloat model.canvasDimensions.height))
+  in
   { rotation = 
       Mat4.mul (Mat4.makeRotate (3 * model.rotation) (vec3 0 1 0))
                (Mat4.makeRotate (2 * model.rotation) (vec3 1 0 0))
@@ -41,7 +44,7 @@ heroUnif model =
                       model.location.z) Mat4.identity
 
   , perspective = 
-      Mat4.makePerspective 45 1.5 0.01 100
+      Mat4.makePerspective 45 aspect 0.01 100
 
   , camera = 
       Mat4.makeLookAt (vec3 0 0 15) (vec3 0 0 0) (vec3 0 1 0)
@@ -71,10 +74,10 @@ controllerUnif model =
   { rotation = Mat4.identity
 
   , location = 
-      Mat4.translate (vec3 2 -1 0) Mat4.identity
+      Mat4.translate (vec3 1.5 -1 0) Mat4.identity
 
   , perspective = 
-      Mat4.makePerspective 45 1.5 0.01 100
+      Mat4.makePerspective 45 1 0.01 100
 
   , camera = 
       Mat4.makeLookAt (vec3 0 0 5) (vec3 0 0 0) (vec3 0 1 0)

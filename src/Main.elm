@@ -4,7 +4,7 @@ import World exposing (heroMesh, fireMesh, controllerMesh,
                        heroUnif, fireUnif, controllerUnif,
                        vertexShader, fragmentShader)
 
-import Common exposing (Model)
+import Common exposing (Model, viewportSize)
 
 import Task
 
@@ -33,10 +33,6 @@ type Msg = TimeDelta Float
   | ResizeMsg
   | PointerEventMsg PointerEvent 
   | ViewportMsg (Result Browser.Dom.Error Browser.Dom.Viewport)
-
-
-viewportSize : (Int, Int)
-viewportSize = (600, 600)
 
 
 init : () -> (Model, Cmd Msg)
@@ -68,9 +64,8 @@ view model =
                  [ width (Tuple.first viewportSize)
                  , height (Tuple.second viewportSize)
                  , style "display" "block"
-                 , style "height" "100%"
-                 , style "max-height" "90vh"
-                 , style "width" "100%"
+                 , style "height" "90vh"
+                 , style "width" "100vw"
                  , id "webgl-canvas"
                  , Pointer.onUp (PointerEventMsg << Up)
                  , Pointer.onDown (PointerEventMsg << Down) ]
