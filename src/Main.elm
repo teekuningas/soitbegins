@@ -14,6 +14,7 @@ type alias Model =
   { location : { x : Float, y: Float, z: Float }
   , rotation : Float
   , elapsed : Float
+  , fireStrength : Float
   }
 
 
@@ -26,6 +27,7 @@ type alias Uniforms =
   , location : Mat4
   , perspective : Mat4
   , camera : Mat4
+  , scale : Mat4
   , shade : Float
   }
 
@@ -40,7 +42,7 @@ type alias MeshList = List (Vertex, Vertex, Vertex)
 
 init : () -> (Model, Cmd Msg)
 init _ = 
-  (Model {x = 0, y = 0, z = 0} 0 0, Cmd.none)
+  (Model {x = 0, y = 0, z = 0} 0 0 1, Cmd.none)
 
 
 view : Model -> Html Msg
@@ -49,8 +51,8 @@ view model =
     [
       div [] [text (String.fromFloat model.elapsed)],
       WebGL.toHtml
-        [ width 600
-        , height 600
+        [ width 1200
+        , height 800
         , style "display" "block"
         , style "width" "100%"
         ]
@@ -59,8 +61,18 @@ view model =
           fragmentShader
           heroMesh
           (uniforms model))
+        , (WebGL.entity
+          vertexShader
+          fragmentShader
+          fireMesh
+          (fireUnif model))
+        , (WebGL.entity
+          vertexShader
+          fragmentShader
+          controllerMesh
+          (controllerUnif model))
         ]
-    ]
+      ]
 
 
 subscriptions : Model -> Sub Msg
@@ -95,15 +107,53 @@ uniforms model =
       Mat4.mul (Mat4.makeRotate (3 * model.rotation) (vec3 0 1 0))
                (Mat4.makeRotate (2 * model.rotation) (vec3 1 0 0))
   , location = 
-      Mat4.translate (vec3 model.location.x 0 0) Mat4.identity
+      Mat4.translate (vec3 
+                      model.location.x 
+                      model.location.y 
+                      model.location.z) Mat4.identity
 
   , perspective = 
-      Mat4.makePerspective 45 1 0.01 100
+      Mat4.makePerspective 45 1.5 0.01 100
 
   , camera = 
       Mat4.makeLookAt (vec3 0 0 15) (vec3 0 0 0) (vec3 0 1 0)
 
-  , shade = 0.5 }
+  , scale =
+      Mat4.scale (vec3 1 1 1) Mat4.identity
+
+  , shade = 0.5 } 
+
+fireUnif : Model -> Uniforms
+fireUnif model = 
+  let unif = uniforms model
+  in
+    { unif | scale = (Mat4.scale 
+                      (vec3 0.5 0.5 0.5) 
+                      Mat4.identity),
+             location = Mat4.mul unif.rotation (Mat4.mul 
+                                                unif.location 
+                                                (Mat4.translate 
+                                                 (vec3 0 1.75 0) 
+                                                 Mat4.identity)) }
+
+
+controllerUnif : Model -> Uniforms
+controllerUnif model =
+  { rotation = Mat4.identity
+
+  , location = 
+      Mat4.translate (vec3 2 -1 0) Mat4.identity
+
+  , perspective = 
+      Mat4.makePerspective 45 1.5 0.01 100
+
+  , camera = 
+      Mat4.makeLookAt (vec3 0 0 5) (vec3 0 0 0) (vec3 0 1 0)
+
+  , scale =
+      Mat4.scale (vec3 0.5 0.5 0.5) Mat4.identity
+
+  , shade = 0.5 } 
 
 
 meshPositionMap : (Vec3 -> Vec3) -> MeshList -> MeshList
@@ -118,21 +168,53 @@ meshPositionMap fun mesh =
     
 heroMesh : Mesh Vertex
 heroMesh = 
-  [ cubeMeshList
+  let balloonColor = Vec3.scale (1/ 255) (vec3 115 210 22) -- green
+  in 
+    [ cubeMeshList
+    , meshPositionMap 
+       (Vec3.add (vec3 0 4 0)) 
+       (meshPositionMap (Vec3.scale 2) (sphereMeshList balloonColor))
+    ]
+    |> List.concat
+    |> WebGL.triangles
+
+
+fireMesh : Mesh Vertex
+fireMesh = 
+  let fireColor = Vec3.scale (1/ 255) (vec3 245 121 0) -- orange
+  in 
+    [ sphereMeshList fireColor
+    ]
+    |> List.concat
+    |> WebGL.triangles
+
+controllerMesh : Mesh Vertex
+controllerMesh =
+  [ meshPositionMap 
+    (Vec3.add (vec3 0 0.2 0))
+    [ ( Vertex (vec3 0 0 1) (vec3 -1 0 0)
+      , Vertex (vec3 0 1 0) (vec3 0 1 0)
+      , Vertex (vec3 0 0 1) (vec3 1 0 0)
+      )
+    ]
   , meshPositionMap 
-     (Vec3.add (vec3 0 4 0)) 
-     (meshPositionMap (Vec3.scale 2) balloonMeshList)
+    (Vec3.add (vec3 0 -0.2 0))
+    [ ( Vertex (vec3 0 0 1) (vec3 1 0 0)
+      , Vertex (vec3 1 0 0) (vec3 0 -1 0)
+      , Vertex (vec3 0 0 1) (vec3 -1 0 0)
+      )
+    ]
+
   ]
   |> List.concat
   |> WebGL.triangles
 
 
-balloonMeshList : MeshList
-balloonMeshList =
+sphereMeshList : Vec3 -> MeshList
+sphereMeshList clr =
   let phi = (1.0 + sqrt 5.0) * 0.5
       a = 1.0
       b = 1.0 / phi
-      clr = Vec3.scale (1/ 255) (vec3 115 210 22) -- green
       v1 = Vertex clr (normalize (vec3 0 b -a))
       v2 = Vertex clr (normalize (vec3 b a 0))
       v3 = Vertex clr (normalize (vec3 -b a 0))
@@ -217,10 +299,11 @@ vertexShader =
      uniform mat4 camera;
      uniform mat4 rotation;
      uniform mat4 location;
+     uniform mat4 scale;
      varying vec3 vcolor;
      void main () {
        gl_Position = (perspective * camera * location * 
-                      rotation * vec4(position, 1.0));
+                      rotation * scale * vec4(position, 1.0));
        vcolor = color;
      }
   |]
