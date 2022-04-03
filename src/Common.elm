@@ -2,7 +2,7 @@ module Common exposing (Model, viewportSize)
 
 
 viewportSize : (Int, Int)
-viewportSize = (600, 600)
+viewportSize = (800, 800)
 
 
 type alias Model =
