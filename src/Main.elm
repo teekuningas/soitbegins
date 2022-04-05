@@ -80,7 +80,7 @@ view model =
                    vertexShader
                    fragmentShader
                    controllerMesh
-                   (controllerUnif model))
+                   (controllerUnif model 0.5 -0.2 0.2))
                  ]
              ]
     ]
