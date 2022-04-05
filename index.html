@@ -7512,7 +7512,7 @@ var $author$project$World$controllerMesh = $elm_explorations$webgl$WebGL$triangl
 				A2(
 				$author$project$World$meshPositionMap,
 				$elm_explorations$linear_algebra$Math$Vector3$add(
-					A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0.2, 0)),
+					A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0.3, 0)),
 				_List_fromArray(
 					[
 						_Utils_Tuple3(
@@ -7532,7 +7532,7 @@ var $author$project$World$controllerMesh = $elm_explorations$webgl$WebGL$triangl
 				A2(
 				$author$project$World$meshPositionMap,
 				$elm_explorations$linear_algebra$Math$Vector3$add(
-					A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, -0.2, 0)),
+					A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, -0.3, 0)),
 				_List_fromArray(
 					[
 						_Utils_Tuple3(
@@ -7556,28 +7556,29 @@ var $elm_explorations$linear_algebra$Math$Matrix4$makeOrtho = _MJS_m4x4makeOrtho
 var $elm_explorations$linear_algebra$Math$Matrix4$scale = _MJS_m4x4scale;
 var $elm_explorations$linear_algebra$Math$Matrix4$translate = _MJS_m4x4translate;
 var $author$project$Common$viewportSize = _Utils_Tuple2(800, 800);
-var $author$project$World$controllerUnif = function (model) {
-	var yscale = model.canvasDimensions.height / $author$project$Common$viewportSize.b;
-	var xscale = model.canvasDimensions.width / $author$project$Common$viewportSize.a;
-	return {
-		camera: A3(
-			$elm_explorations$linear_algebra$Math$Matrix4$makeLookAt,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0, 5),
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0, 0),
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 1, 0)),
-		location: A2(
-			$elm_explorations$linear_algebra$Math$Matrix4$translate,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 7, -5, 0),
-			$elm_explorations$linear_algebra$Math$Matrix4$identity),
-		perspective: A6($elm_explorations$linear_algebra$Math$Matrix4$makeOrtho, -10, 10, -10, 10, 0.01, 10),
-		rotation: $elm_explorations$linear_algebra$Math$Matrix4$identity,
-		scale: A2(
-			$elm_explorations$linear_algebra$Math$Matrix4$scale,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 1 / xscale, 1 / yscale, 1),
-			$elm_explorations$linear_algebra$Math$Matrix4$identity),
-		shade: 0.5
-	};
-};
+var $author$project$World$controllerUnif = F4(
+	function (model, x, y, size) {
+		var yscale = model.canvasDimensions.height / $author$project$Common$viewportSize.b;
+		var xscale = model.canvasDimensions.width / $author$project$Common$viewportSize.a;
+		return {
+			camera: A3(
+				$elm_explorations$linear_algebra$Math$Matrix4$makeLookAt,
+				A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0, 1),
+				A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0, 0),
+				A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 1, 0)),
+			location: A2(
+				$elm_explorations$linear_algebra$Math$Matrix4$translate,
+				A3($elm_explorations$linear_algebra$Math$Vector3$vec3, x, y, 0),
+				$elm_explorations$linear_algebra$Math$Matrix4$identity),
+			perspective: A6($elm_explorations$linear_algebra$Math$Matrix4$makeOrtho, -1, 1, -1, 1, 0, 10),
+			rotation: $elm_explorations$linear_algebra$Math$Matrix4$identity,
+			scale: A2(
+				$elm_explorations$linear_algebra$Math$Matrix4$scale,
+				A3($elm_explorations$linear_algebra$Math$Vector3$vec3, size / xscale, size / yscale, 1),
+				$elm_explorations$linear_algebra$Math$Matrix4$identity),
+			shade: 0.5
+		};
+	});
 var $elm$html$Html$div = _VirtualDom_node('div');
 var $elm_explorations$webgl$WebGL$Internal$DepthTest = F4(
 	function (a, b, c, d) {
@@ -8168,7 +8169,7 @@ var $author$project$Main$view = function (model) {
 								$author$project$World$vertexShader,
 								$author$project$World$fragmentShader,
 								$author$project$World$controllerMesh,
-								$author$project$World$controllerUnif(model))
+								A4($author$project$World$controllerUnif, model, 0.5, -0.2, 0.2))
 							]))
 					]))
 			]));
