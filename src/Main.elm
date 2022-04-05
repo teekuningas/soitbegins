@@ -1,8 +1,9 @@
 module Main exposing (main)
 
-import World exposing (heroMesh, fireMesh, controllerMesh,
-                       heroUnif, fireUnif, controllerUnif,
-                       vertexShader, fragmentShader)
+import World exposing (heroMesh, fireMesh,
+                       heroUnif, fireUnif)
+
+import Controller exposing (controllerMesh, controllerUnif)
 
 import Common exposing (Model, viewportSize)
 
@@ -133,4 +134,35 @@ main =
                   , view = view
                   , subscriptions = subscriptions
                   , update = update }
+
+
+vertexShader : Shader Vertex Uniforms { vcolor : Vec3 }
+vertexShader =
+  [glsl|
+     attribute vec3 position;
+     attribute vec3 color;
+     uniform mat4 perspective;
+     uniform mat4 camera;
+     uniform mat4 rotation;
+     uniform mat4 location;
+     uniform mat4 scale;
+     varying vec3 vcolor;
+     void main () {
+       gl_Position = (perspective * camera * location * 
+                      rotation * scale * vec4(position, 1.0));
+       vcolor = color;
+     }
+  |]
+
+
+fragmentShader : Shader {} Uniforms { vcolor : Vec3 }
+fragmentShader =
+  [glsl|
+    precision mediump float;
+    uniform float shade;
+    varying vec3 vcolor;
+    void main () {
+      gl_FragColor = shade * vec4(vcolor, 1.0);
+    }
+  |]
 
