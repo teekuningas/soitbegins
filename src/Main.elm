@@ -3,9 +3,10 @@ module Main exposing (main)
 import World exposing (heroMesh, fireMesh,
                        heroUnif, fireUnif)
 
-import Controller exposing (controllerMesh, controllerUnif)
+import Controller exposing (controllerMesh, controllerUnif, 
+                            coordinatesWithinUpButton, coordinatesWithinDownButton)
 
-import Common exposing (Model, viewportSize)
+import Common exposing (Model, viewportSize, vertexShader, fragmentShader)
 
 import Task
 
@@ -41,9 +42,11 @@ init model =
   ( { location = {x = 0, y = 0, z = 0} 
     , rotation = 0 
     , elapsed = 0
-    , fireStrength = 1 
+    , power = 1 
     , pointerOffset = { x = 0, y = 0 }
-    , canvasDimensions = { width = 0, height = 0 } }
+    , canvasDimensions = { width = 0, height = 0 }
+    , upButtonDown = False
+    , downButtonDown = False }
   , Task.attempt ViewportMsg (getViewportOf "webgl-canvas") ) 
 
 
@@ -58,6 +61,9 @@ view : Model -> Html Msg
 view model =
   div [] 
     [ div [] [text ("Canvas dimensions: " ++ (Debug.toString model.canvasDimensions))]
+    , div [] [text ("upButtonDown: " ++ (Debug.toString model.upButtonDown))]
+    , div [] [text ("downButtonDown: " ++ (Debug.toString model.downButtonDown))]
+    , div [] [text ("Pointer offset: " ++ (Debug.toString model.pointerOffset))]
     , div [] [ WebGL.toHtml
                  [ width (Tuple.first viewportSize)
                  , height (Tuple.second viewportSize)
@@ -81,7 +87,7 @@ view model =
                    vertexShader
                    fragmentShader
                    controllerMesh
-                   (controllerUnif model 0.5 -0.2 0.2))
+                   (controllerUnif model))
                  ]
              ]
     ]
@@ -110,10 +116,17 @@ update msg model =
       case event of 
         Up struct ->
           ({ model | pointerOffset = { x = round (Tuple.first struct.pointer.offsetPos),
-                                       y = round (Tuple.second struct.pointer.offsetPos) } }, Cmd.none)
+                                       y = round (Tuple.second struct.pointer.offsetPos) },
+                     upButtonDown = False,
+                     downButtonDown = False }, Cmd.none)
         Down struct ->
+          let coordsInUp = coordinatesWithinUpButton model struct.pointer.offsetPos
+              coordsInDown = coordinatesWithinDownButton model struct.pointer.offsetPos
+          in
           ({ model | pointerOffset = { x = round (Tuple.first struct.pointer.offsetPos),
-                                       y = round (Tuple.second struct.pointer.offsetPos) } }, Cmd.none)
+                                       y = round (Tuple.second struct.pointer.offsetPos) },
+                     upButtonDown = if coordsInUp then True else False,
+                     downButtonDown = if coordsInDown then True else False }, Cmd.none)
         _ -> (model, Cmd.none)
 
     ResizeMsg -> 
@@ -135,34 +148,4 @@ main =
                   , subscriptions = subscriptions
                   , update = update }
 
-
-vertexShader : Shader Vertex Uniforms { vcolor : Vec3 }
-vertexShader =
-  [glsl|
-     attribute vec3 position;
-     attribute vec3 color;
-     uniform mat4 perspective;
-     uniform mat4 camera;
-     uniform mat4 rotation;
-     uniform mat4 location;
-     uniform mat4 scale;
-     varying vec3 vcolor;
-     void main () {
-       gl_Position = (perspective * camera * location * 
-                      rotation * scale * vec4(position, 1.0));
-       vcolor = color;
-     }
-  |]
-
-
-fragmentShader : Shader {} Uniforms { vcolor : Vec3 }
-fragmentShader =
-  [glsl|
-    precision mediump float;
-    uniform float shade;
-    varying vec3 vcolor;
-    void main () {
-      gl_FragColor = shade * vec4(vcolor, 1.0);
-    }
-  |]
 
