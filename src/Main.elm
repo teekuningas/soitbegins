@@ -3,7 +3,7 @@ module Main exposing (main)
 import World exposing (heroMesh, fireMesh,
                        heroUnif, fireUnif)
 
-import Controller exposing (controllerMesh, controllerUnif, 
+import Controller exposing (controllerMeshUp, controllerMeshDown, controllerUnif, 
                             coordinatesWithinUpButton, coordinatesWithinDownButton)
 
 import Common exposing (Model, viewportSize, vertexShader, fragmentShader)
@@ -86,8 +86,13 @@ view model =
                  , (WebGL.entity
                    vertexShader
                    fragmentShader
-                   controllerMesh
-                   (controllerUnif model))
+                   controllerMeshUp
+                   (controllerUnif model (if model.upButtonDown then 1.0 else 0.5)))
+                 , (WebGL.entity
+                   vertexShader
+                   fragmentShader
+                   controllerMeshDown
+                   (controllerUnif model (if model.downButtonDown then 1.0 else 0.5)))
                  ]
              ]
     ]
@@ -104,10 +109,14 @@ update msg model =
   case msg of 
     TimeDelta dt ->
       ( let locationRec = model.location
+            newPowerChange = (if model.upButtonDown then 0.01 
+                              else (if model.downButtonDown then -0.01 else 0))
+            newPower = max 0 (min 2 (model.power + newPowerChange))
         in
           { model | rotation = sin (model.elapsed / 1000) / 10, 
                     location = { locationRec | x = 0.5 * sin (model.elapsed / 1000) },
-                    elapsed = model.elapsed + dt
+                    elapsed = model.elapsed + dt,
+                    power = newPower
           } 
         , Cmd.none 
       )

@@ -52,7 +52,7 @@ heroUnif model =
   , scale =
       Mat4.scale (vec3 1 1 1) Mat4.identity
 
-  , shade = 0.5 } 
+  , shade = 0.75 } 
 
 
 fireUnif : Model -> Uniforms
@@ -60,7 +60,7 @@ fireUnif model =
   let unif = heroUnif model
   in
     { unif | scale = (Mat4.scale 
-                      (vec3 0.5 0.5 0.5) 
+                      (vec3 (model.power / 2) (model.power / 2) (model.power / 2)) 
                       Mat4.identity),
              location = Mat4.mul unif.rotation (Mat4.mul 
                                                 unif.location 
