@@ -1,4 +1,4 @@
-module Controller exposing (controllerMesh, controllerUnif, 
+module Controller exposing (controllerMeshUp, controllerMeshDown, controllerUnif, 
                             coordinatesWithinUpButton, coordinatesWithinDownButton)
 
 import Common exposing (Model, viewportSize, meshPositionMap,
@@ -17,8 +17,8 @@ controllerParams = { x = 0.5
                    , trans = 0.3 }
 
 
-controllerUnif : Model -> Uniforms
-controllerUnif model =
+controllerUnif : Model -> Float -> Uniforms
+controllerUnif model shade =
   let xscale = ((toFloat model.canvasDimensions.width) /
                 (toFloat (Tuple.first viewportSize)))
       yscale = ((toFloat model.canvasDimensions.height) /
@@ -41,11 +41,27 @@ controllerUnif model =
   , scale =
       Mat4.scale (vec3 (size/xscale) (size/yscale) 1) Mat4.identity
 
-  , shade = 0.5 } 
+  , shade = shade } 
 
 
-controllerMesh : Mesh Vertex
-controllerMesh =
+controllerMeshDown : Mesh Vertex
+controllerMeshDown =
+  let trans = controllerParams.trans
+  in
+  [ meshPositionMap 
+    (Vec3.add (vec3 0 -trans 0))
+    [ ( Vertex (vec3 0 0 1) (vec3 1 0 0)
+      , Vertex (vec3 1 0 0) (vec3 0 -1 0)
+      , Vertex (vec3 0 0 1) (vec3 -1 0 0)
+      )
+    ]
+  ]
+  |> List.concat
+  |> WebGL.triangles
+
+
+controllerMeshUp : Mesh Vertex
+controllerMeshUp =
   let trans = controllerParams.trans
   in
   [ meshPositionMap 
@@ -55,17 +71,11 @@ controllerMesh =
       , Vertex (vec3 0 0 1) (vec3 1 0 0)
       )
     ]
-  , meshPositionMap 
-    (Vec3.add (vec3 0 -trans 0))
-    [ ( Vertex (vec3 0 0 1) (vec3 1 0 0)
-      , Vertex (vec3 1 0 0) (vec3 0 -1 0)
-      , Vertex (vec3 0 0 1) (vec3 -1 0 0)
-      )
-    ]
-
   ]
   |> List.concat
   |> WebGL.triangles
+
+
 
 
 coordinatesWithinUpButton : Model -> (Float, Float) -> Bool
