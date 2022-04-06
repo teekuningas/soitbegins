@@ -8145,8 +8145,6 @@ var $mpizenberg$elm_pointer_events$Html$Events$Extra$Pointer$onDown = A2($mpizen
 var $mpizenberg$elm_pointer_events$Html$Events$Extra$Pointer$onUp = A2($mpizenberg$elm_pointer_events$Html$Events$Extra$Pointer$onWithOptions, 'pointerup', $mpizenberg$elm_pointer_events$Html$Events$Extra$Pointer$defaultOptions);
 var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
 var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
-var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
-var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
 var $elm_explorations$webgl$WebGL$Internal$Alpha = function (a) {
 	return {$: 'Alpha', a: a};
 };
@@ -8168,7 +8166,6 @@ var $elm_explorations$webgl$WebGL$toHtml = $elm_explorations$webgl$WebGL$toHtmlW
 			$elm_explorations$webgl$WebGL$antialias,
 			$elm_explorations$webgl$WebGL$depth(1)
 		]));
-var $elm$core$Debug$toString = _Debug_toString;
 var $author$project$Common$vertexShader = {
 	src: '\n     attribute vec3 position;\n     attribute vec3 color;\n     uniform mat4 perspective;\n     uniform mat4 camera;\n     uniform mat4 rotation;\n     uniform mat4 location;\n     uniform mat4 scale;\n     varying vec3 vcolor;\n     void main () {\n       gl_Position = (perspective * camera * location *\n                      rotation * scale * vec4(position, 1.0));\n       vcolor = color;\n     }\n  ',
 	attributes: {color: 'color', position: 'position'},
@@ -8186,22 +8183,6 @@ var $author$project$Main$view = function (model) {
 		_List_Nil,
 		_List_fromArray(
 			[
-				A2(
-				$elm$html$Html$div,
-				_List_Nil,
-				_List_fromArray(
-					[
-						$elm$html$Html$text(
-						'Canvas dimensions: ' + $elm$core$Debug$toString(model.canvasDimensions))
-					])),
-				A2(
-				$elm$html$Html$div,
-				_List_Nil,
-				_List_fromArray(
-					[
-						$elm$html$Html$text(
-						'Pointer offset: ' + $elm$core$Debug$toString(model.pointerOffset))
-					])),
 				A2(
 				$elm$html$Html$div,
 				_List_Nil,
