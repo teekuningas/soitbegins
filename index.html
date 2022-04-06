@@ -7389,6 +7389,10 @@ var $author$project$Controller$coordinatesWithinUpButton = F2(
 	function (model, offset) {
 		return A3($author$project$Controller$coordinatesWithinButton, model, offset, $author$project$Controller$controllerParams.trans + 0.5);
 	});
+var $elm$core$Basics$min = F2(
+	function (x, y) {
+		return (_Utils_cmp(x, y) < 0) ? x : y;
+	});
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
 var $elm$core$Basics$round = _Basics_round;
@@ -7400,6 +7404,11 @@ var $author$project$Main$update = F2(
 				var dt = msg.a;
 				return _Utils_Tuple2(
 					function () {
+						var newPowerChange = model.upButtonDown ? 0.01 : (model.downButtonDown ? (-0.01) : 0);
+						var newPower = A2(
+							$elm$core$Basics$max,
+							0,
+							A2($elm$core$Basics$min, 2, model.power + newPowerChange));
 						var locationRec = model.location;
 						return _Utils_update(
 							model,
@@ -7410,6 +7419,7 @@ var $author$project$Main$update = F2(
 									{
 										x: 0.5 * $elm$core$Basics$sin(model.elapsed / 1000)
 									}),
+								power: newPower,
 								rotation: $elm$core$Basics$sin(model.elapsed / 1000) / 10
 							});
 					}(),
@@ -7542,7 +7552,35 @@ var $elm_explorations$webgl$WebGL$Mesh3 = F2(
 var $elm_explorations$webgl$WebGL$triangles = $elm_explorations$webgl$WebGL$Mesh3(
 	{elemSize: 3, indexSize: 0, mode: 4});
 var $elm_explorations$linear_algebra$Math$Vector3$vec3 = _MJS_v3;
-var $author$project$Controller$controllerMesh = function () {
+var $author$project$Controller$controllerMeshDown = function () {
+	var trans = $author$project$Controller$controllerParams.trans;
+	return $elm_explorations$webgl$WebGL$triangles(
+		$elm$core$List$concat(
+			_List_fromArray(
+				[
+					A2(
+					$author$project$Common$meshPositionMap,
+					$elm_explorations$linear_algebra$Math$Vector3$add(
+						A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, -trans, 0)),
+					_List_fromArray(
+						[
+							_Utils_Tuple3(
+							A2(
+								$author$project$Common$Vertex,
+								A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0, 1),
+								A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 1, 0, 0)),
+							A2(
+								$author$project$Common$Vertex,
+								A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 1, 0, 0),
+								A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, -1, 0)),
+							A2(
+								$author$project$Common$Vertex,
+								A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0, 1),
+								A3($elm_explorations$linear_algebra$Math$Vector3$vec3, -1, 0, 0)))
+						]))
+				])));
+}();
+var $author$project$Controller$controllerMeshUp = function () {
 	var trans = $author$project$Controller$controllerParams.trans;
 	return $elm_explorations$webgl$WebGL$triangles(
 		$elm$core$List$concat(
@@ -7567,26 +7605,6 @@ var $author$project$Controller$controllerMesh = function () {
 								$author$project$Common$Vertex,
 								A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0, 1),
 								A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 1, 0, 0)))
-						])),
-					A2(
-					$author$project$Common$meshPositionMap,
-					$elm_explorations$linear_algebra$Math$Vector3$add(
-						A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, -trans, 0)),
-					_List_fromArray(
-						[
-							_Utils_Tuple3(
-							A2(
-								$author$project$Common$Vertex,
-								A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0, 1),
-								A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 1, 0, 0)),
-							A2(
-								$author$project$Common$Vertex,
-								A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 1, 0, 0),
-								A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, -1, 0)),
-							A2(
-								$author$project$Common$Vertex,
-								A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0, 1),
-								A3($elm_explorations$linear_algebra$Math$Vector3$vec3, -1, 0, 0)))
 						]))
 				])));
 }();
@@ -7595,31 +7613,32 @@ var $elm_explorations$linear_algebra$Math$Matrix4$makeLookAt = _MJS_m4x4makeLook
 var $elm_explorations$linear_algebra$Math$Matrix4$makeOrtho = _MJS_m4x4makeOrtho;
 var $elm_explorations$linear_algebra$Math$Matrix4$scale = _MJS_m4x4scale;
 var $elm_explorations$linear_algebra$Math$Matrix4$translate = _MJS_m4x4translate;
-var $author$project$Controller$controllerUnif = function (model) {
-	var yscale = model.canvasDimensions.height / $author$project$Common$viewportSize.b;
-	var y = $author$project$Controller$controllerParams.y;
-	var xscale = model.canvasDimensions.width / $author$project$Common$viewportSize.a;
-	var x = $author$project$Controller$controllerParams.x;
-	var size = $author$project$Controller$controllerParams.size;
-	return {
-		camera: A3(
-			$elm_explorations$linear_algebra$Math$Matrix4$makeLookAt,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0, 1),
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0, 0),
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 1, 0)),
-		location: A2(
-			$elm_explorations$linear_algebra$Math$Matrix4$translate,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, x, y, 0),
-			$elm_explorations$linear_algebra$Math$Matrix4$identity),
-		perspective: A6($elm_explorations$linear_algebra$Math$Matrix4$makeOrtho, -1, 1, -1, 1, 0, 10),
-		rotation: $elm_explorations$linear_algebra$Math$Matrix4$identity,
-		scale: A2(
-			$elm_explorations$linear_algebra$Math$Matrix4$scale,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, size / xscale, size / yscale, 1),
-			$elm_explorations$linear_algebra$Math$Matrix4$identity),
-		shade: 0.5
-	};
-};
+var $author$project$Controller$controllerUnif = F2(
+	function (model, shade) {
+		var yscale = model.canvasDimensions.height / $author$project$Common$viewportSize.b;
+		var y = $author$project$Controller$controllerParams.y;
+		var xscale = model.canvasDimensions.width / $author$project$Common$viewportSize.a;
+		var x = $author$project$Controller$controllerParams.x;
+		var size = $author$project$Controller$controllerParams.size;
+		return {
+			camera: A3(
+				$elm_explorations$linear_algebra$Math$Matrix4$makeLookAt,
+				A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0, 1),
+				A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0, 0),
+				A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 1, 0)),
+			location: A2(
+				$elm_explorations$linear_algebra$Math$Matrix4$translate,
+				A3($elm_explorations$linear_algebra$Math$Vector3$vec3, x, y, 0),
+				$elm_explorations$linear_algebra$Math$Matrix4$identity),
+			perspective: A6($elm_explorations$linear_algebra$Math$Matrix4$makeOrtho, -1, 1, -1, 1, 0, 10),
+			rotation: $elm_explorations$linear_algebra$Math$Matrix4$identity,
+			scale: A2(
+				$elm_explorations$linear_algebra$Math$Matrix4$scale,
+				A3($elm_explorations$linear_algebra$Math$Vector3$vec3, size / xscale, size / yscale, 1),
+				$elm_explorations$linear_algebra$Math$Matrix4$identity),
+			shade: shade
+		};
+	});
 var $elm$html$Html$div = _VirtualDom_node('div');
 var $elm_explorations$webgl$WebGL$Internal$DepthTest = F4(
 	function (a, b, c, d) {
@@ -7837,7 +7856,7 @@ var $author$project$World$heroUnif = function (model) {
 			$elm_explorations$linear_algebra$Math$Matrix4$scale,
 			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 1, 1, 1),
 			$elm_explorations$linear_algebra$Math$Matrix4$identity),
-		shade: 0.5
+		shade: 0.75
 	};
 };
 var $author$project$World$fireUnif = function (model) {
@@ -7857,7 +7876,7 @@ var $author$project$World$fireUnif = function (model) {
 						$elm_explorations$linear_algebra$Math$Matrix4$identity))),
 			scale: A2(
 				$elm_explorations$linear_algebra$Math$Matrix4$scale,
-				A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.5, 0.5, 0.5),
+				A3($elm_explorations$linear_algebra$Math$Vector3$vec3, model.power / 2, model.power / 2, model.power / 2),
 				$elm_explorations$linear_algebra$Math$Matrix4$identity)
 		});
 };
@@ -8237,8 +8256,20 @@ var $author$project$Main$view = function (model) {
 								$elm_explorations$webgl$WebGL$entity,
 								$author$project$Common$vertexShader,
 								$author$project$Common$fragmentShader,
-								$author$project$Controller$controllerMesh,
-								$author$project$Controller$controllerUnif(model))
+								$author$project$Controller$controllerMeshUp,
+								A2(
+									$author$project$Controller$controllerUnif,
+									model,
+									model.upButtonDown ? 1.0 : 0.5)),
+								A4(
+								$elm_explorations$webgl$WebGL$entity,
+								$author$project$Common$vertexShader,
+								$author$project$Common$fragmentShader,
+								$author$project$Controller$controllerMeshDown,
+								A2(
+									$author$project$Controller$controllerUnif,
+									model,
+									model.downButtonDown ? 1.0 : 0.5))
 							]))
 					]))
 			]));
