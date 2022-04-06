@@ -1,13 +1,13 @@
-module World exposing (heroMesh, fireMesh, controllerMesh, 
-                       heroUnif, controllerUnif, fireUnif,
-                       vertexShader, fragmentShader)
+module World exposing (heroMesh, fireMesh, 
+                       heroUnif, fireUnif)
 
-import Common exposing (Model, viewportSize)
+import Common exposing (Model, viewportSize, meshPositionMap,
+                        MeshList, Vertex, Uniforms)
 
 import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector3 as Vec3 exposing (vec3, Vec3)
 
-import WebGL exposing (Mesh, Shader)
+import WebGL exposing (Mesh)
 
 
 type alias Uniforms = 
@@ -69,41 +69,6 @@ fireUnif model =
                                                  Mat4.identity)) }
 
 
-controllerUnif : Model -> Float -> Float -> Float -> Uniforms
-controllerUnif model x y size =
-  let xscale = ((toFloat model.canvasDimensions.width) /
-                (toFloat (Tuple.first viewportSize)))
-      yscale = ((toFloat model.canvasDimensions.height) /
-                (toFloat (Tuple.second viewportSize)))
-  in
-  { rotation = Mat4.identity
-
-  , location = 
-      Mat4.translate (vec3 x y 0) Mat4.identity
-
-  , perspective = 
-      Mat4.makeOrtho -1 1 -1 1 0 10
-
-  , camera = 
-      Mat4.makeLookAt (vec3 0 0 1) (vec3 0 0 0) (vec3 0 1 0)
-
-  , scale =
-      Mat4.scale (vec3 (size/xscale) (size/yscale) 1) Mat4.identity
-
-  , shade = 0.5 } 
-
-
-meshPositionMap : (Vec3 -> Vec3) -> MeshList -> MeshList
-meshPositionMap fun mesh =
-  case mesh of 
-    [] -> 
-      []
-    (v1, v2, v3) :: xs ->
-      [ ( { v1 | position = fun v1.position }
-        , { v2 | position = fun v2.position }
-        , { v3 | position = fun v3.position } ) ] ++ (meshPositionMap fun xs)
-    
-
 heroMesh : Mesh Vertex
 heroMesh = 
   let balloonColor = Vec3.scale (1/ 255) (vec3 115 210 22) -- green
@@ -125,28 +90,6 @@ fireMesh =
     ]
     |> List.concat
     |> WebGL.triangles
-
-
-controllerMesh : Mesh Vertex
-controllerMesh =
-  [ meshPositionMap 
-    (Vec3.add (vec3 0 0.3 0))
-    [ ( Vertex (vec3 0 0 1) (vec3 -1 0 0)
-      , Vertex (vec3 0 1 0) (vec3 0 1 0)
-      , Vertex (vec3 0 0 1) (vec3 1 0 0)
-      )
-    ]
-  , meshPositionMap 
-    (Vec3.add (vec3 0 -0.3 0))
-    [ ( Vertex (vec3 0 0 1) (vec3 1 0 0)
-      , Vertex (vec3 1 0 0) (vec3 0 -1 0)
-      , Vertex (vec3 0 0 1) (vec3 -1 0 0)
-      )
-    ]
-
-  ]
-  |> List.concat
-  |> WebGL.triangles
 
 
 sphereMeshList : Vec3 -> MeshList
@@ -228,35 +171,4 @@ face color a b c d =
     [ ( vertex a, vertex b, vertex c )
     , ( vertex c, vertex d, vertex a )
     ]
-
-
-vertexShader : Shader Vertex Uniforms { vcolor : Vec3 }
-vertexShader =
-  [glsl|
-     attribute vec3 position;
-     attribute vec3 color;
-     uniform mat4 perspective;
-     uniform mat4 camera;
-     uniform mat4 rotation;
-     uniform mat4 location;
-     uniform mat4 scale;
-     varying vec3 vcolor;
-     void main () {
-       gl_Position = (perspective * camera * location * 
-                      rotation * scale * vec4(position, 1.0));
-       vcolor = color;
-     }
-  |]
-
-
-fragmentShader : Shader {} Uniforms { vcolor : Vec3 }
-fragmentShader =
-  [glsl|
-    precision mediump float;
-    uniform float shade;
-    varying vec3 vcolor;
-    void main () {
-      gl_FragColor = shade * vec4(vcolor, 1.0);
-    }
-  |]
 

@@ -1,10 +1,12 @@
 module Main exposing (main)
 
-import World exposing (heroMesh, fireMesh, controllerMesh,
-                       heroUnif, fireUnif, controllerUnif,
-                       vertexShader, fragmentShader)
+import World exposing (heroMesh, fireMesh,
+                       heroUnif, fireUnif)
 
-import Common exposing (Model, viewportSize)
+import Controller exposing (controllerMesh, controllerUnif, 
+                            coordinatesWithinUpButton, coordinatesWithinDownButton)
+
+import Common exposing (Model, viewportSize, vertexShader, fragmentShader)
 
 import Task
 
@@ -40,9 +42,11 @@ init model =
   ( { location = {x = 0, y = 0, z = 0} 
     , rotation = 0 
     , elapsed = 0
-    , fireStrength = 1 
+    , power = 1 
     , pointerOffset = { x = 0, y = 0 }
-    , canvasDimensions = { width = 0, height = 0 } }
+    , canvasDimensions = { width = 0, height = 0 }
+    , upButtonDown = False
+    , downButtonDown = False }
   , Task.attempt ViewportMsg (getViewportOf "webgl-canvas") ) 
 
 
@@ -57,11 +61,14 @@ view : Model -> Html Msg
 view model =
   div [] 
     [ div [] [text ("Canvas dimensions: " ++ (Debug.toString model.canvasDimensions))]
+    , div [] [text ("upButtonDown: " ++ (Debug.toString model.upButtonDown))]
+    , div [] [text ("downButtonDown: " ++ (Debug.toString model.downButtonDown))]
+    , div [] [text ("Pointer offset: " ++ (Debug.toString model.pointerOffset))]
     , div [] [ WebGL.toHtml
                  [ width (Tuple.first viewportSize)
                  , height (Tuple.second viewportSize)
                  , style "display" "block"
-                 , style "height" "80vh"
+                 , style "height" "70vh"
                  , style "width" "100vw"
                  , id "webgl-canvas"
                  , Pointer.onUp (PointerEventMsg << Up)
@@ -80,7 +87,7 @@ view model =
                    vertexShader
                    fragmentShader
                    controllerMesh
-                   (controllerUnif model 0.5 -0.2 0.2))
+                   (controllerUnif model))
                  ]
              ]
     ]
@@ -109,10 +116,17 @@ update msg model =
       case event of 
         Up struct ->
           ({ model | pointerOffset = { x = round (Tuple.first struct.pointer.offsetPos),
-                                       y = round (Tuple.second struct.pointer.offsetPos) } }, Cmd.none)
+                                       y = round (Tuple.second struct.pointer.offsetPos) },
+                     upButtonDown = False,
+                     downButtonDown = False }, Cmd.none)
         Down struct ->
+          let coordsInUp = coordinatesWithinUpButton model struct.pointer.offsetPos
+              coordsInDown = coordinatesWithinDownButton model struct.pointer.offsetPos
+          in
           ({ model | pointerOffset = { x = round (Tuple.first struct.pointer.offsetPos),
-                                       y = round (Tuple.second struct.pointer.offsetPos) } }, Cmd.none)
+                                       y = round (Tuple.second struct.pointer.offsetPos) },
+                     upButtonDown = if coordsInUp then True else False,
+                     downButtonDown = if coordsInDown then True else False }, Cmd.none)
         _ -> (model, Cmd.none)
 
     ResizeMsg -> 
@@ -133,4 +147,5 @@ main =
                   , view = view
                   , subscriptions = subscriptions
                   , update = update }
+
 
