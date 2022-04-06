@@ -61,8 +61,6 @@ view : Model -> Html Msg
 view model =
   div [] 
     [ div [] [text ("Canvas dimensions: " ++ (Debug.toString model.canvasDimensions))]
-    , div [] [text ("upButtonDown: " ++ (Debug.toString model.upButtonDown))]
-    , div [] [text ("downButtonDown: " ++ (Debug.toString model.downButtonDown))]
     , div [] [text ("Pointer offset: " ++ (Debug.toString model.pointerOffset))]
     , div [] [ WebGL.toHtml
                  [ width (Tuple.first viewportSize)
