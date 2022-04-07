@@ -74,13 +74,13 @@ view model =
   in
   div [] 
     [ 
-      div [] [text ("Azimoth: " ++ (Debug.toString model.cameraAzimoth))]
-    , div [] [text ("Drag: " ++ (Debug.toString model.dragState))]
-    , div [] [text ("Elevation: " ++ (Debug.toString model.cameraElevation))]
-    , div [] [text ("Canvas dimensions: " ++ (Debug.toString model.canvasDimensions))]
-    , div [] [text ("Pointer offset: " ++ (Debug.toString model.pointerOffset))]
-    , div [] [ WebGL.toHtml [
---    div [] [ WebGL.toHtml [ 
+--    div [] [text ("Azimoth: " ++ (Debug.toString model.cameraAzimoth))]
+--  , div [] [text ("Drag: " ++ (Debug.toString model.dragState))]
+--  , div [] [text ("Elevation: " ++ (Debug.toString model.cameraElevation))]
+--  , div [] [text ("Canvas dimensions: " ++ (Debug.toString model.canvasDimensions))]
+--  , div [] [text ("Pointer offset: " ++ (Debug.toString model.pointerOffset))]
+--  , div [] [ WebGL.toHtml [
+      div [] [ WebGL.toHtml [ 
                    width (Tuple.first viewportSize)
                  , height (Tuple.second viewportSize)
                  , style "display" "block"
