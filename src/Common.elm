@@ -27,6 +27,7 @@ type alias Model =
   , previousOffset : { x: Int, y: Int }
   , cameraAzimoth : Float
   , cameraElevation : Float
+  , touchMoveData : String
   }
 
 
