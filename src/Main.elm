@@ -22,6 +22,7 @@ import Html.Attributes exposing (height, style, width, id)
 
 import Html.Events
 import Html.Events.Extra.Pointer as Pointer
+import Html.Events.Extra.Touch as Touch
 
 import WebGL
 
@@ -29,7 +30,7 @@ import WebGL
 type PointerEvent = Down Pointer.Event
   | Move Pointer.Event
   | Up Pointer.Event
-  | Cancel Pointer.Event
+  | TouchMove Touch.Event
 
 
 type Msg = TimeDelta Float
@@ -51,7 +52,8 @@ init model =
     , dragState = NoDrag 
     , previousOffset = {x = 0, y = 0}
     , cameraAzimoth = 0 
-    , cameraElevation = 0 }
+    , cameraElevation = 0
+    , touchMoveData = "" }
   , Task.attempt ViewportMsg (getViewportOf "webgl-canvas") ) 
 
 
@@ -66,13 +68,14 @@ view : Model -> Html Msg
 view model =
   div [] 
     [ 
---    div [] [text ("Azimoth: " ++ (Debug.toString model.cameraAzimoth))]
---  , div [] [text ("Elevation: " ++ (Debug.toString model.cameraElevation))]
---  , div [] [text ("Canvas dimensions: " ++ (Debug.toString model.canvasDimensions))]
---  , div [] [text ("Pointer offset: " ++ (Debug.toString model.pointerOffset))]
---  , div [] [ WebGL.toHtml
-      div [] [ WebGL.toHtml
-                 [ width (Tuple.first viewportSize)
+      div [] [text ("Azimoth: " ++ (Debug.toString model.cameraAzimoth))]
+    , div [] [text ("Elevation: " ++ (Debug.toString model.cameraElevation))]
+    , div [] [text ("Touchmove data: " ++ (model.touchMoveData))]
+    , div [] [text ("Canvas dimensions: " ++ (Debug.toString model.canvasDimensions))]
+    , div [] [text ("Pointer offset: " ++ (Debug.toString model.pointerOffset))]
+    , div [] [ WebGL.toHtml [
+--    div [] [ WebGL.toHtml [ 
+                   width (Tuple.first viewportSize)
                  , height (Tuple.second viewportSize)
                  , style "display" "block"
                  , style "height" "70vh"
@@ -80,6 +83,7 @@ view model =
                  , id "webgl-canvas"
                  , Pointer.onUp (PointerEventMsg << Up)
                  , Pointer.onDown (PointerEventMsg << Down)
+                 , Touch.onMove (PointerEventMsg << TouchMove)
                  , Pointer.onMove (PointerEventMsg << Move) ]
                  [ (WebGL.entity
                    vertexShader
@@ -162,8 +166,12 @@ update msg model =
           ({model | pointerOffset = { x = round (Tuple.first struct.pointer.offsetPos),
                                       y = round (Tuple.second struct.pointer.offsetPos) }}, Cmd.none)
 
-        
-        _ -> (model, Cmd.none)
+        TouchMove struct ->
+          case (List.head struct.touches) of 
+            Nothing -> (model, Cmd.none)
+            Just x -> let offsetPos = x.clientPos
+                      in ({model | pointerOffset = { x = round (Tuple.first offsetPos),
+                                                     y = round (Tuple.second offsetPos)}}, Cmd.none)
 
     ResizeMsg -> 
       (model, Task.attempt ViewportMsg (getViewportOf "webgl-canvas") ) 
