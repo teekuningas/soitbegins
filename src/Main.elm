@@ -21,16 +21,19 @@ import Html exposing (Html, div, text)
 import Html.Attributes exposing (height, style, width, id)
 
 import Html.Events
-import Html.Events.Extra.Pointer as Pointer
+import Html.Events.Extra.Mouse as Mouse
 import Html.Events.Extra.Touch as Touch
 
 import WebGL
 
 
-type PointerEvent = Down Pointer.Event
-  | Move Pointer.Event
-  | Up Pointer.Event
+type PointerEvent = 
+    MouseUp Mouse.Event
+  | MouseDown Mouse.Event
+  | MouseMove Mouse.Event
   | TouchMove Touch.Event
+  | TouchDown Touch.Event
+  | TouchUp Touch.Event
 
 
 type Msg = TimeDelta Float
@@ -45,15 +48,14 @@ init model =
     , rotation = 0 
     , elapsed = 0
     , power = 1 
-    , pointerOffset = { x = 0, y = 0 }
     , canvasDimensions = { width = 0, height = 0 }
+    , dragState = NoDrag 
+    , pointerOffset = { x = 0, y = 0 }
+    , previousOffset = {x = 0, y = 0}
     , upButtonDown = False
     , downButtonDown = False
-    , dragState = NoDrag 
-    , previousOffset = {x = 0, y = 0}
     , cameraAzimoth = 0 
-    , cameraElevation = 0
-    , touchMoveData = "" }
+    , cameraElevation = 0 }
   , Task.attempt ViewportMsg (getViewportOf "webgl-canvas") ) 
 
 
@@ -66,25 +68,31 @@ fixOffset offset viewport = { x = round (toFloat (offset.x * (Tuple.first viewpo
 
 view : Model -> Html Msg
 view model =
+  let
+    upButtonDown = model.upButtonDown
+    downButtonDown = model.downButtonDown
+  in
   div [] 
     [ 
-      div [] [text ("Azimoth: " ++ (Debug.toString model.cameraAzimoth))]
-    , div [] [text ("Elevation: " ++ (Debug.toString model.cameraElevation))]
-    , div [] [text ("Touchmove data: " ++ (model.touchMoveData))]
-    , div [] [text ("Canvas dimensions: " ++ (Debug.toString model.canvasDimensions))]
-    , div [] [text ("Pointer offset: " ++ (Debug.toString model.pointerOffset))]
-    , div [] [ WebGL.toHtml [
---    div [] [ WebGL.toHtml [ 
+--    div [] [text ("Azimoth: " ++ (Debug.toString model.cameraAzimoth))]
+--  , div [] [text ("Drag: " ++ (Debug.toString model.dragState))]
+--  , div [] [text ("Elevation: " ++ (Debug.toString model.cameraElevation))]
+--  , div [] [text ("Canvas dimensions: " ++ (Debug.toString model.canvasDimensions))]
+--  , div [] [text ("Pointer offset: " ++ (Debug.toString model.pointerOffset))]
+--  , div [] [ WebGL.toHtml [
+      div [] [ WebGL.toHtml [ 
                    width (Tuple.first viewportSize)
                  , height (Tuple.second viewportSize)
                  , style "display" "block"
                  , style "height" "70vh"
                  , style "width" "100vw"
                  , id "webgl-canvas"
-                 , Pointer.onUp (PointerEventMsg << Up)
-                 , Pointer.onDown (PointerEventMsg << Down)
+                 , Touch.onEnd (PointerEventMsg << TouchUp)
+                 , Touch.onStart (PointerEventMsg << TouchDown)
                  , Touch.onMove (PointerEventMsg << TouchMove)
-                 , Pointer.onMove (PointerEventMsg << Move) ]
+                 , Mouse.onUp (PointerEventMsg << MouseUp)
+                 , Mouse.onDown (PointerEventMsg << MouseDown)
+                 , Mouse.onMove (PointerEventMsg << MouseMove) ]
                  [ (WebGL.entity
                    vertexShader
                    fragmentShader
@@ -99,12 +107,12 @@ view model =
                    vertexShader
                    fragmentShader
                    controllerMeshUp
-                   (controllerUnif model (if model.upButtonDown then 1.0 else 0.5)))
+                   (controllerUnif model (if upButtonDown then 1.0 else 0.5)))
                  , (WebGL.entity
                    vertexShader
                    fragmentShader
                    controllerMeshDown
-                   (controllerUnif model (if model.downButtonDown then 1.0 else 0.5)))
+                   (controllerUnif model (if downButtonDown then 1.0 else 0.5)))
                  ]
              ]
     ]
@@ -121,57 +129,112 @@ update msg model =
   case msg of 
     TimeDelta dt ->
       ( let locationRec = model.location
+
             newPowerChange = (if model.upButtonDown then 0.01 
                               else (if model.downButtonDown then -0.01 else 0))
-            newPower = max 0 (min 2 (model.power + newPowerChange))
-            newCameraAzimoth = 
-              (if model.dragState == Drag 
-               then model.cameraAzimoth - (toFloat (model.pointerOffset.x - 
-                                                    model.previousOffset.x)) * pi / 180
-               else model.cameraAzimoth)
 
-            newCameraElevation = 
-              max (-pi/3)
-                (min (pi/3) (if model.dragState == Drag 
-                             then model.cameraElevation + (toFloat (model.pointerOffset.y - 
-                                                                    model.previousOffset.y)) * pi / 180
-                       else model.cameraElevation))
+            newPower = max 0 (min 2 (model.power + newPowerChange))
+
         in
           { model | rotation = sin (model.elapsed / 1000) / 10, 
                     location = { locationRec | x = 0.5 * sin (model.elapsed / 1000) },
                     elapsed = model.elapsed + dt,
-                    power = newPower,
-                    cameraAzimoth = newCameraAzimoth,
-                    cameraElevation = newCameraElevation,
-                    previousOffset = model.pointerOffset
+                    power = newPower
           } 
         , Cmd.none 
       )
 
     PointerEventMsg event -> 
       case event of 
-        Up struct ->
+
+        MouseUp struct ->
           ({ model | upButtonDown = False,
                      downButtonDown = False,
                      dragState = NoDrag }, Cmd.none)
-        Down struct ->
-          let coordsInUp = coordinatesWithinUpButton model struct.pointer.offsetPos
-              coordsInDown = coordinatesWithinDownButton model struct.pointer.offsetPos
+
+        MouseDown struct ->
+          let offsetPos = struct.offsetPos
+              coordsInUp = coordinatesWithinUpButton model offsetPos
+              coordsInDown = coordinatesWithinDownButton model offsetPos
+              upButtonDown = if coordsInUp then True else False
+              downButtonDown = if coordsInDown then True else False
           in
-          ({ model | upButtonDown = if coordsInUp then True else False,
-                     downButtonDown = if coordsInDown then True else False ,
+          ({ model | previousOffset = {x = round (Tuple.first offsetPos),
+                                       y = round (Tuple.second offsetPos)},
+                     pointerOffset = {x = round (Tuple.first offsetPos),
+                                      y = round (Tuple.second offsetPos)},
+                     upButtonDown = upButtonDown,
+                     downButtonDown = downButtonDown,
                      dragState = Drag}, Cmd.none)
 
-        Move struct ->
-          ({model | pointerOffset = { x = round (Tuple.first struct.pointer.offsetPos),
-                                      y = round (Tuple.second struct.pointer.offsetPos) }}, Cmd.none)
+        MouseMove struct ->
+          let offsetPos = struct.offsetPos
+              newCameraAzimoth = 
+                (if model.dragState == Drag 
+                 then model.cameraAzimoth - (toFloat (round (Tuple.first offsetPos) - 
+                                                      model.previousOffset.x)) * pi / 180
+                 else model.cameraAzimoth)
+              newCameraElevation = 
+                (if model.dragState == Drag 
+                 then model.cameraElevation + (toFloat (round (Tuple.second offsetPos) - 
+                                                        model.previousOffset.y)) * pi / 180
+                 else model.cameraElevation)
+          in ({model | cameraAzimoth = newCameraAzimoth,
+                       cameraElevation =
+                         (if newCameraElevation <= (pi/3) 
+                          then (if newCameraElevation >= (-pi/3) 
+                                then newCameraElevation else model.cameraElevation)
+                          else model.cameraElevation),
+                       previousOffset = {x = round (Tuple.first offsetPos),
+                                         y = round (Tuple.second offsetPos)} 
+           }, Cmd.none)
+
+        TouchUp struct ->
+          ({ model | upButtonDown = False,
+                     downButtonDown = False,
+                     dragState = NoDrag }, Cmd.none)
+
+        TouchDown struct ->
+          case (List.head struct.touches) of 
+            Nothing -> (model, Cmd.none)
+            Just x -> let offsetPos = x.clientPos
+                          coordsInUp = coordinatesWithinUpButton model offsetPos
+                          coordsInDown = coordinatesWithinDownButton model offsetPos
+                          upButtonDown = if coordsInUp then True else False
+                          downButtonDown = if coordsInDown then True else False
+                      in
+                      ({ model | previousOffset = {x = round (Tuple.first offsetPos),
+                                                   y = round (Tuple.second offsetPos)},
+                                 pointerOffset = {x = round (Tuple.first offsetPos),
+                                                  y = round (Tuple.second offsetPos)},
+                                 upButtonDown = upButtonDown,
+                                 downButtonDown = downButtonDown,
+                                 dragState = Drag}, Cmd.none)
 
         TouchMove struct ->
           case (List.head struct.touches) of 
             Nothing -> (model, Cmd.none)
             Just x -> let offsetPos = x.clientPos
-                      in ({model | pointerOffset = { x = round (Tuple.first offsetPos),
+                          newCameraAzimoth = 
+                            (if model.dragState == Drag 
+                             then model.cameraAzimoth - (toFloat (round (Tuple.first offsetPos) - 
+                                                                  model.previousOffset.x)) * pi / 180
+                             else model.cameraAzimoth)
+                          newCameraElevation = 
+                            (if model.dragState == Drag 
+                             then model.cameraElevation + (toFloat (round (Tuple.second offsetPos) - 
+                                                                    model.previousOffset.y)) * pi / 180
+                             else model.cameraElevation)
+
+                      in ({model | cameraAzimoth = newCameraAzimoth,
+                                   cameraElevation = 
+                                     (if newCameraElevation <= (pi/3) 
+                                      then (if newCameraElevation >= (-pi/3) 
+                                            then newCameraElevation else model.cameraElevation)
+                                      else model.cameraElevation),
+                                   previousOffset = {x = round (Tuple.first offsetPos),
                                                      y = round (Tuple.second offsetPos)}}, Cmd.none)
+
 
     ResizeMsg -> 
       (model, Task.attempt ViewportMsg (getViewportOf "webgl-canvas") ) 

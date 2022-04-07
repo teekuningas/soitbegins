@@ -19,15 +19,14 @@ type alias Model =
   , rotation : Float
   , elapsed : Float
   , power : Float
-  , pointerOffset : { x: Int, y: Int }
   , canvasDimensions : { width: Int, height: Int }
-  , upButtonDown : Bool
-  , downButtonDown : Bool
   , dragState : DragState
+  , pointerOffset : { x: Int, y: Int }
   , previousOffset : { x: Int, y: Int }
+  , downButtonDown : Bool
+  , upButtonDown : Bool
   , cameraAzimoth : Float
   , cameraElevation : Float
-  , touchMoveData : String
   }
 
 
