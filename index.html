@@ -6745,6 +6745,7 @@ var $elm$core$Task$perform = F2(
 				A2($elm$core$Task$map, toMessage, task)));
 	});
 var $elm$browser$Browser$element = _Browser_element;
+var $author$project$Common$NoDrag = {$: 'NoDrag'};
 var $author$project$Main$ViewportMsg = function (a) {
 	return {$: 'ViewportMsg', a: a};
 };
@@ -6776,12 +6777,16 @@ var $elm$browser$Browser$Dom$getViewportOf = _Browser_getViewportOf;
 var $author$project$Main$init = function (model) {
 	return _Utils_Tuple2(
 		{
+			cameraAzimoth: 0,
+			cameraElevation: 0,
 			canvasDimensions: {height: 0, width: 0},
 			downButtonDown: false,
+			dragState: $author$project$Common$NoDrag,
 			elapsed: 0,
 			location: {x: 0, y: 0, z: 0},
 			pointerOffset: {x: 0, y: 0},
 			power: 1,
+			previousOffset: {x: 0, y: 0},
 			rotation: 0,
 			upButtonDown: false
 		},
@@ -7353,6 +7358,7 @@ var $author$project$Main$subscriptions = function (_v0) {
 					}))
 			]));
 };
+var $author$project$Common$Drag = {$: 'Drag'};
 var $elm$core$Basics$negate = function (n) {
 	return -n;
 };
@@ -7395,6 +7401,7 @@ var $elm$core$Basics$min = F2(
 	});
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
+var $elm$core$Basics$pi = _Basics_pi;
 var $elm$core$Basics$round = _Basics_round;
 var $elm$core$Basics$sin = _Basics_sin;
 var $author$project$Main$update = F2(
@@ -7409,10 +7416,20 @@ var $author$project$Main$update = F2(
 							$elm$core$Basics$max,
 							0,
 							A2($elm$core$Basics$min, 2, model.power + newPowerChange));
+						var newCameraElevation = A2(
+							$elm$core$Basics$max,
+							(-$elm$core$Basics$pi) / 3,
+							A2(
+								$elm$core$Basics$min,
+								$elm$core$Basics$pi / 3,
+								_Utils_eq(model.dragState, $author$project$Common$Drag) ? (model.cameraElevation + (((model.pointerOffset.y - model.previousOffset.y) * $elm$core$Basics$pi) / 180)) : model.cameraElevation));
+						var newCameraAzimoth = _Utils_eq(model.dragState, $author$project$Common$Drag) ? (model.cameraAzimoth - (((model.pointerOffset.x - model.previousOffset.x) * $elm$core$Basics$pi) / 180)) : model.cameraAzimoth;
 						var locationRec = model.location;
 						return _Utils_update(
 							model,
 							{
+								cameraAzimoth: newCameraAzimoth,
+								cameraElevation: newCameraElevation,
 								elapsed: model.elapsed + dt,
 								location: _Utils_update(
 									locationRec,
@@ -7420,6 +7437,7 @@ var $author$project$Main$update = F2(
 										x: 0.5 * $elm$core$Basics$sin(model.elapsed / 1000)
 									}),
 								power: newPower,
+								previousOffset: model.pointerOffset,
 								rotation: $elm$core$Basics$sin(model.elapsed / 1000) / 10
 							});
 					}(),
@@ -7432,14 +7450,7 @@ var $author$project$Main$update = F2(
 						return _Utils_Tuple2(
 							_Utils_update(
 								model,
-								{
-									downButtonDown: false,
-									pointerOffset: {
-										x: $elm$core$Basics$round(struct.pointer.offsetPos.a),
-										y: $elm$core$Basics$round(struct.pointer.offsetPos.b)
-									},
-									upButtonDown: false
-								}),
+								{downButtonDown: false, dragState: $author$project$Common$NoDrag, upButtonDown: false}),
 							$elm$core$Platform$Cmd$none);
 					case 'Down':
 						var struct = event.a;
@@ -7450,11 +7461,20 @@ var $author$project$Main$update = F2(
 								model,
 								{
 									downButtonDown: coordsInDown ? true : false,
+									dragState: $author$project$Common$Drag,
+									upButtonDown: coordsInUp ? true : false
+								}),
+							$elm$core$Platform$Cmd$none);
+					case 'Move':
+						var struct = event.a;
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{
 									pointerOffset: {
 										x: $elm$core$Basics$round(struct.pointer.offsetPos.a),
 										y: $elm$core$Basics$round(struct.pointer.offsetPos.b)
-									},
-									upButtonDown: coordsInUp ? true : false
+									}
 								}),
 							$elm$core$Platform$Cmd$none);
 					default:
@@ -7489,6 +7509,9 @@ var $author$project$Main$update = F2(
 	});
 var $author$project$Main$Down = function (a) {
 	return {$: 'Down', a: a};
+};
+var $author$project$Main$Move = function (a) {
+	return {$: 'Move', a: a};
 };
 var $author$project$Main$PointerEventMsg = function (a) {
 	return {$: 'PointerEventMsg', a: a};
@@ -7826,17 +7849,42 @@ var $author$project$World$fireMesh = function () {
 					$author$project$World$sphereMeshList(fireColor)
 				])));
 }();
-var $elm_explorations$linear_algebra$Math$Matrix4$makePerspective = _MJS_m4x4makePerspective;
+var $elm_explorations$linear_algebra$Math$Vector3$cross = _MJS_v3cross;
 var $elm_explorations$linear_algebra$Math$Matrix4$makeRotate = _MJS_m4x4makeRotate;
+var $elm_explorations$linear_algebra$Math$Matrix4$transform = _MJS_v3mul4x4;
+var $author$project$World$makeCamera = F2(
+	function (azimoth, elevation) {
+		var up = A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 1, 0);
+		var locStart = A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0, 15);
+		var locAz = A2(
+			$elm_explorations$linear_algebra$Math$Matrix4$transform,
+			A2(
+				$elm_explorations$linear_algebra$Math$Matrix4$makeRotate,
+				azimoth,
+				A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 1, 0)),
+			locStart);
+		var locElv = A2(
+			$elm_explorations$linear_algebra$Math$Matrix4$transform,
+			A2(
+				$elm_explorations$linear_algebra$Math$Matrix4$makeRotate,
+				elevation,
+				A2(
+					$elm_explorations$linear_algebra$Math$Vector3$cross,
+					locAz,
+					A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 1, 0))),
+			locAz);
+		return A3(
+			$elm_explorations$linear_algebra$Math$Matrix4$makeLookAt,
+			locElv,
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 2, 0),
+			up);
+	});
+var $elm_explorations$linear_algebra$Math$Matrix4$makePerspective = _MJS_m4x4makePerspective;
 var $elm_explorations$linear_algebra$Math$Matrix4$mul = _MJS_m4x4mul;
-var $author$project$World$heroUnif = function (model) {
+var $author$project$World$worldUnif = function (model) {
 	var aspect = model.canvasDimensions.width / model.canvasDimensions.height;
 	return {
-		camera: A3(
-			$elm_explorations$linear_algebra$Math$Matrix4$makeLookAt,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0, 15),
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 2, 0),
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 1, 0)),
+		camera: A2($author$project$World$makeCamera, model.cameraAzimoth, model.cameraElevation),
 		location: A2(
 			$elm_explorations$linear_algebra$Math$Matrix4$translate,
 			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, model.location.x, model.location.y, model.location.z),
@@ -7858,6 +7906,9 @@ var $author$project$World$heroUnif = function (model) {
 			$elm_explorations$linear_algebra$Math$Matrix4$identity),
 		shade: 0.75
 	};
+};
+var $author$project$World$heroUnif = function (model) {
+	return $author$project$World$worldUnif(model);
 };
 var $author$project$World$fireUnif = function (model) {
 	var unif = $author$project$World$heroUnif(model);
@@ -8142,6 +8193,7 @@ var $mpizenberg$elm_pointer_events$Html$Events$Extra$Pointer$onWithOptions = F3(
 				$mpizenberg$elm_pointer_events$Html$Events$Extra$Pointer$eventDecoder));
 	});
 var $mpizenberg$elm_pointer_events$Html$Events$Extra$Pointer$onDown = A2($mpizenberg$elm_pointer_events$Html$Events$Extra$Pointer$onWithOptions, 'pointerdown', $mpizenberg$elm_pointer_events$Html$Events$Extra$Pointer$defaultOptions);
+var $mpizenberg$elm_pointer_events$Html$Events$Extra$Pointer$onMove = A2($mpizenberg$elm_pointer_events$Html$Events$Extra$Pointer$onWithOptions, 'pointermove', $mpizenberg$elm_pointer_events$Html$Events$Extra$Pointer$defaultOptions);
 var $mpizenberg$elm_pointer_events$Html$Events$Extra$Pointer$onUp = A2($mpizenberg$elm_pointer_events$Html$Events$Extra$Pointer$onWithOptions, 'pointerup', $mpizenberg$elm_pointer_events$Html$Events$Extra$Pointer$defaultOptions);
 var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
 var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
@@ -8201,7 +8253,9 @@ var $author$project$Main$view = function (model) {
 								$mpizenberg$elm_pointer_events$Html$Events$Extra$Pointer$onUp(
 								A2($elm$core$Basics$composeL, $author$project$Main$PointerEventMsg, $author$project$Main$Up)),
 								$mpizenberg$elm_pointer_events$Html$Events$Extra$Pointer$onDown(
-								A2($elm$core$Basics$composeL, $author$project$Main$PointerEventMsg, $author$project$Main$Down))
+								A2($elm$core$Basics$composeL, $author$project$Main$PointerEventMsg, $author$project$Main$Down)),
+								$mpizenberg$elm_pointer_events$Html$Events$Extra$Pointer$onMove(
+								A2($elm$core$Basics$composeL, $author$project$Main$PointerEventMsg, $author$project$Main$Move))
 							]),
 						_List_fromArray(
 							[
