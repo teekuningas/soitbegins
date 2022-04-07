@@ -6788,6 +6788,7 @@ var $author$project$Main$init = function (model) {
 			power: 1,
 			previousOffset: {x: 0, y: 0},
 			rotation: 0,
+			touchMoveData: '',
 			upButtonDown: false
 		},
 		A2(
@@ -7395,6 +7396,15 @@ var $author$project$Controller$coordinatesWithinUpButton = F2(
 	function (model, offset) {
 		return A3($author$project$Controller$coordinatesWithinButton, model, offset, $author$project$Controller$controllerParams.trans + 0.5);
 	});
+var $elm$core$List$head = function (list) {
+	if (list.b) {
+		var x = list.a;
+		var xs = list.b;
+		return $elm$core$Maybe$Just(x);
+	} else {
+		return $elm$core$Maybe$Nothing;
+	}
+};
 var $elm$core$Basics$min = F2(
 	function (x, y) {
 		return (_Utils_cmp(x, y) < 0) ? x : y;
@@ -7478,7 +7488,24 @@ var $author$project$Main$update = F2(
 								}),
 							$elm$core$Platform$Cmd$none);
 					default:
-						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+						var struct = event.a;
+						var _v2 = $elm$core$List$head(struct.touches);
+						if (_v2.$ === 'Nothing') {
+							return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+						} else {
+							var x = _v2.a;
+							var offsetPos = x.clientPos;
+							return _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{
+										pointerOffset: {
+											x: $elm$core$Basics$round(offsetPos.a),
+											y: $elm$core$Basics$round(offsetPos.b)
+										}
+									}),
+								$elm$core$Platform$Cmd$none);
+						}
 				}
 			case 'ResizeMsg':
 				return _Utils_Tuple2(
@@ -7515,6 +7542,9 @@ var $author$project$Main$Move = function (a) {
 };
 var $author$project$Main$PointerEventMsg = function (a) {
 	return {$: 'PointerEventMsg', a: a};
+};
+var $author$project$Main$TouchMove = function (a) {
+	return {$: 'TouchMove', a: a};
 };
 var $author$project$Main$Up = function (a) {
 	return {$: 'Up', a: a};
@@ -8194,9 +8224,86 @@ var $mpizenberg$elm_pointer_events$Html$Events$Extra$Pointer$onWithOptions = F3(
 	});
 var $mpizenberg$elm_pointer_events$Html$Events$Extra$Pointer$onDown = A2($mpizenberg$elm_pointer_events$Html$Events$Extra$Pointer$onWithOptions, 'pointerdown', $mpizenberg$elm_pointer_events$Html$Events$Extra$Pointer$defaultOptions);
 var $mpizenberg$elm_pointer_events$Html$Events$Extra$Pointer$onMove = A2($mpizenberg$elm_pointer_events$Html$Events$Extra$Pointer$onWithOptions, 'pointermove', $mpizenberg$elm_pointer_events$Html$Events$Extra$Pointer$defaultOptions);
+var $mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$defaultOptions = {preventDefault: true, stopPropagation: false};
+var $mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$Event = F4(
+	function (keys, changedTouches, targetTouches, touches) {
+		return {changedTouches: changedTouches, keys: keys, targetTouches: targetTouches, touches: touches};
+	});
+var $elm$json$Json$Decode$map4 = _Json_map4;
+var $mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$Touch = F4(
+	function (identifier, clientPos, pagePos, screenPos) {
+		return {clientPos: clientPos, identifier: identifier, pagePos: pagePos, screenPos: screenPos};
+	});
+var $mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$touchDecoder = A5(
+	$elm$json$Json$Decode$map4,
+	$mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$Touch,
+	A2($elm$json$Json$Decode$field, 'identifier', $elm$json$Json$Decode$int),
+	$mpizenberg$elm_pointer_events$Internal$Decode$clientPos,
+	$mpizenberg$elm_pointer_events$Internal$Decode$pagePos,
+	$mpizenberg$elm_pointer_events$Internal$Decode$screenPos);
+var $mpizenberg$elm_pointer_events$Internal$Decode$all = A2(
+	$elm$core$List$foldr,
+	$elm$json$Json$Decode$map2($elm$core$List$cons),
+	$elm$json$Json$Decode$succeed(_List_Nil));
+var $elm$json$Json$Decode$andThen = _Json_andThen;
+var $mpizenberg$elm_pointer_events$Internal$Decode$dynamicListOf = function (itemDecoder) {
+	var decodeOne = function (n) {
+		return A2(
+			$elm$json$Json$Decode$field,
+			$elm$core$String$fromInt(n),
+			itemDecoder);
+	};
+	var decodeN = function (n) {
+		return $mpizenberg$elm_pointer_events$Internal$Decode$all(
+			A2(
+				$elm$core$List$map,
+				decodeOne,
+				A2($elm$core$List$range, 0, n - 1)));
+	};
+	return A2(
+		$elm$json$Json$Decode$andThen,
+		decodeN,
+		A2($elm$json$Json$Decode$field, 'length', $elm$json$Json$Decode$int));
+};
+var $mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$touchListDecoder = $mpizenberg$elm_pointer_events$Internal$Decode$dynamicListOf;
+var $mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$eventDecoder = A5(
+	$elm$json$Json$Decode$map4,
+	$mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$Event,
+	$mpizenberg$elm_pointer_events$Internal$Decode$keys,
+	A2(
+		$elm$json$Json$Decode$field,
+		'changedTouches',
+		$mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$touchListDecoder($mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$touchDecoder)),
+	A2(
+		$elm$json$Json$Decode$field,
+		'targetTouches',
+		$mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$touchListDecoder($mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$touchDecoder)),
+	A2(
+		$elm$json$Json$Decode$field,
+		'touches',
+		$mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$touchListDecoder($mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$touchDecoder)));
+var $mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$onWithOptions = F3(
+	function (event, options, tag) {
+		return A2(
+			$elm$html$Html$Events$custom,
+			event,
+			A2(
+				$elm$json$Json$Decode$map,
+				function (ev) {
+					return {
+						message: tag(ev),
+						preventDefault: options.preventDefault,
+						stopPropagation: options.stopPropagation
+					};
+				},
+				$mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$eventDecoder));
+	});
+var $mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$onMove = A2($mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$onWithOptions, 'touchmove', $mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$defaultOptions);
 var $mpizenberg$elm_pointer_events$Html$Events$Extra$Pointer$onUp = A2($mpizenberg$elm_pointer_events$Html$Events$Extra$Pointer$onWithOptions, 'pointerup', $mpizenberg$elm_pointer_events$Html$Events$Extra$Pointer$defaultOptions);
 var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
 var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
+var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
+var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
 var $elm_explorations$webgl$WebGL$Internal$Alpha = function (a) {
 	return {$: 'Alpha', a: a};
 };
@@ -8218,6 +8325,7 @@ var $elm_explorations$webgl$WebGL$toHtml = $elm_explorations$webgl$WebGL$toHtmlW
 			$elm_explorations$webgl$WebGL$antialias,
 			$elm_explorations$webgl$WebGL$depth(1)
 		]));
+var $elm$core$Debug$toString = _Debug_toString;
 var $author$project$Common$vertexShader = {
 	src: '\n     attribute vec3 position;\n     attribute vec3 color;\n     uniform mat4 perspective;\n     uniform mat4 camera;\n     uniform mat4 rotation;\n     uniform mat4 location;\n     uniform mat4 scale;\n     varying vec3 vcolor;\n     void main () {\n       gl_Position = (perspective * camera * location *\n                      rotation * scale * vec4(position, 1.0));\n       vcolor = color;\n     }\n  ',
 	attributes: {color: 'color', position: 'position'},
@@ -8240,6 +8348,45 @@ var $author$project$Main$view = function (model) {
 				_List_Nil,
 				_List_fromArray(
 					[
+						$elm$html$Html$text(
+						'Azimoth: ' + $elm$core$Debug$toString(model.cameraAzimoth))
+					])),
+				A2(
+				$elm$html$Html$div,
+				_List_Nil,
+				_List_fromArray(
+					[
+						$elm$html$Html$text(
+						'Elevation: ' + $elm$core$Debug$toString(model.cameraElevation))
+					])),
+				A2(
+				$elm$html$Html$div,
+				_List_Nil,
+				_List_fromArray(
+					[
+						$elm$html$Html$text('Touchmove data: ' + model.touchMoveData)
+					])),
+				A2(
+				$elm$html$Html$div,
+				_List_Nil,
+				_List_fromArray(
+					[
+						$elm$html$Html$text(
+						'Canvas dimensions: ' + $elm$core$Debug$toString(model.canvasDimensions))
+					])),
+				A2(
+				$elm$html$Html$div,
+				_List_Nil,
+				_List_fromArray(
+					[
+						$elm$html$Html$text(
+						'Pointer offset: ' + $elm$core$Debug$toString(model.pointerOffset))
+					])),
+				A2(
+				$elm$html$Html$div,
+				_List_Nil,
+				_List_fromArray(
+					[
 						A2(
 						$elm_explorations$webgl$WebGL$toHtml,
 						_List_fromArray(
@@ -8254,6 +8401,8 @@ var $author$project$Main$view = function (model) {
 								A2($elm$core$Basics$composeL, $author$project$Main$PointerEventMsg, $author$project$Main$Up)),
 								$mpizenberg$elm_pointer_events$Html$Events$Extra$Pointer$onDown(
 								A2($elm$core$Basics$composeL, $author$project$Main$PointerEventMsg, $author$project$Main$Down)),
+								$mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$onMove(
+								A2($elm$core$Basics$composeL, $author$project$Main$PointerEventMsg, $author$project$Main$TouchMove)),
 								$mpizenberg$elm_pointer_events$Html$Events$Extra$Pointer$onMove(
 								A2($elm$core$Basics$composeL, $author$project$Main$PointerEventMsg, $author$project$Main$Move))
 							]),
