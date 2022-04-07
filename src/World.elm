@@ -29,8 +29,19 @@ type alias Vertex =
 type alias MeshList = List (Vertex, Vertex, Vertex)
 
 
-heroUnif : Model -> Uniforms
-heroUnif model =
+makeCamera : Float -> Float -> Mat4
+makeCamera azimoth elevation =
+  let locStart = (vec3 0 0 15)
+      locAz = Mat4.transform (Mat4.makeRotate azimoth (vec3 0 1 0)) locStart
+      locElv = Mat4.transform (Mat4.makeRotate elevation 
+                               (Vec3.cross locAz (vec3 0 1 0))) locAz
+      up = vec3 0 1 0
+  in
+    Mat4.makeLookAt locElv (vec3 0 2 0) up
+
+
+worldUnif : Model -> Uniforms
+worldUnif model =
   let aspect = ((toFloat model.canvasDimensions.width) / 
                 (toFloat model.canvasDimensions.height))
   in
@@ -47,12 +58,17 @@ heroUnif model =
       Mat4.makePerspective 45 aspect 0.01 100
 
   , camera = 
-      Mat4.makeLookAt (vec3 0 0 15) (vec3 0 2 0) (vec3 0 1 0)
+      makeCamera model.cameraAzimoth model.cameraElevation
 
   , scale =
       Mat4.scale (vec3 1 1 1) Mat4.identity
 
   , shade = 0.75 } 
+
+
+heroUnif : Model -> Uniforms
+heroUnif model = worldUnif model
+
 
 
 fireUnif : Model -> Uniforms

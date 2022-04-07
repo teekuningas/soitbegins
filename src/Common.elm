@@ -1,5 +1,6 @@
 module Common exposing (Model, viewportSize, meshPositionMap, 
-                        MeshList, Vertex, Uniforms,
+                        MeshList, Vertex, Uniforms, 
+                        DragState(..),
                         vertexShader, fragmentShader)
 
 import Math.Matrix4 as Mat4 exposing (Mat4)
@@ -11,6 +12,8 @@ viewportSize : (Int, Int)
 viewportSize = (800, 800)
 
 
+type DragState = Drag | NoDrag
+
 type alias Model =
   { location : { x : Float, y: Float, z: Float }
   , rotation : Float
@@ -20,6 +23,10 @@ type alias Model =
   , canvasDimensions : { width: Int, height: Int }
   , upButtonDown : Bool
   , downButtonDown : Bool
+  , dragState : DragState
+  , previousOffset : { x: Int, y: Int }
+  , cameraAzimoth : Float
+  , cameraElevation : Float
   }
 
 

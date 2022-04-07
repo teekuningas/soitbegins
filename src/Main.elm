@@ -6,7 +6,8 @@ import World exposing (heroMesh, fireMesh,
 import Controller exposing (controllerMeshUp, controllerMeshDown, controllerUnif, 
                             coordinatesWithinUpButton, coordinatesWithinDownButton)
 
-import Common exposing (Model, viewportSize, vertexShader, fragmentShader)
+import Common exposing (Model, DragState(..),
+                        viewportSize, vertexShader, fragmentShader)
 
 import Task
 
@@ -46,7 +47,11 @@ init model =
     , pointerOffset = { x = 0, y = 0 }
     , canvasDimensions = { width = 0, height = 0 }
     , upButtonDown = False
-    , downButtonDown = False }
+    , downButtonDown = False
+    , dragState = NoDrag 
+    , previousOffset = {x = 0, y = 0}
+    , cameraAzimoth = 0 
+    , cameraElevation = 0 }
   , Task.attempt ViewportMsg (getViewportOf "webgl-canvas") ) 
 
 
@@ -61,7 +66,9 @@ view : Model -> Html Msg
 view model =
   div [] 
     [ 
---    div [] [text ("Canvas dimensions: " ++ (Debug.toString model.canvasDimensions))]
+--    div [] [text ("Azimoth: " ++ (Debug.toString model.cameraAzimoth))]
+--  , div [] [text ("Elevation: " ++ (Debug.toString model.cameraElevation))]
+--  , div [] [text ("Canvas dimensions: " ++ (Debug.toString model.canvasDimensions))]
 --  , div [] [text ("Pointer offset: " ++ (Debug.toString model.pointerOffset))]
 --  , div [] [ WebGL.toHtml
       div [] [ WebGL.toHtml
@@ -72,7 +79,8 @@ view model =
                  , style "width" "100vw"
                  , id "webgl-canvas"
                  , Pointer.onUp (PointerEventMsg << Up)
-                 , Pointer.onDown (PointerEventMsg << Down) ]
+                 , Pointer.onDown (PointerEventMsg << Down)
+                 , Pointer.onMove (PointerEventMsg << Move) ]
                  [ (WebGL.entity
                    vertexShader
                    fragmentShader
@@ -112,11 +120,26 @@ update msg model =
             newPowerChange = (if model.upButtonDown then 0.01 
                               else (if model.downButtonDown then -0.01 else 0))
             newPower = max 0 (min 2 (model.power + newPowerChange))
+            newCameraAzimoth = 
+              (if model.dragState == Drag 
+               then model.cameraAzimoth - (toFloat (model.pointerOffset.x - 
+                                                    model.previousOffset.x)) * pi / 180
+               else model.cameraAzimoth)
+
+            newCameraElevation = 
+              max (-pi/3)
+                (min (pi/3) (if model.dragState == Drag 
+                             then model.cameraElevation + (toFloat (model.pointerOffset.y - 
+                                                                    model.previousOffset.y)) * pi / 180
+                       else model.cameraElevation))
         in
           { model | rotation = sin (model.elapsed / 1000) / 10, 
                     location = { locationRec | x = 0.5 * sin (model.elapsed / 1000) },
                     elapsed = model.elapsed + dt,
-                    power = newPower
+                    power = newPower,
+                    cameraAzimoth = newCameraAzimoth,
+                    cameraElevation = newCameraElevation,
+                    previousOffset = model.pointerOffset
           } 
         , Cmd.none 
       )
@@ -124,18 +147,22 @@ update msg model =
     PointerEventMsg event -> 
       case event of 
         Up struct ->
-          ({ model | pointerOffset = { x = round (Tuple.first struct.pointer.offsetPos),
-                                       y = round (Tuple.second struct.pointer.offsetPos) },
-                     upButtonDown = False,
-                     downButtonDown = False }, Cmd.none)
+          ({ model | upButtonDown = False,
+                     downButtonDown = False,
+                     dragState = NoDrag }, Cmd.none)
         Down struct ->
           let coordsInUp = coordinatesWithinUpButton model struct.pointer.offsetPos
               coordsInDown = coordinatesWithinDownButton model struct.pointer.offsetPos
           in
-          ({ model | pointerOffset = { x = round (Tuple.first struct.pointer.offsetPos),
-                                       y = round (Tuple.second struct.pointer.offsetPos) },
-                     upButtonDown = if coordsInUp then True else False,
-                     downButtonDown = if coordsInDown then True else False }, Cmd.none)
+          ({ model | upButtonDown = if coordsInUp then True else False,
+                     downButtonDown = if coordsInDown then True else False ,
+                     dragState = Drag}, Cmd.none)
+
+        Move struct ->
+          ({model | pointerOffset = { x = round (Tuple.first struct.pointer.offsetPos),
+                                      y = round (Tuple.second struct.pointer.offsetPos) }}, Cmd.none)
+
+        
         _ -> (model, Cmd.none)
 
     ResizeMsg -> 
