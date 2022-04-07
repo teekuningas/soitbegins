@@ -66,10 +66,12 @@ view : Model -> Html Msg
 view model =
   div [] 
     [ 
-      div [] [text ("Canvas dimensions: " ++ (Debug.toString model.canvasDimensions))]
-    , div [] [text ("Pointer offset: " ++ (Debug.toString model.pointerOffset))]
-    , div [] [ WebGL.toHtml
---    div [] [ WebGL.toHtml
+--    div [] [text ("Azimoth: " ++ (Debug.toString model.cameraAzimoth))]
+--  , div [] [text ("Elevation: " ++ (Debug.toString model.cameraElevation))]
+--  , div [] [text ("Canvas dimensions: " ++ (Debug.toString model.canvasDimensions))]
+--  , div [] [text ("Pointer offset: " ++ (Debug.toString model.pointerOffset))]
+--  , div [] [ WebGL.toHtml
+      div [] [ WebGL.toHtml
                  [ width (Tuple.first viewportSize)
                  , height (Tuple.second viewportSize)
                  , style "display" "block"
@@ -118,8 +120,18 @@ update msg model =
             newPowerChange = (if model.upButtonDown then 0.01 
                               else (if model.downButtonDown then -0.01 else 0))
             newPower = max 0 (min 2 (model.power + newPowerChange))
-            newCameraAzimoth = model.cameraAzimoth + toFloat (model.pointerOffset.x - model.previousOffset.x) 
-            newCameraElevation = model.cameraElevation + toFloat (model.pointerOffset.y - model.previousOffset.y)
+            newCameraAzimoth = 
+              (if model.dragState == Drag 
+               then model.cameraAzimoth - (toFloat (model.pointerOffset.x - 
+                                                    model.previousOffset.x)) * pi / 180
+               else model.cameraAzimoth)
+
+            newCameraElevation = 
+              max (-pi/3)
+                (min (pi/3) (if model.dragState == Drag 
+                             then model.cameraElevation + (toFloat (model.pointerOffset.y - 
+                                                                    model.previousOffset.y)) * pi / 180
+                       else model.cameraElevation))
         in
           { model | rotation = sin (model.elapsed / 1000) / 10, 
                     location = { locationRec | x = 0.5 * sin (model.elapsed / 1000) },
@@ -136,13 +148,15 @@ update msg model =
       case event of 
         Up struct ->
           ({ model | upButtonDown = False,
-                     downButtonDown = False }, Cmd.none)
+                     downButtonDown = False,
+                     dragState = NoDrag }, Cmd.none)
         Down struct ->
           let coordsInUp = coordinatesWithinUpButton model struct.pointer.offsetPos
               coordsInDown = coordinatesWithinDownButton model struct.pointer.offsetPos
           in
           ({ model | upButtonDown = if coordsInUp then True else False,
-                     downButtonDown = if coordsInDown then True else False }, Cmd.none)
+                     downButtonDown = if coordsInDown then True else False ,
+                     dragState = Drag}, Cmd.none)
 
         Move struct ->
           ({model | pointerOffset = { x = round (Tuple.first struct.pointer.offsetPos),
