@@ -14,19 +14,41 @@ viewportSize = (800, 800)
 
 type DragState = Drag | NoDrag
 
-type alias Model =
-  { location : { x : Float, y: Float, z: Float }
-  , rotation : Float
-  , elapsed : Float
+type alias Hero = 
+  { locationX : Float 
+  , locationY : Float
+  , locationZ : Float
+  , rotationTheta : Float 
   , power : Float
-  , canvasDimensions : { width: Int, height: Int }
-  , dragState : DragState
+  }
+
+type alias Earth = 
+  { locationX : Float
+  , locationY : Float
+  , locationZ : Float
+  , rotationTheta : Float
+  }
+
+type alias Camera = 
+  { azimoth : Float
+  , elevation : Float
+  }
+
+type alias Controller = 
+  { dragState : DragState 
   , pointerOffset : { x: Int, y: Int }
   , previousOffset : { x: Int, y: Int }
   , downButtonDown : Bool
   , upButtonDown : Bool
-  , cameraAzimoth : Float
-  , cameraElevation : Float
+  }
+
+type alias Model =
+  { hero : Hero
+  , earth : Earth
+  , camera : Camera
+  , elapsed : Float
+  , canvasDimensions : { width: Int, height: Int }
+  , controller : Controller
   }
 
 

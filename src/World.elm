@@ -10,25 +10,6 @@ import Math.Vector3 as Vec3 exposing (vec3, Vec3)
 import WebGL exposing (Mesh)
 
 
-type alias Uniforms = 
-  { rotation : Mat4
-  , location : Mat4
-  , perspective : Mat4
-  , camera : Mat4
-  , scale : Mat4
-  , shade : Float
-  }
-
-
-type alias Vertex =
-  { color : Vec3
-  , position : Vec3 
-  }
-
-
-type alias MeshList = List (Vertex, Vertex, Vertex)
-
-
 makeCamera : Float -> Float -> Mat4
 makeCamera azimoth elevation =
   let locStart = (vec3 0 0 15)
@@ -40,43 +21,47 @@ makeCamera azimoth elevation =
     Mat4.makeLookAt locElv (vec3 0 2 0) up
 
 
-worldUnif : Model -> Uniforms
-worldUnif model =
+generalUnif : Model -> Uniforms
+generalUnif model =
   let aspect = ((toFloat model.canvasDimensions.width) / 
                 (toFloat model.canvasDimensions.height))
   in
-  { rotation = 
-      Mat4.mul (Mat4.makeRotate (3 * model.rotation) (vec3 0 1 0))
-               (Mat4.makeRotate (2 * model.rotation) (vec3 1 0 0))
-  , location = 
-      Mat4.translate (vec3 
-                      model.location.x 
-                      model.location.y 
-                      model.location.z) Mat4.identity
-
+  { rotation = Mat4.identity 
+  , location = Mat4.identity
+  , scale = Mat4.identity
   , perspective = 
       Mat4.makePerspective 45 aspect 0.01 100
-
   , camera = 
-      makeCamera model.cameraAzimoth model.cameraElevation
-
-  , scale =
-      Mat4.scale (vec3 1 1 1) Mat4.identity
-
+      makeCamera model.camera.azimoth model.camera.elevation
   , shade = 0.75 } 
 
 
-heroUnif : Model -> Uniforms
-heroUnif model = worldUnif model
+earthUnif : Model -> Uniforms
+earthUnif model = 
+  generalUnif model
 
+
+heroUnif : Model -> Uniforms
+heroUnif model =
+  let unif = generalUnif model
+  in
+  { unif | rotation = Mat4.mul (Mat4.makeRotate (3 * model.hero.rotationTheta) (vec3 0 1 0))
+                               (Mat4.makeRotate (2 * model.hero.rotationTheta) (vec3 1 0 0)),
+           location = Mat4.translate (vec3 
+                                      model.hero.locationX
+                                      model.hero.locationY 
+                                      model.hero.locationZ) Mat4.identity,
+           scale = Mat4.scale (vec3 1 1 1) Mat4.identity } 
 
 
 fireUnif : Model -> Uniforms
 fireUnif model = 
-  let unif = heroUnif model
+  let unif = generalUnif model
   in
     { unif | scale = (Mat4.scale 
-                      (vec3 (model.power / 2) (model.power / 2) (model.power / 2)) 
+                      (vec3 (model.hero.power / 2) 
+                            (model.hero.power / 2) 
+                            (model.hero.power / 2)) 
                       Mat4.identity),
              location = Mat4.mul unif.rotation (Mat4.mul 
                                                 unif.location 

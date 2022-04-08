@@ -44,18 +44,25 @@ type Msg = TimeDelta Float
 
 init : () -> (Model, Cmd Msg)
 init model = 
-  ( { location = {x = 0, y = 0, z = 0} 
-    , rotation = 0 
+  ( { hero = { locationX = 0 
+             , locationY = 0
+             , locationZ = 0
+             , rotationTheta = 0
+             , power = 1 } 
+    , earth = { locationX = 0
+              , locationY = 0
+              , locationZ = 0
+              , rotationTheta = 0 }
+    , camera = { azimoth = 0
+               , elevation = 0 }
     , elapsed = 0
-    , power = 1 
     , canvasDimensions = { width = 0, height = 0 }
-    , dragState = NoDrag 
-    , pointerOffset = { x = 0, y = 0 }
-    , previousOffset = {x = 0, y = 0}
-    , upButtonDown = False
-    , downButtonDown = False
-    , cameraAzimoth = 0 
-    , cameraElevation = 0 }
+    , controller = { dragState = NoDrag
+                   , pointerOffset = { x = 0, y = 0 }
+                   , previousOffset = { x = 0, y = 0 }
+                   , upButtonDown = False
+                   , downButtonDown = False } 
+    }
   , Task.attempt ViewportMsg (getViewportOf "webgl-canvas") ) 
 
 
@@ -69,8 +76,8 @@ fixOffset offset viewport = { x = round (toFloat (offset.x * (Tuple.first viewpo
 view : Model -> Html Msg
 view model =
   let
-    upButtonDown = model.upButtonDown
-    downButtonDown = model.downButtonDown
+    upButtonDown = model.controller.upButtonDown
+    downButtonDown = model.controller.downButtonDown
   in
   div [] 
     [ 
@@ -128,113 +135,159 @@ update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of 
     TimeDelta dt ->
-      ( let locationRec = model.location
+      ( let newPowerChange = (if model.controller.upButtonDown then 0.01 
+                              else (if model.controller.downButtonDown then -0.01 else 0))
 
-            newPowerChange = (if model.upButtonDown then 0.01 
-                              else (if model.downButtonDown then -0.01 else 0))
+            newPower = max 0 (min 2 (model.hero.power + newPowerChange))
 
-            newPower = max 0 (min 2 (model.power + newPowerChange))
-
+            hero = model.hero
+            newHero = { hero | rotationTheta = sin (model.elapsed / 1000) / 10, 
+                               locationX = 0.5 * sin (model.elapsed / 1000),
+                               power = newPower }
         in
-          { model | rotation = sin (model.elapsed / 1000) / 10, 
-                    location = { locationRec | x = 0.5 * sin (model.elapsed / 1000) },
-                    elapsed = model.elapsed + dt,
-                    power = newPower
+          { model | hero = newHero,
+                    elapsed = model.elapsed + dt 
           } 
-        , Cmd.none 
+      , Cmd.none 
       )
 
     PointerEventMsg event -> 
       case event of 
-
         MouseUp struct ->
-          ({ model | upButtonDown = False,
-                     downButtonDown = False,
-                     dragState = NoDrag }, Cmd.none)
+          let controller = 
+                model.controller
+              newController = 
+                { controller | upButtonDown = False,
+                               downButtonDown = False,
+                               dragState = NoDrag }
+          in 
+            ( { model | controller = newController }, Cmd.none)
 
         MouseDown struct ->
-          let offsetPos = struct.offsetPos
-              coordsInUp = coordinatesWithinUpButton model offsetPos
-              coordsInDown = coordinatesWithinDownButton model offsetPos
-              upButtonDown = if coordsInUp then True else False
-              downButtonDown = if coordsInDown then True else False
+          let offsetPos = 
+                struct.offsetPos
+              coordsInUp = 
+                coordinatesWithinUpButton model offsetPos
+              coordsInDown = 
+                coordinatesWithinDownButton model offsetPos
+              upButtonDown = 
+                if coordsInUp then True else False
+              downButtonDown = 
+                if coordsInDown then True else False
+              controller = 
+                model.controller
+              newController = 
+                { controller | previousOffset = { x = round (Tuple.first offsetPos),
+                                                  y = round (Tuple.second offsetPos)},
+                               pointerOffset = { x = round (Tuple.first offsetPos),
+                                                 y = round (Tuple.second offsetPos)},
+                               upButtonDown = upButtonDown,
+                               downButtonDown = downButtonDown,
+                               dragState = Drag }
           in
-          ({ model | previousOffset = {x = round (Tuple.first offsetPos),
-                                       y = round (Tuple.second offsetPos)},
-                     pointerOffset = {x = round (Tuple.first offsetPos),
-                                      y = round (Tuple.second offsetPos)},
-                     upButtonDown = upButtonDown,
-                     downButtonDown = downButtonDown,
-                     dragState = Drag}, Cmd.none)
+            ( { model | controller = newController }, Cmd.none )
 
         MouseMove struct ->
           let offsetPos = struct.offsetPos
-              newCameraAzimoth = 
-                (if model.dragState == Drag 
-                 then model.cameraAzimoth - (toFloat (round (Tuple.first offsetPos) - 
-                                                      model.previousOffset.x)) * pi / 180
-                 else model.cameraAzimoth)
-              newCameraElevation = 
-                (if model.dragState == Drag 
-                 then model.cameraElevation + (toFloat (round (Tuple.second offsetPos) - 
-                                                        model.previousOffset.y)) * pi / 180
-                 else model.cameraElevation)
-          in ({model | cameraAzimoth = newCameraAzimoth,
-                       cameraElevation =
-                         (if newCameraElevation <= (pi/3) 
-                          then (if newCameraElevation >= (-pi/3) 
-                                then newCameraElevation else model.cameraElevation)
-                          else model.cameraElevation),
-                       previousOffset = {x = round (Tuple.first offsetPos),
-                                         y = round (Tuple.second offsetPos)} 
-           }, Cmd.none)
+              newAzimoth = 
+                (if model.controller.dragState == Drag 
+                 then model.camera.azimoth - (toFloat (round (Tuple.first offsetPos) - 
+                                                       model.controller.previousOffset.x)) * pi / 180
+                 else model.camera.azimoth)
+              newElevation = 
+                (if model.controller.dragState == Drag 
+                 then model.camera.elevation + (toFloat (round (Tuple.second offsetPos) - 
+                                                         model.controller.previousOffset.y)) * pi / 180
+                 else model.camera.elevation)
+              camera = 
+                model.camera
+              newCamera = 
+                { camera | azimoth = newAzimoth,
+                           elevation = ( if newElevation <= (pi/3) 
+                                         then ( if newElevation >= (-pi/3) 
+                                                then newElevation else model.camera.elevation)
+                                         else model.camera.elevation ) }
+              controller = 
+                model.controller
+              newController = 
+                { controller | previousOffset = { x = round (Tuple.first offsetPos),
+                                                  y = round (Tuple.second offsetPos) } }
+
+          in ( { model | camera = newCamera,
+                         controller = newController
+               }, Cmd.none )
 
         TouchUp struct ->
-          ({ model | upButtonDown = False,
-                     downButtonDown = False,
-                     dragState = NoDrag }, Cmd.none)
+          let controller = 
+                model.controller
+              newController = 
+                { controller | upButtonDown = False,
+                               downButtonDown = False,
+                               dragState = NoDrag }
+          in 
+            ( { model | controller = newController }, Cmd.none)
 
         TouchDown struct ->
           case (List.head struct.touches) of 
             Nothing -> (model, Cmd.none)
-            Just x -> let offsetPos = x.clientPos
-                          coordsInUp = coordinatesWithinUpButton model offsetPos
-                          coordsInDown = coordinatesWithinDownButton model offsetPos
-                          upButtonDown = if coordsInUp then True else False
-                          downButtonDown = if coordsInDown then True else False
-                      in
-                      ({ model | previousOffset = {x = round (Tuple.first offsetPos),
-                                                   y = round (Tuple.second offsetPos)},
-                                 pointerOffset = {x = round (Tuple.first offsetPos),
-                                                  y = round (Tuple.second offsetPos)},
-                                 upButtonDown = upButtonDown,
-                                 downButtonDown = downButtonDown,
-                                 dragState = Drag}, Cmd.none)
+            Just x -> 
+              let offsetPos = 
+                    x.clientPos
+                  coordsInUp = 
+                    coordinatesWithinUpButton model offsetPos
+                  coordsInDown = 
+                    coordinatesWithinDownButton model offsetPos
+                  upButtonDown = 
+                    if coordsInUp then True else False
+                  downButtonDown = 
+                    if coordsInDown then True else False
+                  controller = 
+                    model.controller
+                  newController = 
+                    { controller | previousOffset = { x = round (Tuple.first offsetPos),
+                                                      y = round (Tuple.second offsetPos)},
+                                   pointerOffset = { x = round (Tuple.first offsetPos),
+                                                     y = round (Tuple.second offsetPos)},
+                                   upButtonDown = upButtonDown,
+                                   downButtonDown = downButtonDown,
+                                   dragState = Drag }
+              in
+                ( { model | controller = newController }, Cmd.none )
 
         TouchMove struct ->
           case (List.head struct.touches) of 
             Nothing -> (model, Cmd.none)
-            Just x -> let offsetPos = x.clientPos
-                          newCameraAzimoth = 
-                            (if model.dragState == Drag 
-                             then model.cameraAzimoth - (toFloat (round (Tuple.first offsetPos) - 
-                                                                  model.previousOffset.x)) * pi / 180
-                             else model.cameraAzimoth)
-                          newCameraElevation = 
-                            (if model.dragState == Drag 
-                             then model.cameraElevation + (toFloat (round (Tuple.second offsetPos) - 
-                                                                    model.previousOffset.y)) * pi / 180
-                             else model.cameraElevation)
+            Just x ->
+              let offsetPos = 
+                    x.clientPos
+                  newAzimoth = 
+                    (if model.controller.dragState == Drag 
+                     then model.camera.azimoth - (toFloat (round (Tuple.first offsetPos) - 
+                                                           model.controller.previousOffset.x)) * pi / 180
+                     else model.camera.azimoth)
+                  newElevation = 
+                    (if model.controller.dragState == Drag 
+                     then model.camera.elevation + (toFloat (round (Tuple.second offsetPos) - 
+                                                             model.controller.previousOffset.y)) * pi / 180
+                     else model.camera.elevation)
+                  camera = 
+                    model.camera
+                  newCamera = 
+                     { camera | azimoth = newAzimoth,
+                                elevation =
+                                  ( if newElevation <= (pi/3) 
+                                    then (if newElevation >= (-pi/3) 
+                                          then newElevation else model.camera.elevation)
+                                    else model.camera.elevation ) }
+                  controller =
+                    model.controller
+                  newController = 
+                    { controller | previousOffset = { x = round (Tuple.first offsetPos),
+                                                      y = round (Tuple.second offsetPos) } }
 
-                      in ({model | cameraAzimoth = newCameraAzimoth,
-                                   cameraElevation = 
-                                     (if newCameraElevation <= (pi/3) 
-                                      then (if newCameraElevation >= (-pi/3) 
-                                            then newCameraElevation else model.cameraElevation)
-                                      else model.cameraElevation),
-                                   previousOffset = {x = round (Tuple.first offsetPos),
-                                                     y = round (Tuple.second offsetPos)}}, Cmd.none)
-
+              in ( { model | camera = newCamera,
+                             controller = newController
+                   }, Cmd.none )
 
     ResizeMsg -> 
       (model, Task.attempt ViewportMsg (getViewportOf "webgl-canvas") ) 
