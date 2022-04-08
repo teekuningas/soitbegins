@@ -6777,18 +6777,18 @@ var $elm$browser$Browser$Dom$getViewportOf = _Browser_getViewportOf;
 var $author$project$Main$init = function (model) {
 	return _Utils_Tuple2(
 		{
-			cameraAzimoth: 0,
-			cameraElevation: 0,
+			camera: {azimoth: 0, elevation: 0},
 			canvasDimensions: {height: 0, width: 0},
-			downButtonDown: false,
-			dragState: $author$project$Common$NoDrag,
+			controller: {
+				downButtonDown: false,
+				dragState: $author$project$Common$NoDrag,
+				pointerOffset: {x: 0, y: 0},
+				previousOffset: {x: 0, y: 0},
+				upButtonDown: false
+			},
+			earth: {locationX: 0, locationY: 0, locationZ: 0, rotationTheta: 0},
 			elapsed: 0,
-			location: {x: 0, y: 0, z: 0},
-			pointerOffset: {x: 0, y: 0},
-			power: 1,
-			previousOffset: {x: 0, y: 0},
-			rotation: 0,
-			upButtonDown: false
+			hero: {locationX: 0, locationY: 0, locationZ: 0, power: 1, rotationTheta: 0}
 		},
 		A2(
 			$elm$core$Task$attempt,
@@ -7421,24 +7421,22 @@ var $author$project$Main$update = F2(
 				var dt = msg.a;
 				return _Utils_Tuple2(
 					function () {
-						var newPowerChange = model.upButtonDown ? 0.01 : (model.downButtonDown ? (-0.01) : 0);
+						var newPowerChange = model.controller.upButtonDown ? 0.01 : (model.controller.downButtonDown ? (-0.01) : 0);
 						var newPower = A2(
 							$elm$core$Basics$max,
 							0,
-							A2($elm$core$Basics$min, 2, model.power + newPowerChange));
-						var locationRec = model.location;
+							A2($elm$core$Basics$min, 2, model.hero.power + newPowerChange));
+						var hero = model.hero;
+						var newHero = _Utils_update(
+							hero,
+							{
+								locationX: 0.5 * $elm$core$Basics$sin(model.elapsed / 1000),
+								power: newPower,
+								rotationTheta: $elm$core$Basics$sin(model.elapsed / 1000) / 10
+							});
 						return _Utils_update(
 							model,
-							{
-								elapsed: model.elapsed + dt,
-								location: _Utils_update(
-									locationRec,
-									{
-										x: 0.5 * $elm$core$Basics$sin(model.elapsed / 1000)
-									}),
-								power: newPower,
-								rotation: $elm$core$Basics$sin(model.elapsed / 1000) / 10
-							});
+							{elapsed: model.elapsed + dt, hero: newHero});
 					}(),
 					$elm$core$Platform$Cmd$none);
 			case 'PointerEventMsg':
@@ -7446,10 +7444,14 @@ var $author$project$Main$update = F2(
 				switch (event.$) {
 					case 'MouseUp':
 						var struct = event.a;
+						var controller = model.controller;
+						var newController = _Utils_update(
+							controller,
+							{downButtonDown: false, dragState: $author$project$Common$NoDrag, upButtonDown: false});
 						return _Utils_Tuple2(
 							_Utils_update(
 								model,
-								{downButtonDown: false, dragState: $author$project$Common$NoDrag, upButtonDown: false}),
+								{controller: newController}),
 							$elm$core$Platform$Cmd$none);
 					case 'MouseDown':
 						var struct = event.a;
@@ -7458,46 +7460,63 @@ var $author$project$Main$update = F2(
 						var upButtonDown = coordsInUp ? true : false;
 						var coordsInDown = A2($author$project$Controller$coordinatesWithinDownButton, model, offsetPos);
 						var downButtonDown = coordsInDown ? true : false;
+						var controller = model.controller;
+						var newController = _Utils_update(
+							controller,
+							{
+								downButtonDown: downButtonDown,
+								dragState: $author$project$Common$Drag,
+								pointerOffset: {
+									x: $elm$core$Basics$round(offsetPos.a),
+									y: $elm$core$Basics$round(offsetPos.b)
+								},
+								previousOffset: {
+									x: $elm$core$Basics$round(offsetPos.a),
+									y: $elm$core$Basics$round(offsetPos.b)
+								},
+								upButtonDown: upButtonDown
+							});
 						return _Utils_Tuple2(
 							_Utils_update(
 								model,
-								{
-									downButtonDown: downButtonDown,
-									dragState: $author$project$Common$Drag,
-									pointerOffset: {
-										x: $elm$core$Basics$round(offsetPos.a),
-										y: $elm$core$Basics$round(offsetPos.b)
-									},
-									previousOffset: {
-										x: $elm$core$Basics$round(offsetPos.a),
-										y: $elm$core$Basics$round(offsetPos.b)
-									},
-									upButtonDown: upButtonDown
-								}),
+								{controller: newController}),
 							$elm$core$Platform$Cmd$none);
 					case 'MouseMove':
 						var struct = event.a;
 						var offsetPos = struct.offsetPos;
-						var newCameraElevation = _Utils_eq(model.dragState, $author$project$Common$Drag) ? (model.cameraElevation + ((($elm$core$Basics$round(offsetPos.b) - model.previousOffset.y) * $elm$core$Basics$pi) / 180)) : model.cameraElevation;
-						var newCameraAzimoth = _Utils_eq(model.dragState, $author$project$Common$Drag) ? (model.cameraAzimoth - ((($elm$core$Basics$round(offsetPos.a) - model.previousOffset.x) * $elm$core$Basics$pi) / 180)) : model.cameraAzimoth;
+						var newElevation = _Utils_eq(model.controller.dragState, $author$project$Common$Drag) ? (model.camera.elevation + ((($elm$core$Basics$round(offsetPos.b) - model.controller.previousOffset.y) * $elm$core$Basics$pi) / 180)) : model.camera.elevation;
+						var newAzimoth = _Utils_eq(model.controller.dragState, $author$project$Common$Drag) ? (model.camera.azimoth - ((($elm$core$Basics$round(offsetPos.a) - model.controller.previousOffset.x) * $elm$core$Basics$pi) / 180)) : model.camera.azimoth;
+						var controller = model.controller;
+						var newController = _Utils_update(
+							controller,
+							{
+								previousOffset: {
+									x: $elm$core$Basics$round(offsetPos.a),
+									y: $elm$core$Basics$round(offsetPos.b)
+								}
+							});
+						var camera = model.camera;
+						var newCamera = _Utils_update(
+							camera,
+							{
+								azimoth: newAzimoth,
+								elevation: (_Utils_cmp(newElevation, $elm$core$Basics$pi / 3) < 1) ? ((_Utils_cmp(newElevation, (-$elm$core$Basics$pi) / 3) > -1) ? newElevation : model.camera.elevation) : model.camera.elevation
+							});
 						return _Utils_Tuple2(
 							_Utils_update(
 								model,
-								{
-									cameraAzimoth: newCameraAzimoth,
-									cameraElevation: (_Utils_cmp(newCameraElevation, $elm$core$Basics$pi / 3) < 1) ? ((_Utils_cmp(newCameraElevation, (-$elm$core$Basics$pi) / 3) > -1) ? newCameraElevation : model.cameraElevation) : model.cameraElevation,
-									previousOffset: {
-										x: $elm$core$Basics$round(offsetPos.a),
-										y: $elm$core$Basics$round(offsetPos.b)
-									}
-								}),
+								{camera: newCamera, controller: newController}),
 							$elm$core$Platform$Cmd$none);
 					case 'TouchUp':
 						var struct = event.a;
+						var controller = model.controller;
+						var newController = _Utils_update(
+							controller,
+							{downButtonDown: false, dragState: $author$project$Common$NoDrag, upButtonDown: false});
 						return _Utils_Tuple2(
 							_Utils_update(
 								model,
-								{downButtonDown: false, dragState: $author$project$Common$NoDrag, upButtonDown: false}),
+								{controller: newController}),
 							$elm$core$Platform$Cmd$none);
 					case 'TouchDown':
 						var struct = event.a;
@@ -7511,22 +7530,26 @@ var $author$project$Main$update = F2(
 							var upButtonDown = coordsInUp ? true : false;
 							var coordsInDown = A2($author$project$Controller$coordinatesWithinDownButton, model, offsetPos);
 							var downButtonDown = coordsInDown ? true : false;
+							var controller = model.controller;
+							var newController = _Utils_update(
+								controller,
+								{
+									downButtonDown: downButtonDown,
+									dragState: $author$project$Common$Drag,
+									pointerOffset: {
+										x: $elm$core$Basics$round(offsetPos.a),
+										y: $elm$core$Basics$round(offsetPos.b)
+									},
+									previousOffset: {
+										x: $elm$core$Basics$round(offsetPos.a),
+										y: $elm$core$Basics$round(offsetPos.b)
+									},
+									upButtonDown: upButtonDown
+								});
 							return _Utils_Tuple2(
 								_Utils_update(
 									model,
-									{
-										downButtonDown: downButtonDown,
-										dragState: $author$project$Common$Drag,
-										pointerOffset: {
-											x: $elm$core$Basics$round(offsetPos.a),
-											y: $elm$core$Basics$round(offsetPos.b)
-										},
-										previousOffset: {
-											x: $elm$core$Basics$round(offsetPos.a),
-											y: $elm$core$Basics$round(offsetPos.b)
-										},
-										upButtonDown: upButtonDown
-									}),
+									{controller: newController}),
 								$elm$core$Platform$Cmd$none);
 						}
 					default:
@@ -7537,19 +7560,28 @@ var $author$project$Main$update = F2(
 						} else {
 							var x = _v3.a;
 							var offsetPos = x.clientPos;
-							var newCameraElevation = _Utils_eq(model.dragState, $author$project$Common$Drag) ? (model.cameraElevation + ((($elm$core$Basics$round(offsetPos.b) - model.previousOffset.y) * $elm$core$Basics$pi) / 180)) : model.cameraElevation;
-							var newCameraAzimoth = _Utils_eq(model.dragState, $author$project$Common$Drag) ? (model.cameraAzimoth - ((($elm$core$Basics$round(offsetPos.a) - model.previousOffset.x) * $elm$core$Basics$pi) / 180)) : model.cameraAzimoth;
+							var newElevation = _Utils_eq(model.controller.dragState, $author$project$Common$Drag) ? (model.camera.elevation + ((($elm$core$Basics$round(offsetPos.b) - model.controller.previousOffset.y) * $elm$core$Basics$pi) / 180)) : model.camera.elevation;
+							var newAzimoth = _Utils_eq(model.controller.dragState, $author$project$Common$Drag) ? (model.camera.azimoth - ((($elm$core$Basics$round(offsetPos.a) - model.controller.previousOffset.x) * $elm$core$Basics$pi) / 180)) : model.camera.azimoth;
+							var controller = model.controller;
+							var newController = _Utils_update(
+								controller,
+								{
+									previousOffset: {
+										x: $elm$core$Basics$round(offsetPos.a),
+										y: $elm$core$Basics$round(offsetPos.b)
+									}
+								});
+							var camera = model.camera;
+							var newCamera = _Utils_update(
+								camera,
+								{
+									azimoth: newAzimoth,
+									elevation: (_Utils_cmp(newElevation, $elm$core$Basics$pi / 3) < 1) ? ((_Utils_cmp(newElevation, (-$elm$core$Basics$pi) / 3) > -1) ? newElevation : model.camera.elevation) : model.camera.elevation
+								});
 							return _Utils_Tuple2(
 								_Utils_update(
 									model,
-									{
-										cameraAzimoth: newCameraAzimoth,
-										cameraElevation: (_Utils_cmp(newCameraElevation, $elm$core$Basics$pi / 3) < 1) ? ((_Utils_cmp(newCameraElevation, (-$elm$core$Basics$pi) / 3) > -1) ? newCameraElevation : model.cameraElevation) : model.cameraElevation,
-										previousOffset: {
-											x: $elm$core$Basics$round(offsetPos.a),
-											y: $elm$core$Basics$round(offsetPos.b)
-										}
-									}),
+									{camera: newCamera, controller: newController}),
 								$elm$core$Platform$Cmd$none);
 						}
 				}
@@ -7825,10 +7857,6 @@ var $elm_explorations$webgl$WebGL$entity = $elm_explorations$webgl$WebGL$entityW
 	_List_fromArray(
 		[$elm_explorations$webgl$WebGL$Settings$DepthTest$default]));
 var $elm_explorations$linear_algebra$Math$Vector3$scale = _MJS_v3scale;
-var $author$project$World$Vertex = F2(
-	function (color, position) {
-		return {color: color, position: position};
-	});
 var $elm_explorations$linear_algebra$Math$Vector3$normalize = _MJS_v3normalize;
 var $elm$core$Basics$sqrt = _Basics_sqrt;
 var $author$project$World$sphereMeshList = function (clr) {
@@ -7836,62 +7864,62 @@ var $author$project$World$sphereMeshList = function (clr) {
 	var b = 1.0 / phi;
 	var a = 1.0;
 	var v1 = A2(
-		$author$project$World$Vertex,
+		$author$project$Common$Vertex,
 		clr,
 		$elm_explorations$linear_algebra$Math$Vector3$normalize(
 			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, b, -a)));
 	var v10 = A2(
-		$author$project$World$Vertex,
+		$author$project$Common$Vertex,
 		clr,
 		$elm_explorations$linear_algebra$Math$Vector3$normalize(
 			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, -a, 0, -b)));
 	var v11 = A2(
-		$author$project$World$Vertex,
+		$author$project$Common$Vertex,
 		clr,
 		$elm_explorations$linear_algebra$Math$Vector3$normalize(
 			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, b, -a, 0)));
 	var v12 = A2(
-		$author$project$World$Vertex,
+		$author$project$Common$Vertex,
 		clr,
 		$elm_explorations$linear_algebra$Math$Vector3$normalize(
 			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, -b, -a, 0)));
 	var v2 = A2(
-		$author$project$World$Vertex,
+		$author$project$Common$Vertex,
 		clr,
 		$elm_explorations$linear_algebra$Math$Vector3$normalize(
 			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, b, a, 0)));
 	var v3 = A2(
-		$author$project$World$Vertex,
+		$author$project$Common$Vertex,
 		clr,
 		$elm_explorations$linear_algebra$Math$Vector3$normalize(
 			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, -b, a, 0)));
 	var v4 = A2(
-		$author$project$World$Vertex,
+		$author$project$Common$Vertex,
 		clr,
 		$elm_explorations$linear_algebra$Math$Vector3$normalize(
 			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, b, a)));
 	var v5 = A2(
-		$author$project$World$Vertex,
+		$author$project$Common$Vertex,
 		clr,
 		$elm_explorations$linear_algebra$Math$Vector3$normalize(
 			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, -b, a)));
 	var v6 = A2(
-		$author$project$World$Vertex,
+		$author$project$Common$Vertex,
 		clr,
 		$elm_explorations$linear_algebra$Math$Vector3$normalize(
 			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, -a, 0, b)));
 	var v7 = A2(
-		$author$project$World$Vertex,
+		$author$project$Common$Vertex,
 		clr,
 		$elm_explorations$linear_algebra$Math$Vector3$normalize(
 			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, -b, a)));
 	var v8 = A2(
-		$author$project$World$Vertex,
+		$author$project$Common$Vertex,
 		clr,
 		$elm_explorations$linear_algebra$Math$Vector3$normalize(
 			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, a, 0, -b)));
 	var v9 = A2(
-		$author$project$World$Vertex,
+		$author$project$Common$Vertex,
 		clr,
 		$elm_explorations$linear_algebra$Math$Vector3$normalize(
 			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, a, 0, b)));
@@ -7962,38 +7990,20 @@ var $author$project$World$makeCamera = F2(
 			up);
 	});
 var $elm_explorations$linear_algebra$Math$Matrix4$makePerspective = _MJS_m4x4makePerspective;
-var $elm_explorations$linear_algebra$Math$Matrix4$mul = _MJS_m4x4mul;
-var $author$project$World$worldUnif = function (model) {
+var $author$project$World$generalUnif = function (model) {
 	var aspect = model.canvasDimensions.width / model.canvasDimensions.height;
 	return {
-		camera: A2($author$project$World$makeCamera, model.cameraAzimoth, model.cameraElevation),
-		location: A2(
-			$elm_explorations$linear_algebra$Math$Matrix4$translate,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, model.location.x, model.location.y, model.location.z),
-			$elm_explorations$linear_algebra$Math$Matrix4$identity),
+		camera: A2($author$project$World$makeCamera, model.camera.azimoth, model.camera.elevation),
+		location: $elm_explorations$linear_algebra$Math$Matrix4$identity,
 		perspective: A4($elm_explorations$linear_algebra$Math$Matrix4$makePerspective, 45, aspect, 0.01, 100),
-		rotation: A2(
-			$elm_explorations$linear_algebra$Math$Matrix4$mul,
-			A2(
-				$elm_explorations$linear_algebra$Math$Matrix4$makeRotate,
-				3 * model.rotation,
-				A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 1, 0)),
-			A2(
-				$elm_explorations$linear_algebra$Math$Matrix4$makeRotate,
-				2 * model.rotation,
-				A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 1, 0, 0))),
-		scale: A2(
-			$elm_explorations$linear_algebra$Math$Matrix4$scale,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 1, 1, 1),
-			$elm_explorations$linear_algebra$Math$Matrix4$identity),
+		rotation: $elm_explorations$linear_algebra$Math$Matrix4$identity,
+		scale: $elm_explorations$linear_algebra$Math$Matrix4$identity,
 		shade: 0.75
 	};
 };
-var $author$project$World$heroUnif = function (model) {
-	return $author$project$World$worldUnif(model);
-};
+var $elm_explorations$linear_algebra$Math$Matrix4$mul = _MJS_m4x4mul;
 var $author$project$World$fireUnif = function (model) {
-	var unif = $author$project$World$heroUnif(model);
+	var unif = $author$project$World$generalUnif(model);
 	return _Utils_update(
 		unif,
 		{
@@ -8009,7 +8019,7 @@ var $author$project$World$fireUnif = function (model) {
 						$elm_explorations$linear_algebra$Math$Matrix4$identity))),
 			scale: A2(
 				$elm_explorations$linear_algebra$Math$Matrix4$scale,
-				A3($elm_explorations$linear_algebra$Math$Vector3$vec3, model.power / 2, model.power / 2, model.power / 2),
+				A3($elm_explorations$linear_algebra$Math$Vector3$vec3, model.hero.power / 2, model.hero.power / 2, model.hero.power / 2),
 				$elm_explorations$linear_algebra$Math$Matrix4$identity)
 		});
 };
@@ -8028,7 +8038,7 @@ var $author$project$World$face = F5(
 	function (color, a, b, c, d) {
 		var vertex = function (position) {
 			return A2(
-				$author$project$World$Vertex,
+				$author$project$Common$Vertex,
 				A2($elm_explorations$linear_algebra$Math$Vector3$scale, 1 / 255, color),
 				position);
 		};
@@ -8120,6 +8130,31 @@ var $author$project$World$heroMesh = function () {
 						$author$project$World$sphereMeshList(balloonColor)))
 				])));
 }();
+var $author$project$World$heroUnif = function (model) {
+	var unif = $author$project$World$generalUnif(model);
+	return _Utils_update(
+		unif,
+		{
+			location: A2(
+				$elm_explorations$linear_algebra$Math$Matrix4$translate,
+				A3($elm_explorations$linear_algebra$Math$Vector3$vec3, model.hero.locationX, model.hero.locationY, model.hero.locationZ),
+				$elm_explorations$linear_algebra$Math$Matrix4$identity),
+			rotation: A2(
+				$elm_explorations$linear_algebra$Math$Matrix4$mul,
+				A2(
+					$elm_explorations$linear_algebra$Math$Matrix4$makeRotate,
+					3 * model.hero.rotationTheta,
+					A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 1, 0)),
+				A2(
+					$elm_explorations$linear_algebra$Math$Matrix4$makeRotate,
+					2 * model.hero.rotationTheta,
+					A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 1, 0, 0))),
+			scale: A2(
+				$elm_explorations$linear_algebra$Math$Matrix4$scale,
+				A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 1, 1, 1),
+				$elm_explorations$linear_algebra$Math$Matrix4$identity)
+		});
+};
 var $elm$json$Json$Encode$string = _Json_wrap;
 var $elm$html$Html$Attributes$stringProperty = F2(
 	function (key, string) {
@@ -8349,8 +8384,8 @@ var $elm$html$Html$Attributes$width = function (n) {
 		$elm$core$String$fromInt(n));
 };
 var $author$project$Main$view = function (model) {
-	var upButtonDown = model.upButtonDown;
-	var downButtonDown = model.downButtonDown;
+	var upButtonDown = model.controller.upButtonDown;
+	var downButtonDown = model.controller.downButtonDown;
 	return A2(
 		$elm$html$Html$div,
 		_List_Nil,
