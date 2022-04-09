@@ -56,7 +56,7 @@ heroUnif model =
 
 fireUnif : Model -> Uniforms
 fireUnif model = 
-  let unif = generalUnif model
+  let unif = heroUnif model
   in
     { unif | scale = (Mat4.scale 
                       (vec3 (model.hero.power / 2) 
@@ -66,9 +66,84 @@ fireUnif model =
              location = Mat4.mul unif.rotation (Mat4.mul 
                                                 unif.location 
                                                 (Mat4.translate 
-                                                 (vec3 0 1.75 0) 
+                                                 (vec3 0 1.6 0) 
                                                  Mat4.identity)) }
 
+
+subdivideProject : MeshList -> MeshList
+subdivideProject mesh =
+  let helper m =
+        case m of 
+          [] -> 
+            []
+          (v1, v2, v3) :: xs ->
+            let 
+                mp12X = ((Vec3.getX v1.position) + 
+                         (Vec3.getX v2.position)) / 2
+                mp12Y = ((Vec3.getY v1.position) +
+                         (Vec3.getY v2.position)) / 2
+                mp12Z = ((Vec3.getZ v1.position) +
+                         (Vec3.getZ v2.position)) / 2
+
+                mp13X = ((Vec3.getX v1.position) + 
+                         (Vec3.getX v3.position)) / 2
+                mp13Y = ((Vec3.getY v1.position) +
+                         (Vec3.getY v3.position)) / 2
+                mp13Z = ((Vec3.getZ v1.position) +
+                         (Vec3.getZ v3.position)) / 2
+
+                mp23X = ((Vec3.getX v2.position) + 
+                         (Vec3.getX v3.position)) / 2
+                mp23Y = ((Vec3.getY v2.position) +
+                         (Vec3.getY v3.position)) / 2
+                mp23Z = ((Vec3.getZ v2.position) +
+                         (Vec3.getZ v3.position)) / 2
+
+                clr12R = ((Vec3.getX v1.color) +
+                          (Vec3.getX v2.color)) / 2
+                clr12G = ((Vec3.getY v1.color) +
+                          (Vec3.getY v2.color)) / 2
+                clr12B = ((Vec3.getZ v1.color) +
+                          (Vec3.getZ v2.color)) / 2
+
+                clr13R = ((Vec3.getX v1.color) +
+                          (Vec3.getX v3.color)) / 2
+                clr13G = ((Vec3.getY v1.color) +
+                          (Vec3.getY v3.color)) / 2
+                clr13B = ((Vec3.getZ v1.color) +
+                          (Vec3.getZ v3.color)) / 2
+
+                clr23R = ((Vec3.getX v2.color) +
+                          (Vec3.getX v3.color)) / 2
+                clr23G = ((Vec3.getY v2.color) +
+                          (Vec3.getY v3.color)) / 2
+                clr23B = ((Vec3.getZ v2.color) +
+                          (Vec3.getZ v3.color)) / 2
+
+                pos12 = vec3 mp12X mp12Y mp12Z
+                pos13 = vec3 mp13X mp13Y mp13Z
+                pos23 = vec3 mp23X mp23Y mp23Z
+
+                clr12 = vec3 clr12R clr12G clr12B
+                clr13 = vec3 clr13R clr13G clr13B
+                clr23 = vec3 clr23R clr23G clr23B
+
+                -- clr12 = Vec3.scale (1/ 255) (vec3 100 100 100)
+                -- clr13 = Vec3.scale (1/ 255) (vec3 100 100 100)
+                -- clr23 = Vec3.scale (1/ 255) (vec3 100 100 100)
+
+                v12 = Vertex clr12 (Vec3.normalize pos12)
+                v13 = Vertex clr13 (Vec3.normalize pos13)
+                v23 = Vertex clr23 (Vec3.normalize pos23)
+            in 
+              [
+               (v1, v12, v13),
+               (v12, v2, v23),
+               (v23, v3, v13),
+               (v13, v12, v23)
+              ] :: helper xs
+  in List.concat (helper mesh)
+                 
 
 heroMesh : Mesh Vertex
 heroMesh = 
@@ -77,7 +152,9 @@ heroMesh =
     [ cubeMeshList
     , meshPositionMap 
        (Vec3.add (vec3 0 4 0)) 
-       (meshPositionMap (Vec3.scale 2) (sphereMeshList balloonColor))
+       (meshPositionMap 
+        (Vec3.scale 2) 
+        (subdivideProject (icosaMeshList balloonColor)))
     ]
     |> List.concat
     |> WebGL.triangles
@@ -87,29 +164,43 @@ fireMesh : Mesh Vertex
 fireMesh = 
   let fireColor = Vec3.scale (1/ 255) (vec3 245 121 0) -- orange
   in 
-    [ sphereMeshList fireColor
+    [ icosaMeshList fireColor
     ]
     |> List.concat
     |> WebGL.triangles
 
 
-sphereMeshList : Vec3 -> MeshList
-sphereMeshList clr =
+icosaMeshList : Vec3 -> MeshList
+icosaMeshList clr =
   let phi = (1.0 + sqrt 5.0) * 0.5
       a = 1.0
       b = 1.0 / phi
+--    v1 = Vertex (Vec3.add (vec3 0.01 0.01 0.01) clr) (Vec3.normalize (vec3 0 b -a))
+--    v2 = Vertex (Vec3.add (vec3 0.03 0.03 0.03) clr) (Vec3.normalize (vec3 b a 0))
+--    v3 = Vertex (Vec3.add (vec3 0.05 0.05 0.05) clr) (Vec3.normalize (vec3 -b a 0))
+--    v4 = Vertex (Vec3.add (vec3 0.07 0.07 0.07) clr) (Vec3.normalize (vec3 0 b a))
+--    v5 = Vertex (Vec3.add (vec3 0.09 0.09 0.09) clr) (Vec3.normalize (vec3 0 -b a))
+--    v6 = Vertex (Vec3.add (vec3 0.11 0.11 0.11) clr) (Vec3.normalize (vec3 -a 0 b))
+--    v7 = Vertex (Vec3.add (vec3 0.13 0.13 0.13) clr) (Vec3.normalize (vec3 0 -b -a))
+--    v8 = Vertex (Vec3.add (vec3 0.15 0.15 0.15) clr) (Vec3.normalize (vec3 a 0 -b))
+--    v9 = Vertex (Vec3.add (vec3 0.17 0.17 0.17) clr) (Vec3.normalize (vec3 a 0 b))
+--    v10 = Vertex (Vec3.add (vec3 0.19 0.19 0.19) clr) (Vec3.normalize (vec3 -a 0 -b))
+--    v11 = Vertex (Vec3.add (vec3 0.21 0.21 0.21) clr) (Vec3.normalize (vec3 b -a 0))
+--    v12 = Vertex (Vec3.add (vec3 0.23 0.23 0.23) clr) (Vec3.normalize (vec3 -b -a 0))
+
       v1 = Vertex clr (Vec3.normalize (vec3 0 b -a))
       v2 = Vertex clr (Vec3.normalize (vec3 b a 0))
       v3 = Vertex clr (Vec3.normalize (vec3 -b a 0))
       v4 = Vertex clr (Vec3.normalize (vec3 0 b a))
       v5 = Vertex clr (Vec3.normalize (vec3 0 -b a))
       v6 = Vertex clr (Vec3.normalize (vec3 -a 0 b))
-      v7 = Vertex clr (Vec3.normalize (vec3 0 -b a))
+      v7 = Vertex clr (Vec3.normalize (vec3 0 -b -a))
       v8 = Vertex clr (Vec3.normalize (vec3 a 0 -b))
       v9 = Vertex clr (Vec3.normalize (vec3 a 0 b))
       v10 = Vertex clr (Vec3.normalize (vec3 -a 0 -b))
       v11 = Vertex clr (Vec3.normalize (vec3 b -a 0))
       v12 = Vertex clr (Vec3.normalize (vec3 -b -a 0))
+
   in 
     [ (v3, v2, v1)
     , (v2, v3, v4)
