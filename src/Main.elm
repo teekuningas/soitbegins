@@ -1,13 +1,17 @@
 module Main exposing (main)
 
 import World exposing (heroMesh, fireMesh,
-                       heroUnif, fireUnif)
+                       heroUnif, fireUnif,
+                       earthMesh, earthUnif,
+                       sunMesh, sunUnif)
 
 import Controller exposing (controllerMeshUp, controllerMeshDown, controllerUnif, 
                             coordinatesWithinUpButton, coordinatesWithinDownButton)
 
 import Common exposing (Model, DragState(..),
                         viewportSize, vertexShader, fragmentShader)
+
+import Math.Vector3 as Vec3 exposing (vec3)
 
 import Task
 
@@ -44,15 +48,17 @@ type Msg = TimeDelta Float
 
 init : () -> (Model, Cmd Msg)
 init model = 
-  ( { hero = { locationX = 0 
-             , locationY = 0
-             , locationZ = 0
+  ( { hero = { height = 70
+             , latitude = 0
+             , longitude = 0
              , rotationTheta = 0
              , power = 1 } 
-    , earth = { locationX = 0
-              , locationY = 0
-              , locationZ = 0
-              , rotationTheta = 0 }
+    , earth = { locationX = -7
+              , locationY = -30
+              , locationZ = 50
+              , rotationTheta = 0
+              , rotationAxis = vec3 -0.2 1 0 }
+              -- , rotationAxis = vec3 1 0 0 }
     , camera = { azimoth = 0
                , elevation = 0 }
     , elapsed = 0
@@ -91,7 +97,7 @@ view model =
                    width (Tuple.first viewportSize)
                  , height (Tuple.second viewportSize)
                  , style "display" "block"
-                 , style "height" "70vh"
+                 , style "height" "90vh"
                  , style "width" "100vw"
                  , id "webgl-canvas"
                  , Touch.onEnd (PointerEventMsg << TouchUp)
@@ -110,6 +116,16 @@ view model =
                    fragmentShader
                    fireMesh
                    (fireUnif model))
+                 , (WebGL.entity
+                   vertexShader
+                   fragmentShader
+                   earthMesh
+                   (earthUnif model))
+                 , (WebGL.entity
+                   vertexShader
+                   fragmentShader
+                   sunMesh
+                   (sunUnif model))
                  , (WebGL.entity
                    vertexShader
                    fragmentShader
@@ -142,11 +158,13 @@ update msg model =
 
             hero = model.hero
             newHero = { hero | rotationTheta = sin (model.elapsed / 1000) / 10, 
-                               locationX = 0.5 * sin (model.elapsed / 1000),
                                power = newPower }
+            earth = model.earth
+            newEarth = { earth | rotationTheta = (model.elapsed / 2000) }
         in
           { model | hero = newHero,
-                    elapsed = model.elapsed + dt 
+                    earth = newEarth,
+                    elapsed = model.elapsed + dt
           } 
       , Cmd.none 
       )

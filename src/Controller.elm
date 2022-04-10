@@ -26,21 +26,19 @@ controllerUnif model shade =
       x = controllerParams.x
       y = controllerParams.y
       size = controllerParams.size
+
+      translation = Mat4.translate (vec3 x y 0) Mat4.identity
+      scale = Mat4.scale (vec3 (size/xscale) (size/yscale) 1) Mat4.identity
   in
-  { rotation = Mat4.identity
-
-  , location = 
-      Mat4.translate (vec3 x y 0) Mat4.identity
-
+  { scale = scale
+  , rotation = Mat4.identity
+  , translation = translation
+  , postRotation = Mat4.identity
+  , postTranslation = Mat4.identity
   , perspective = 
       Mat4.makeOrtho -1 1 -1 1 0 10
-
   , camera = 
       Mat4.makeLookAt (vec3 0 0 1) (vec3 0 0 0) (vec3 0 1 0)
-
-  , scale =
-      Mat4.scale (vec3 (size/xscale) (size/yscale) 1) Mat4.identity
-
   , shade = shade } 
 
 

@@ -15,9 +15,9 @@ viewportSize = (800, 800)
 type DragState = Drag | NoDrag
 
 type alias Hero = 
-  { locationX : Float 
-  , locationY : Float
-  , locationZ : Float
+  { height : Float 
+  , latitude : Float
+  , longitude : Float
   , rotationTheta : Float 
   , power : Float
   }
@@ -27,6 +27,7 @@ type alias Earth =
   , locationY : Float
   , locationZ : Float
   , rotationTheta : Float
+  , rotationAxis : Vec3
   }
 
 type alias Camera = 
@@ -64,11 +65,13 @@ meshPositionMap fun mesh =
 
 
 type alias Uniforms =
-  { rotation : Mat4
-  , location : Mat4
+  { scale : Mat4
+  , rotation : Mat4
+  , translation : Mat4
+  , postRotation : Mat4
+  , postTranslation : Mat4
   , perspective : Mat4
   , camera : Mat4
-  , scale : Mat4
   , shade : Float
   }
 
@@ -89,13 +92,16 @@ vertexShader =
      attribute vec3 color;
      uniform mat4 perspective;
      uniform mat4 camera;
-     uniform mat4 rotation;
-     uniform mat4 location;
      uniform mat4 scale;
+     uniform mat4 rotation;
+     uniform mat4 translation;
+     uniform mat4 postRotation;
+     uniform mat4 postTranslation;
      varying vec3 vcolor;
      void main () {
-       gl_Position = (perspective * camera * location *
-                      rotation * scale * vec4(position, 1.0));
+       gl_Position = (perspective * camera * postTranslation * 
+                      postRotation * translation * rotation *
+                      scale * vec4(position, 1.0));
        vcolor = color;
      }
   |]
