@@ -66,11 +66,14 @@ heroUnif model =
       heroRotation = Mat4.mul (Mat4.makeRotate (3 * model.hero.rotationTheta) (vec3 0 1 0))
                               (Mat4.makeRotate (2 * model.hero.rotationTheta) (vec3 1 0 0))
 
-      -- First get the proper height
       heightTranslation = (Mat4.translate (Vec3.scale model.hero.height Vec3.j) Mat4.identity)
 
       worldRotationAxis = model.earth.rotationAxis
       worldRotation = (Mat4.makeRotate model.earth.rotationTheta worldRotationAxis) 
+
+      -- TODO:
+      -- need to implement the latitude longitude logic here!!
+      -- perhapse use the heroLocation func or not, maybe not?
 
       earthTranslation = Mat4.translate (vec3 model.earth.locationX
                                               model.earth.locationY
@@ -309,6 +312,7 @@ makeCamera model =
       height = model.hero.height
       latitude = model.hero.latitude
       longitude = model.hero.longitude
+
       cartesianHero = 
         case cartesianFromSpherical (height, latitude, longitude) 
         of (x, y, z) -> vec3 x y z
@@ -325,6 +329,8 @@ makeCamera model =
       rotatedLoc = Mat4.transform earthRotation locTrans
 
       finalCameraLoc = Vec3.add earthLoc rotatedLoc
+
+      target = Vec3.add (Mat4.transform earthRotation cartesianHero) earthLoc
 
       up = Mat4.transform earthRotation (vec3 0 1 0) 
   in
@@ -356,6 +362,4 @@ heroLocation model =
 
   in
     Vec3.add (Mat4.transform rotation localLocation) earthLocation
-    -- earthLocation
-        
   
