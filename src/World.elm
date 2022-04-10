@@ -1,5 +1,7 @@
-module World exposing (heroMesh, fireMesh, 
-                       heroUnif, fireUnif)
+module World exposing (heroMesh, heroUnif, 
+                       fireMesh, fireUnif,
+                       earthMesh, earthUnif,
+                       sunMesh, sunUnif)
 
 import Common exposing (Model, viewportSize, meshPositionMap,
                         MeshList, Vertex, Uniforms)
@@ -10,64 +12,214 @@ import Math.Vector3 as Vec3 exposing (vec3, Vec3)
 import WebGL exposing (Mesh)
 
 
-makeCamera : Float -> Float -> Mat4
-makeCamera azimoth elevation =
-  let locStart = (vec3 0 0 15)
-      locAz = Mat4.transform (Mat4.makeRotate azimoth (vec3 0 1 0)) locStart
-      locElv = Mat4.transform (Mat4.makeRotate elevation 
-                               (Vec3.cross locAz (vec3 0 1 0))) locAz
-      up = vec3 0 1 0
-  in
-    Mat4.makeLookAt locElv (vec3 0 2 0) up
-
 
 generalUnif : Model -> Uniforms
 generalUnif model =
   let aspect = ((toFloat model.canvasDimensions.width) / 
                 (toFloat model.canvasDimensions.height))
   in
-  { rotation = Mat4.identity 
-  , location = Mat4.identity
-  , scale = Mat4.identity
+  { scale = 
+      Mat4.identity
+  , rotation = 
+      Mat4.identity
+  , translation =
+      Mat4.identity
+  , postRotation =
+      Mat4.identity
+  , postTranslation =
+      Mat4.identity
   , perspective = 
-      Mat4.makePerspective 45 aspect 0.01 100
+      Mat4.makePerspective 45 aspect 0.01 500
   , camera = 
-      makeCamera model.camera.azimoth model.camera.elevation
+      makeCamera model
   , shade = 0.75 } 
+
+
+sunUnif : Model -> Uniforms
+sunUnif model =
+  let unif = generalUnif model
+  in { unif | scale = (Mat4.scale (vec3 10 10 10) Mat4.identity)}
 
 
 earthUnif : Model -> Uniforms
 earthUnif model = 
-  generalUnif model
+  let unif = generalUnif model
+      translation = Mat4.translate (vec3 model.earth.locationX
+                                         model.earth.locationY
+                                         model.earth.locationZ) Mat4.identity
+
+      scale = Mat4.scale (vec3 50 50 50) Mat4.identity
+
+      worldRotationAxis = model.earth.rotationAxis
+      rotation = Mat4.makeRotate model.earth.rotationTheta worldRotationAxis
+
+  in
+  { unif | scale = scale,
+           rotation = rotation,
+           translation = translation }
 
 
 heroUnif : Model -> Uniforms
 heroUnif model =
   let unif = generalUnif model
+
+      heroRotation = Mat4.mul (Mat4.makeRotate (3 * model.hero.rotationTheta) (vec3 0 1 0))
+                              (Mat4.makeRotate (2 * model.hero.rotationTheta) (vec3 1 0 0))
+
+      -- First get the proper height
+      heightTranslation = (Mat4.translate (Vec3.scale model.hero.height Vec3.j) Mat4.identity)
+
+      worldRotationAxis = model.earth.rotationAxis
+      worldRotation = (Mat4.makeRotate model.earth.rotationTheta worldRotationAxis) 
+
+      earthTranslation = Mat4.translate (vec3 model.earth.locationX
+                                              model.earth.locationY
+                                              model.earth.locationZ) Mat4.identity
+
   in
-  { unif | rotation = Mat4.mul (Mat4.makeRotate (3 * model.hero.rotationTheta) (vec3 0 1 0))
-                               (Mat4.makeRotate (2 * model.hero.rotationTheta) (vec3 1 0 0)),
-           location = Mat4.translate (vec3 
-                                      model.hero.locationX
-                                      model.hero.locationY 
-                                      model.hero.locationZ) Mat4.identity,
-           scale = Mat4.scale (vec3 1 1 1) Mat4.identity } 
+  { unif | rotation = heroRotation,
+           translation = heightTranslation,
+           postRotation = worldRotation,
+           postTranslation = earthTranslation }
 
 
 fireUnif : Model -> Uniforms
 fireUnif model = 
   let unif = heroUnif model
+      scale = (Mat4.scale (vec3 (model.hero.power / 2) 
+                                (model.hero.power / 2) 
+                                (model.hero.power / 2)) 
+                          Mat4.identity)
+
+      translation = Mat4.mul unif.translation (Mat4.translate (vec3 0 1.6 0) Mat4.identity)
+
   in
-    { unif | scale = (Mat4.scale 
-                      (vec3 (model.hero.power / 2) 
-                            (model.hero.power / 2) 
-                            (model.hero.power / 2)) 
-                      Mat4.identity),
-             location = Mat4.mul unif.rotation (Mat4.mul 
-                                                unif.location 
-                                                (Mat4.translate 
-                                                 (vec3 0 1.6 0) 
-                                                 Mat4.identity)) }
+    { unif | scale = scale,
+             translation = translation }
+                
+
+earthMesh : Mesh Vertex
+earthMesh = 
+  let earthColor = Vec3.scale (1/255) (vec3 52 101 164) -- blue
+  in 
+    (subdivideProject (subdivideProject (icosaMeshList earthColor)))
+    |> WebGL.triangles
+
+
+sunMesh : Mesh Vertex
+sunMesh = 
+  let sunColor = Vec3.scale (1/255) (vec3 237 212 0) -- yellow
+  in 
+    (subdivideProject (subdivideProject (icosaMeshList sunColor)))
+    |> WebGL.triangles
+
+
+heroMesh : Mesh Vertex
+heroMesh = 
+  let balloonColor = Vec3.scale (1/255) (vec3 115 210 22) -- green
+  in 
+    [ cubeMeshList
+    , meshPositionMap 
+       (Vec3.add (vec3 0 4 0)) 
+       (meshPositionMap 
+        (Vec3.scale 2) 
+        (subdivideProject (icosaMeshList balloonColor)))
+    ]
+    |> List.concat
+    |> WebGL.triangles
+
+
+fireMesh : Mesh Vertex
+fireMesh = 
+  let fireColor = Vec3.scale (1/ 255) (vec3 245 121 0) -- orange
+  in 
+    [ icosaMeshList fireColor
+    ]
+    |> List.concat
+    |> WebGL.triangles
+
+
+icosaMeshList : Vec3 -> MeshList
+icosaMeshList clr =
+  let phi = (1.0 + sqrt 5.0) * 0.5
+      a = 1.0
+      b = 1.0 / phi
+
+      v1 = Vertex (Vec3.add clr (vec3 0.0 0.0 0.0)) (Vec3.normalize (vec3 0 b -a))
+      v2 = Vertex (Vec3.add clr (vec3 0.02 0.02 0.02)) (Vec3.normalize (vec3 b a 0))
+      v3 = Vertex (Vec3.add clr (vec3 0.04 0.04 0.04)) (Vec3.normalize (vec3 -b a 0))
+      v4 = Vertex (Vec3.add clr (vec3 0.06 0.06 0.06)) (Vec3.normalize (vec3 0 b a))
+      v5 = Vertex (Vec3.add clr (vec3 0.08 0.08 0.08)) (Vec3.normalize (vec3 0 -b a))
+      v6 = Vertex (Vec3.add clr (vec3 0.10 0.10 0.10)) (Vec3.normalize (vec3 -a 0 b))
+      v7 = Vertex (Vec3.add clr (vec3 0.12 0.12 0.12)) (Vec3.normalize (vec3 0 -b -a))
+      v8 = Vertex (Vec3.add clr (vec3 0.14 0.14 0.14)) (Vec3.normalize (vec3 a 0 -b))
+      v9 = Vertex (Vec3.add clr (vec3 0.16 0.16 0.16)) (Vec3.normalize (vec3 a 0 b))
+      v10 = Vertex (Vec3.add clr (vec3 0.18 0.18 0.18)) (Vec3.normalize (vec3 -a 0 -b))
+      v11 = Vertex (Vec3.add clr (vec3 0.20 0.20 0.20)) (Vec3.normalize (vec3 b -a 0))
+      v12 = Vertex (Vec3.add clr (vec3 0.22 0.22 0.22)) (Vec3.normalize (vec3 -b -a 0))
+
+  in 
+    [ (v3, v2, v1)
+    , (v2, v3, v4)
+    , (v6, v5, v4)
+    , (v5, v9, v4)
+    , (v8, v7, v1)
+    , (v7, v10, v1)
+    , (v12, v11, v5)
+    , (v11, v12, v7)
+    , (v10, v6, v3)
+    , (v6, v10, v12)
+    , (v9, v8, v2)
+    , (v8, v9, v11)
+    , (v3, v6, v4)
+    , (v9, v2, v4)
+    , (v10, v3, v1)
+    , (v2, v8, v1)
+    , (v12, v10, v7)
+    , (v8, v11, v7)
+    , (v6, v12, v5)
+    , (v11, v9, v5) ]
+
+
+cubeMeshList : MeshList
+cubeMeshList =
+  let
+    rft =
+      vec3 1 1 1
+    lft =
+      vec3 -1 1 1
+    lbt =
+      vec3 -1 -1 1
+    rbt =
+      vec3 1 -1 1
+    rbb =
+      vec3 1 -1 -1
+    rfb =
+      vec3 1 1 -1
+    lfb =
+      vec3 -1 1 -1
+    lbb =
+      vec3 -1 -1 -1
+  in
+    [ face (vec3 115 210 22) rft rfb rbb rbt -- green
+    , face (vec3 52 101 164) rft rfb lfb lft -- blue
+    , face (vec3 237 212 0) rft lft lbt rbt -- yellow
+    , face (vec3 204 0 0) rfb lfb lbb rbb -- red
+    , face (vec3 117 80 123) lft lfb lbb lbt -- purple
+    , face (vec3 245 121 0) rbt rbb lbb lbt -- orange
+    ]
+    |> List.concat
+
+
+face : Vec3 -> Vec3 -> Vec3 -> Vec3 -> Vec3 -> MeshList
+face color a b c d =
+  let
+    vertex position =
+      Vertex (Vec3.scale (1 / 255) color) position
+  in
+    [ ( vertex a, vertex b, vertex c )
+    , ( vertex c, vertex d, vertex a )
+    ]
 
 
 subdivideProject : MeshList -> MeshList
@@ -143,124 +295,67 @@ subdivideProject mesh =
                (v13, v12, v23)
               ] :: helper xs
   in List.concat (helper mesh)
-                 
+ 
 
-heroMesh : Mesh Vertex
-heroMesh = 
-  let balloonColor = Vec3.scale (1/ 255) (vec3 115 210 22) -- green
-  in 
-    [ cubeMeshList
-    , meshPositionMap 
-       (Vec3.add (vec3 0 4 0)) 
-       (meshPositionMap 
-        (Vec3.scale 2) 
-        (subdivideProject (icosaMeshList balloonColor)))
-    ]
-    |> List.concat
-    |> WebGL.triangles
+makeCamera : Model -> Mat4
+makeCamera model =
+  let azimoth = model.camera.azimoth
+      elevation = model.camera.elevation
 
+      earthLoc = (vec3 model.earth.locationX
+                       model.earth.locationY
+                       model.earth.locationZ)
 
-fireMesh : Mesh Vertex
-fireMesh = 
-  let fireColor = Vec3.scale (1/ 255) (vec3 245 121 0) -- orange
-  in 
-    [ icosaMeshList fireColor
-    ]
-    |> List.concat
-    |> WebGL.triangles
+      height = model.hero.height
+      latitude = model.hero.latitude
+      longitude = model.hero.longitude
+      cartesianHero = 
+        case cartesianFromSpherical (height, latitude, longitude) 
+        of (x, y, z) -> vec3 x y z
 
+      locStart = vec3 0 0 20
 
-icosaMeshList : Vec3 -> MeshList
-icosaMeshList clr =
-  let phi = (1.0 + sqrt 5.0) * 0.5
-      a = 1.0
-      b = 1.0 / phi
---    v1 = Vertex (Vec3.add (vec3 0.01 0.01 0.01) clr) (Vec3.normalize (vec3 0 b -a))
---    v2 = Vertex (Vec3.add (vec3 0.03 0.03 0.03) clr) (Vec3.normalize (vec3 b a 0))
---    v3 = Vertex (Vec3.add (vec3 0.05 0.05 0.05) clr) (Vec3.normalize (vec3 -b a 0))
---    v4 = Vertex (Vec3.add (vec3 0.07 0.07 0.07) clr) (Vec3.normalize (vec3 0 b a))
---    v5 = Vertex (Vec3.add (vec3 0.09 0.09 0.09) clr) (Vec3.normalize (vec3 0 -b a))
---    v6 = Vertex (Vec3.add (vec3 0.11 0.11 0.11) clr) (Vec3.normalize (vec3 -a 0 b))
---    v7 = Vertex (Vec3.add (vec3 0.13 0.13 0.13) clr) (Vec3.normalize (vec3 0 -b -a))
---    v8 = Vertex (Vec3.add (vec3 0.15 0.15 0.15) clr) (Vec3.normalize (vec3 a 0 -b))
---    v9 = Vertex (Vec3.add (vec3 0.17 0.17 0.17) clr) (Vec3.normalize (vec3 a 0 b))
---    v10 = Vertex (Vec3.add (vec3 0.19 0.19 0.19) clr) (Vec3.normalize (vec3 -a 0 -b))
---    v11 = Vertex (Vec3.add (vec3 0.21 0.21 0.21) clr) (Vec3.normalize (vec3 b -a 0))
---    v12 = Vertex (Vec3.add (vec3 0.23 0.23 0.23) clr) (Vec3.normalize (vec3 -b -a 0))
+      locAz = Mat4.transform (Mat4.makeRotate azimoth (vec3 0 1 0)) locStart
+      locElv = Mat4.transform (Mat4.makeRotate elevation 
+                               (Vec3.cross locAz (vec3 0 1 0))) locAz
 
-      v1 = Vertex clr (Vec3.normalize (vec3 0 b -a))
-      v2 = Vertex clr (Vec3.normalize (vec3 b a 0))
-      v3 = Vertex clr (Vec3.normalize (vec3 -b a 0))
-      v4 = Vertex clr (Vec3.normalize (vec3 0 b a))
-      v5 = Vertex clr (Vec3.normalize (vec3 0 -b a))
-      v6 = Vertex clr (Vec3.normalize (vec3 -a 0 b))
-      v7 = Vertex clr (Vec3.normalize (vec3 0 -b -a))
-      v8 = Vertex clr (Vec3.normalize (vec3 a 0 -b))
-      v9 = Vertex clr (Vec3.normalize (vec3 a 0 b))
-      v10 = Vertex clr (Vec3.normalize (vec3 -a 0 -b))
-      v11 = Vertex clr (Vec3.normalize (vec3 b -a 0))
-      v12 = Vertex clr (Vec3.normalize (vec3 -b -a 0))
+      locTrans = Vec3.add cartesianHero locElv
 
-  in 
-    [ (v3, v2, v1)
-    , (v2, v3, v4)
-    , (v6, v5, v4)
-    , (v5, v9, v4)
-    , (v8, v7, v1)
-    , (v7, v10, v1)
-    , (v12, v11, v5)
-    , (v11, v12, v7)
-    , (v10, v6, v3)
-    , (v6, v10, v12)
-    , (v9, v8, v2)
-    , (v8, v9, v11)
-    , (v3, v6, v4)
-    , (v9, v2, v4)
-    , (v10, v3, v1)
-    , (v2, v8, v1)
-    , (v12, v10, v7)
-    , (v8, v11, v7)
-    , (v6, v12, v5)
-    , (v11, v9, v5) ]
+      earthRotation = Mat4.makeRotate model.earth.rotationTheta model.earth.rotationAxis 
+      rotatedLoc = Mat4.transform earthRotation locTrans
 
+      finalCameraLoc = Vec3.add earthLoc rotatedLoc
 
-cubeMeshList : MeshList
-cubeMeshList =
-  let
-    rft =
-      vec3 1 1 1
-    lft =
-      vec3 -1 1 1
-    lbt =
-      vec3 -1 -1 1
-    rbt =
-      vec3 1 -1 1
-    rbb =
-      vec3 1 -1 -1
-    rfb =
-      vec3 1 1 -1
-    lfb =
-      vec3 -1 1 -1
-    lbb =
-      vec3 -1 -1 -1
+      up = Mat4.transform earthRotation (vec3 0 1 0) 
   in
-    [ face (vec3 115 210 22) rft rfb rbb rbt -- green
-    , face (vec3 52 101 164) rft rfb lfb lft -- blue
-    , face (vec3 237 212 0) rft lft lbt rbt -- yellow
-    , face (vec3 204 0 0) rfb lfb lbb rbb -- red
-    , face (vec3 117 80 123) lft lfb lbb lbt -- purple
-    , face (vec3 245 121 0) rbt rbb lbb lbt -- orange
-    ]
-    |> List.concat
+    Mat4.makeLookAt finalCameraLoc
+                    (heroLocation model)
+                    up
 
+cartesianFromSpherical : (Float, Float, Float) -> (Float, Float, Float)
+cartesianFromSpherical spherical = 
+  case spherical of (height, latitude, longitude) -> (height * (sin latitude) * (cos longitude),
+                                                      height * (cos latitude),
+                                                      height * (sin latitude) * (sin longitude))
 
-face : Vec3 -> Vec3 -> Vec3 -> Vec3 -> Vec3 -> MeshList
-face color a b c d =
-  let
-    vertex position =
-      Vertex (Vec3.scale (1 / 255) color) position
+heroLocation : Model -> Vec3
+heroLocation model = 
+ let rotation = 
+       Mat4.makeRotate model.earth.rotationTheta model.earth.rotationAxis
+     height = 
+       model.hero.height
+     latitude = 
+       model.hero.latitude
+     longitude = 
+       model.hero.longitude
+     localLocation =
+       case cartesianFromSpherical (height, latitude, longitude) of (x, y, z) -> (vec3 x y z)
+     earthLocation = (vec3 model.earth.locationX
+                           model.earth.locationY
+                           model.earth.locationZ)
+
   in
-    [ ( vertex a, vertex b, vertex c )
-    , ( vertex c, vertex d, vertex a )
-    ]
-
+    Vec3.add (Mat4.transform rotation localLocation) earthLocation
+    -- earthLocation
+        
+  
