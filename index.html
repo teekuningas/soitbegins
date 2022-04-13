@@ -1,0 +1,54 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>So it begins!</title>
+  <script type="text/javascript" src="main.js"></script>
+</head>
+
+<body>
+    <div id="myapp"></div>
+</body>
+
+<script type="text/javascript">
+
+// Start the Elm application.
+var app = Elm.Main.init({
+    node: document.getElementById('myapp')
+});
+
+// To decouple player logic from world logic,
+// we update the world parameters here outside of elm realm.
+var intervalID = window.setInterval(myCallback, 500);
+
+// Initialize the model
+var data = { 
+  'earth': { 
+    'locationX': -7,
+    'locationY': -30,
+    'locationZ': 50,
+    'rotationTheta': 0,
+    'rotationAxisX': -0.2,
+    'rotationAxisY': 1,
+    'rotationAxisZ': 0
+  }
+};
+
+var oldTime = Date.now();
+function myCallback() {
+  let newTime = Date.now(); 
+  let elapsed = newTime - oldTime;
+
+  // Update params periodically
+  data['earth']['rotationTheta'] = elapsed / 2000;
+
+  let json = JSON.stringify(data);
+
+  // And send to elm
+  app.ports.messageReceiver.send(json);
+}
+
+</script>
+
+</html>

@@ -18,11 +18,19 @@ generalUnif model =
   let aspect = ((toFloat model.canvasDimensions.width) / 
                 (toFloat model.canvasDimensions.height))
   in
-  { scale = 
+  { preScale =
+      Mat4.identity 
+  , preRotation = 
+      Mat4.identity
+  , preTranslation =
+      Mat4.identity
+  , scale = 
       Mat4.identity
   , rotation = 
       Mat4.identity
   , translation =
+      Mat4.identity
+  , postScale = 
       Mat4.identity
   , postRotation =
       Mat4.identity
@@ -89,23 +97,24 @@ heroUnif model =
 fireUnif : Model -> Uniforms
 fireUnif model = 
   let unif = heroUnif model
-      scale = (Mat4.scale (vec3 (model.hero.power / 2) 
-                                (model.hero.power / 2) 
-                                (model.hero.power / 2)) 
-                          Mat4.identity)
-
-      translation = Mat4.mul unif.translation (Mat4.translate (vec3 0 1.6 0) Mat4.identity)
+      preScale = (Mat4.scale (vec3 (model.hero.power / 2) 
+                                   (model.hero.power / 2) 
+                                   (model.hero.power / 2)) 
+                             Mat4.identity)
+      preTranslation = 
+        Mat4.translate (vec3 0 1.6 0) Mat4.identity
 
   in
-    { unif | scale = scale,
-             translation = translation }
+    { unif | preScale = preScale,
+             preTranslation = preTranslation }
                 
 
 earthMesh : Mesh Vertex
 earthMesh = 
   let earthColor = Vec3.scale (1/255) (vec3 52 101 164) -- blue
+      divideColor = Vec3.scale (1/255) (vec3 115 210 22) -- green
   in 
-    (subdivideProject (subdivideProject (icosaMeshList earthColor)))
+    (subdivideProject (subdivideProject (icosaMeshList divideColor) earthColor) divideColor)
     |> WebGL.triangles
 
 
@@ -113,7 +122,7 @@ sunMesh : Mesh Vertex
 sunMesh = 
   let sunColor = Vec3.scale (1/255) (vec3 237 212 0) -- yellow
   in 
-    (subdivideProject (subdivideProject (icosaMeshList sunColor)))
+    (subdivideProject (subdivideProject (icosaMeshList sunColor) sunColor) sunColor)
     |> WebGL.triangles
 
 
@@ -126,7 +135,7 @@ heroMesh =
        (Vec3.add (vec3 0 4 0)) 
        (meshPositionMap 
         (Vec3.scale 2) 
-        (subdivideProject (icosaMeshList balloonColor)))
+        (subdivideProject (icosaMeshList balloonColor) balloonColor))
     ]
     |> List.concat
     |> WebGL.triangles
@@ -136,7 +145,8 @@ fireMesh : Mesh Vertex
 fireMesh = 
   let fireColor = Vec3.scale (1/ 255) (vec3 245 121 0) -- orange
   in 
-    [ icosaMeshList fireColor
+    [ 
+      icosaMeshList fireColor
     ]
     |> List.concat
     |> WebGL.triangles
@@ -225,8 +235,8 @@ face color a b c d =
     ]
 
 
-subdivideProject : MeshList -> MeshList
-subdivideProject mesh =
+subdivideProject : MeshList -> Vec3 -> MeshList
+subdivideProject mesh clr =
   let helper m =
         case m of 
           [] -> 
@@ -254,38 +264,39 @@ subdivideProject mesh =
                 mp23Z = ((Vec3.getZ v2.position) +
                          (Vec3.getZ v3.position)) / 2
 
-                clr12R = ((Vec3.getX v1.color) +
-                          (Vec3.getX v2.color)) / 2
-                clr12G = ((Vec3.getY v1.color) +
-                          (Vec3.getY v2.color)) / 2
-                clr12B = ((Vec3.getZ v1.color) +
-                          (Vec3.getZ v2.color)) / 2
+                -- clr12R = ((Vec3.getX v1.color) +
+                --           (Vec3.getX v2.color)) / 2
+                -- clr12G = ((Vec3.getY v1.color) +
+                --           (Vec3.getY v2.color)) / 2
+                -- clr12B = ((Vec3.getZ v1.color) +
+                --           (Vec3.getZ v2.color)) / 2
 
-                clr13R = ((Vec3.getX v1.color) +
-                          (Vec3.getX v3.color)) / 2
-                clr13G = ((Vec3.getY v1.color) +
-                          (Vec3.getY v3.color)) / 2
-                clr13B = ((Vec3.getZ v1.color) +
-                          (Vec3.getZ v3.color)) / 2
+                -- clr13R = ((Vec3.getX v1.color) +
+                --           (Vec3.getX v3.color)) / 2
+                -- clr13G = ((Vec3.getY v1.color) +
+                --           (Vec3.getY v3.color)) / 2
+                -- clr13B = ((Vec3.getZ v1.color) +
+                --           (Vec3.getZ v3.color)) / 2
 
-                clr23R = ((Vec3.getX v2.color) +
-                          (Vec3.getX v3.color)) / 2
-                clr23G = ((Vec3.getY v2.color) +
-                          (Vec3.getY v3.color)) / 2
-                clr23B = ((Vec3.getZ v2.color) +
-                          (Vec3.getZ v3.color)) / 2
+                -- clr23R = ((Vec3.getX v2.color) +
+                --           (Vec3.getX v3.color)) / 2
+                -- clr23G = ((Vec3.getY v2.color) +
+                --           (Vec3.getY v3.color)) / 2
+                -- clr23B = ((Vec3.getZ v2.color) +
+                --           (Vec3.getZ v3.color)) / 2
+
+                -- clr12 = vec3 clr12R clr12G clr12B
+                -- clr13 = vec3 clr13R clr13G clr13B
+                -- clr23 = vec3 clr23R clr23G clr23B
+
+                clr12 = clr
+                clr13 = clr
+                clr23 = clr
+
 
                 pos12 = vec3 mp12X mp12Y mp12Z
                 pos13 = vec3 mp13X mp13Y mp13Z
                 pos23 = vec3 mp23X mp23Y mp23Z
-
-                clr12 = vec3 clr12R clr12G clr12B
-                clr13 = vec3 clr13R clr13G clr13B
-                clr23 = vec3 clr23R clr23G clr23B
-
-                -- clr12 = Vec3.scale (1/ 255) (vec3 100 100 100)
-                -- clr13 = Vec3.scale (1/ 255) (vec3 100 100 100)
-                -- clr23 = Vec3.scale (1/ 255) (vec3 100 100 100)
 
                 v12 = Vertex clr12 (Vec3.normalize pos12)
                 v13 = Vertex clr13 (Vec3.normalize pos13)

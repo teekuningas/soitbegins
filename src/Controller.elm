@@ -30,9 +30,13 @@ controllerUnif model shade =
       translation = Mat4.translate (vec3 x y 0) Mat4.identity
       scale = Mat4.scale (vec3 (size/xscale) (size/yscale) 1) Mat4.identity
   in
-  { scale = scale
+  { preScale = Mat4.identity 
+  , preRotation = Mat4.identity
+  , preTranslation = Mat4.identity
+  , scale = scale
   , rotation = Mat4.identity
   , translation = translation
+  , postScale = Mat4.identity
   , postRotation = Mat4.identity
   , postTranslation = Mat4.identity
   , perspective = 

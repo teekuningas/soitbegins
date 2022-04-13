@@ -5,6 +5,8 @@ import World exposing (heroMesh, fireMesh,
                        earthMesh, earthUnif,
                        sunMesh, sunUnif)
 
+import Receiver exposing (messageReceiver, decodeJson, RecvValue)
+
 import Controller exposing (controllerMeshUp, controllerMeshDown, controllerUnif, 
                             coordinatesWithinUpButton, coordinatesWithinDownButton)
 
@@ -14,10 +16,12 @@ import Common exposing (Model, DragState(..),
 import Math.Vector3 as Vec3 exposing (vec3)
 
 import Task
+import Time
+import List
 
 import Browser
 import Browser.Dom exposing (getViewportOf, Viewport)
-import Browser.Events exposing (onAnimationFrameDelta, onResize)
+import Browser.Events exposing (onAnimationFrame, onResize)
 
 import Platform.Sub exposing (batch)
 
@@ -40,44 +44,48 @@ type PointerEvent =
   | TouchUp Touch.Event
 
 
-type Msg = TimeDelta Float
+type Msg = TimeElapsed Time.Posix
   | ResizeMsg
-  | PointerEventMsg PointerEvent 
+  | PointerEventMsg PointerEvent
   | ViewportMsg (Result Browser.Dom.Error Browser.Dom.Viewport)
+  | RecvMsg RecvValue
+  | RecvMsgError String
+  | UpdateTimeMsg Time.Posix
 
 
 init : () -> (Model, Cmd Msg)
 init model = 
+  let earth = { locationX = 0
+              , locationY = 0
+              , locationZ = 0
+              , rotationTheta = 0
+              , rotationAxis = vec3 0 0 0 }
+  in
+
   ( { hero = { height = 70
              , latitude = 0
              , longitude = 0
              , rotationTheta = 0
              , power = 1 } 
-    , earth = { locationX = -7
-              , locationY = -30
-              , locationZ = 50
-              , rotationTheta = 0
-              , rotationAxis = vec3 -0.2 1 0 }
-              -- , rotationAxis = vec3 1 0 0 }
+    , earth = earth
     , camera = { azimoth = 0
                , elevation = 0 }
-    , elapsed = 0
+    , updateParams = { msgElapsed = 0
+                     , msgElapsedPrevious = 0
+                     , msgEarth = earth
+                     , msgEarthPrevious = earth
+                     , elapsed = 0
+                     , elapsedPrevious = 0 }
     , canvasDimensions = { width = 0, height = 0 }
     , controller = { dragState = NoDrag
                    , pointerOffset = { x = 0, y = 0 }
                    , previousOffset = { x = 0, y = 0 }
                    , upButtonDown = False
                    , downButtonDown = False } 
+    , messages = []
     }
   , Task.attempt ViewportMsg (getViewportOf "webgl-canvas") ) 
 
-
-fixOffset : { x : Int , y: Int } -> { width: Int, height: Int } -> { x : Int, y : Int }
-fixOffset offset viewport = { x = round (toFloat (offset.x * (Tuple.first viewportSize)) / 
-                                         (toFloat viewport.width)),
-                              y = round (toFloat (offset.y * (Tuple.second viewportSize)) / 
-                                         (toFloat viewport.height)) }
-       
 
 view : Model -> Html Msg
 view model =
@@ -86,14 +94,7 @@ view model =
     downButtonDown = model.controller.downButtonDown
   in
   div [] 
-    [ 
---    div [] [text ("Azimoth: " ++ (Debug.toString model.cameraAzimoth))]
---  , div [] [text ("Drag: " ++ (Debug.toString model.dragState))]
---  , div [] [text ("Elevation: " ++ (Debug.toString model.cameraElevation))]
---  , div [] [text ("Canvas dimensions: " ++ (Debug.toString model.canvasDimensions))]
---  , div [] [text ("Pointer offset: " ++ (Debug.toString model.pointerOffset))]
---  , div [] [ WebGL.toHtml [
-      div [] [ WebGL.toHtml [ 
+    [ div [] [ WebGL.toHtml [ 
                    width (Tuple.first viewportSize)
                  , height (Tuple.second viewportSize)
                  , style "display" "block"
@@ -143,31 +144,108 @@ view model =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ = 
-  batch [ (onAnimationFrameDelta (\x -> TimeDelta x))
-        , (onResize (\width height -> ResizeMsg)) ]
+  batch [ (onAnimationFrame (\x -> TimeElapsed x))
+        , (onResize (\width height -> ResizeMsg))
+        , (messageReceiver recvJson) ]
 
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of 
-    TimeDelta dt ->
-      ( let newPowerChange = (if model.controller.upButtonDown then 0.01 
-                              else (if model.controller.downButtonDown then -0.01 else 0))
 
-            newPower = max 0 (min 2 (model.hero.power + newPowerChange))
+    RecvMsgError message ->
+      ( { model | messages = [message] ++ model.messages }, Cmd.none )
+
+    -- Receive World parameters through a port.
+    -- Store parameters, but do not touch the real thing yet.
+
+    RecvMsg message ->
+      let oldEarth = model.updateParams.msgEarth
+          newEarth = { oldEarth | locationX = message.earth.locationX,
+                                  locationY = message.earth.locationY,
+                                  locationZ = message.earth.locationZ,
+                                  rotationTheta = message.earth.rotationTheta,
+                                  rotationAxis = (vec3 message.earth.rotationAxisX
+                                                       message.earth.rotationAxisY
+                                                       message.earth.rotationAxisZ) }
+
+          updateParams = model.updateParams
+          newUpdateParams = { updateParams | msgEarth = newEarth,
+                                             msgEarthPrevious = oldEarth }
+      in
+        ( { model | messages = [Debug.toString message] ++ model.messages,
+                    updateParams = newUpdateParams}, 
+          -- Also store the time
+          Task.perform UpdateTimeMsg Time.now)
+
+    -- For smooth interpolation we need to collect times 
+    -- when messages have been received
+
+    UpdateTimeMsg dt ->
+      let updateParams = model.updateParams
+          newUpdateParams = { updateParams | msgElapsed = toFloat (Time.posixToMillis dt),
+                                             msgElapsedPrevious = model.updateParams.msgElapsed }
+      in
+        ( { model | updateParams = newUpdateParams }, Cmd.none )
+
+    -- This is called for each animation frame update. Here we construct a interpolated world
+    -- which is reflected in the visuals
+
+    TimeElapsed dt ->
+      ( let 
+            -- Update hero params
+
+            timeInBetween = model.updateParams.elapsed - model.updateParams.elapsedPrevious
+
+            newPowerChange = (if model.controller.upButtonDown then 0.001
+                              else (if model.controller.downButtonDown then -0.001 else 0))
+
+            newPower = max 0 (min 2 (model.hero.power + (timeInBetween*newPowerChange)))
 
             hero = model.hero
-            newHero = { hero | rotationTheta = sin (model.elapsed / 1000) / 10, 
-                               power = newPower }
+            newHero = { hero | rotationTheta = sin (model.updateParams.elapsed / 1000) / 10, 
+                               power = newPower } 
+
+            -- Store time related params
+
+            updateParams = model.updateParams
+            newUpdateParams = { updateParams | elapsed = toFloat (Time.posixToMillis dt),
+                                               elapsedPrevious = updateParams.elapsed }
+
+            -- Interpolate between two received earth messages
+
+            earthPrevious = updateParams.msgEarthPrevious
+            earthNext = updateParams.msgEarth
+
+            weight = ((updateParams.elapsed - updateParams.msgElapsed) / 
+                      (updateParams.msgElapsed - updateParams.msgElapsedPrevious))
+
+            weightedAve p1 p2 w = 
+              p1 + w * (p2 - p1)
+
+            weightedAveVec v1 v2 w =
+              (vec3 (weightedAve (Vec3.getX v1) (Vec3.getX v2) w)
+                    (weightedAve (Vec3.getY v1) (Vec3.getY v2) w)
+                    (weightedAve (Vec3.getZ v1) (Vec3.getZ v2) w))
+
             earth = model.earth
-            newEarth = { earth | rotationTheta = (model.elapsed / 2000) }
+            newEarth = { earth | rotationTheta = weightedAve earthPrevious.rotationTheta earthNext.rotationTheta weight,
+                                 locationX = weightedAve earthPrevious.locationX earthNext.locationX weight,
+                                 locationY = weightedAve earthPrevious.locationY earthNext.locationY weight,
+                                 locationZ = weightedAve earthPrevious.locationZ earthNext.locationZ weight,
+                                 rotationAxis = weightedAveVec earthPrevious.rotationAxis earthNext.rotationAxis weight
+                       }
+
         in
+          -- Aand update the final model.
           { model | hero = newHero,
-                    earth = newEarth,
-                    elapsed = model.elapsed + dt
+                    updateParams = newUpdateParams,
+                    earth = newEarth
           } 
       , Cmd.none 
       )
+
+    -- Here mouse and touch related events are handled
 
     PointerEventMsg event -> 
       case event of 
@@ -307,6 +385,8 @@ update msg model =
                              controller = newController
                    }, Cmd.none )
 
+    -- Viewport related handlers
+
     ResizeMsg -> 
       (model, Task.attempt ViewportMsg (getViewportOf "webgl-canvas") ) 
 
@@ -319,6 +399,9 @@ update msg model =
         Err errMsg -> (model, Cmd.none)
 
 
+-- Here it begins.
+
+
 main : Program () Model Msg
 main =
   Browser.element { init = init
@@ -326,4 +409,22 @@ main =
                   , subscriptions = subscriptions
                   , update = update }
 
+
+-- Helpers
+
+
+recvJson : String -> Msg
+recvJson value =
+  case decodeJson value of
+    Ok result ->
+      RecvMsg result
+    Err errorMessage ->
+      RecvMsgError ("Error while receiving json: " ++ Debug.toString errorMessage)
+
+
+fixOffset : { x : Int , y: Int } -> { width: Int, height: Int } -> { x : Int, y : Int }
+fixOffset offset viewport = { x = round (toFloat (offset.x * (Tuple.first viewportSize)) / 
+                                         (toFloat viewport.width)),
+                              y = round (toFloat (offset.y * (Tuple.second viewportSize)) / 
+                                         (toFloat viewport.height)) }
 
