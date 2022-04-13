@@ -1,7 +1,5 @@
-module Common exposing (Model, viewportSize, meshPositionMap, 
-                        MeshList, Vertex, Uniforms, 
-                        DragState(..),
-                        vertexShader, fragmentShader)
+module Common exposing (Model, viewportSize, meshPositionMap, MeshList, Vertex, Uniforms, 
+                        DragState(..), vertexShader, fragmentShader)
 
 import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector3 as Vec3 exposing (vec3, Vec3)
@@ -13,6 +11,7 @@ viewportSize = (800, 800)
 
 
 type DragState = Drag | NoDrag
+
 
 type alias Hero = 
   { height : Float 
@@ -43,13 +42,23 @@ type alias Controller =
   , upButtonDown : Bool
   }
 
+type alias UpdateParameters = 
+  { msgElapsed : Float
+  , msgElapsedPrevious : Float
+  , msgEarth : Earth
+  , msgEarthPrevious : Earth
+  , elapsed : Float
+  , elapsedPrevious : Float
+  }
+
 type alias Model =
   { hero : Hero
   , earth : Earth
   , camera : Camera
-  , elapsed : Float
   , canvasDimensions : { width: Int, height: Int }
   , controller : Controller
+  , updateParams : UpdateParameters
+  , messages : List String
   }
 
 
@@ -65,9 +74,13 @@ meshPositionMap fun mesh =
 
 
 type alias Uniforms =
-  { scale : Mat4
+  { preScale : Mat4
+  , preRotation : Mat4
+  , preTranslation : Mat4
+  , scale : Mat4
   , rotation : Mat4
   , translation : Mat4
+  , postScale : Mat4
   , postRotation : Mat4
   , postTranslation : Mat4
   , perspective : Mat4
@@ -92,16 +105,21 @@ vertexShader =
      attribute vec3 color;
      uniform mat4 perspective;
      uniform mat4 camera;
+     uniform mat4 preScale;
+     uniform mat4 preRotation;
+     uniform mat4 preTranslation;
      uniform mat4 scale;
      uniform mat4 rotation;
      uniform mat4 translation;
+     uniform mat4 postScale;
      uniform mat4 postRotation;
      uniform mat4 postTranslation;
      varying vec3 vcolor;
      void main () {
-       gl_Position = (perspective * camera * postTranslation * 
-                      postRotation * translation * rotation *
-                      scale * vec4(position, 1.0));
+       gl_Position = (perspective * camera * 
+                      postTranslation * postRotation * postScale * 
+                      translation * rotation * scale *
+                      preTranslation * preRotation * preScale * vec4(position, 1.0));
        vcolor = color;
      }
   |]
