@@ -35,6 +35,8 @@ import Html.Events.Extra.Touch as Touch
 import WebGL
 
 
+-- Some type definitions
+
 type PointerEvent = 
     MouseUp Mouse.Event
   | MouseDown Mouse.Event
@@ -53,16 +55,18 @@ type Msg = TimeElapsed Time.Posix
   | UpdateTimeMsg Time.Posix
 
 
+-- The model initialization
+
 init : () -> (Model, Cmd Msg)
 init model = 
-  let earth = { locationX = 0
-              , locationY = 0
-              , locationZ = 0
+  let earth = { locationX = 100
+              , locationY = 100
+              , locationZ = 100
               , rotationTheta = 0 }
   in
 
-  ( { hero = { height = 1.05
-             , latitude = 0
+  ( { hero = { height = 1.15
+             , latitude = 0.5
              , longitude = 0
              , rotationTheta = 0
              , power = 1 } 
@@ -85,6 +89,8 @@ init model =
     }
   , Task.attempt ViewportMsg (getViewportOf "webgl-canvas") ) 
 
+
+-- The view function
 
 view : Model -> Html Msg
 view model =
@@ -141,12 +147,16 @@ view model =
     ]
 
 
+-- Subscriptions
+
 subscriptions : Model -> Sub Msg
 subscriptions _ = 
   batch [ (onAnimationFrame (\x -> TimeElapsed x))
         , (onResize (\width height -> ResizeMsg))
         , (messageReceiver recvJson) ]
 
+
+-- Updates
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
@@ -198,9 +208,13 @@ update msg model =
 
             newPower = max 0 (min 2 (model.hero.power + (timeInBetween*newPowerChange)))
 
+            newHeightChange = (newPower - 1) * timeInBetween / 20000
+            newHeight = max 1 (min 10 (model.hero.height + (timeInBetween*newHeightChange)))
+
             hero = model.hero
             newHero = { hero | rotationTheta = sin (model.updateParams.elapsed / 1000) / 10, 
-                               power = newPower } 
+                               power = newPower,
+                               height = newHeight } 
 
             -- Store time related params
 
@@ -400,7 +414,7 @@ main =
                   , update = update }
 
 
--- Helpers
+-- Some helpers
 
 
 recvJson : String -> Msg

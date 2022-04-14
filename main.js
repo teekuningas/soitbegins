@@ -6807,7 +6807,7 @@ var $elm$core$Task$attempt = F2(
 	});
 var $elm$browser$Browser$Dom$getViewportOf = _Browser_getViewportOf;
 var $author$project$Main$init = function (model) {
-	var earth = {locationX: 0, locationY: 0, locationZ: 0, rotationTheta: 0};
+	var earth = {locationX: 100, locationY: 100, locationZ: 100, rotationTheta: 0};
 	return _Utils_Tuple2(
 		{
 			camera: {azimoth: 0, elevation: 0},
@@ -6820,7 +6820,7 @@ var $author$project$Main$init = function (model) {
 				upButtonDown: false
 			},
 			earth: earth,
-			hero: {height: 1.05, latitude: 0, longitude: 0, power: 1, rotationTheta: 0},
+			hero: {height: 1.15, latitude: 0.5, longitude: 0, power: 1, rotationTheta: 0},
 			messages: _List_Nil,
 			updateParams: {elapsed: 0, elapsedPrevious: 0, msgEarth: earth, msgEarthPrevious: earth, msgElapsed: 0, msgElapsedPrevious: 0}
 		},
@@ -7586,10 +7586,16 @@ var $author$project$Main$update = F2(
 							$elm$core$Basics$max,
 							0,
 							A2($elm$core$Basics$min, 2, model.hero.power + (timeInBetween * newPowerChange)));
+						var newHeightChange = ((newPower - 1) * timeInBetween) / 20000;
+						var newHeight = A2(
+							$elm$core$Basics$max,
+							1,
+							A2($elm$core$Basics$min, 10, model.hero.height + (timeInBetween * newHeightChange)));
 						var hero = model.hero;
 						var newHero = _Utils_update(
 							hero,
 							{
+								height: newHeight,
 								power: newPower,
 								rotationTheta: $elm$core$Basics$sin(model.updateParams.elapsed / 1000) / 10
 							});
@@ -8196,18 +8202,96 @@ var $author$project$World$earthMesh = function () {
 						$author$project$World$icosaMeshList(axisColor)))
 				])));
 }();
-var $author$project$World$makeOverviewCamera = function (model) {
-	return A3(
-		$elm_explorations$linear_algebra$Math$Matrix4$makeLookAt,
-		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 5, 0, 3),
-		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, model.earth.locationX, model.earth.locationY, model.earth.locationZ),
-		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 1, 0));
+var $elm_explorations$linear_algebra$Math$Vector3$cross = _MJS_v3cross;
+var $elm_explorations$linear_algebra$Math$Vector3$j = A3(_MJS_v3, 0, 1, 0);
+var $elm_explorations$linear_algebra$Math$Matrix4$makeRotate = _MJS_m4x4makeRotate;
+var $elm_explorations$linear_algebra$Math$Matrix4$mul = _MJS_m4x4mul;
+var $elm_explorations$linear_algebra$Math$Matrix4$transform = _MJS_v3mul4x4;
+var $author$project$World$makeHeroCamera = function (model) {
+	var locStart = A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0, 0.15);
+	var elevation = model.camera.elevation;
+	var earthLoc = A3($elm_explorations$linear_algebra$Math$Vector3$vec3, model.earth.locationX, model.earth.locationY, model.earth.locationZ);
+	var earthAxis = A2(
+		$elm_explorations$linear_algebra$Math$Matrix4$transform,
+		A2(
+			$elm_explorations$linear_algebra$Math$Matrix4$makeRotate,
+			(23.5 / 180) * $elm$core$Basics$pi,
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0, 1)),
+		$elm_explorations$linear_algebra$Math$Vector3$j);
+	var earthRotationRotation = A2($elm_explorations$linear_algebra$Math$Matrix4$makeRotate, model.earth.rotationTheta, earthAxis);
+	var latitudeAxis = A2(
+		$elm_explorations$linear_algebra$Math$Vector3$cross,
+		earthAxis,
+		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 1, 0, 0));
+	var latitudeRotation = A2($elm_explorations$linear_algebra$Math$Matrix4$makeRotate, ($elm$core$Basics$pi / 2) - model.hero.latitude, latitudeAxis);
+	var longitudeRotation = A2($elm_explorations$linear_algebra$Math$Matrix4$makeRotate, model.hero.longitude, earthAxis);
+	var azimoth = model.camera.azimoth;
+	var locAz = A2(
+		$elm_explorations$linear_algebra$Math$Matrix4$transform,
+		A2(
+			$elm_explorations$linear_algebra$Math$Matrix4$makeRotate,
+			azimoth,
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 1, 0)),
+		locStart);
+	var locElv = A2(
+		$elm_explorations$linear_algebra$Math$Matrix4$transform,
+		A2(
+			$elm_explorations$linear_algebra$Math$Matrix4$makeRotate,
+			elevation,
+			A2(
+				$elm_explorations$linear_algebra$Math$Vector3$cross,
+				locAz,
+				A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 1, 0))),
+		locAz);
+	var alignRotation = A2(
+		$elm_explorations$linear_algebra$Math$Matrix4$makeRotate,
+		(23.5 / 180) * $elm$core$Basics$pi,
+		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0, 1));
+	var rotateAround = A3(
+		$elm$core$List$foldl,
+		$elm_explorations$linear_algebra$Math$Matrix4$mul,
+		$elm_explorations$linear_algebra$Math$Matrix4$identity,
+		_List_fromArray(
+			[alignRotation, latitudeRotation, longitudeRotation, earthRotationRotation]));
+	var cameraTransformation = A3(
+		$elm$core$List$foldl,
+		$elm_explorations$linear_algebra$Math$Matrix4$mul,
+		$elm_explorations$linear_algebra$Math$Matrix4$identity,
+		_List_fromArray(
+			[
+				A2(
+				$elm_explorations$linear_algebra$Math$Matrix4$translate,
+				A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, model.hero.height, 0),
+				$elm_explorations$linear_algebra$Math$Matrix4$identity),
+				rotateAround,
+				A2($elm_explorations$linear_algebra$Math$Matrix4$translate, earthLoc, $elm_explorations$linear_algebra$Math$Matrix4$identity)
+			]));
+	var cameraLocation = A2($elm_explorations$linear_algebra$Math$Matrix4$transform, cameraTransformation, locElv);
+	var targetTransformation = A3(
+		$elm$core$List$foldl,
+		$elm_explorations$linear_algebra$Math$Matrix4$mul,
+		$elm_explorations$linear_algebra$Math$Matrix4$identity,
+		_List_fromArray(
+			[
+				A2(
+				$elm_explorations$linear_algebra$Math$Matrix4$translate,
+				A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, model.hero.height, 0),
+				$elm_explorations$linear_algebra$Math$Matrix4$identity),
+				rotateAround,
+				A2($elm_explorations$linear_algebra$Math$Matrix4$translate, earthLoc, $elm_explorations$linear_algebra$Math$Matrix4$identity)
+			]));
+	var targetLocation = A2(
+		$elm_explorations$linear_algebra$Math$Matrix4$transform,
+		targetTransformation,
+		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0, 0));
+	var up = A2($elm_explorations$linear_algebra$Math$Matrix4$transform, rotateAround, $elm_explorations$linear_algebra$Math$Vector3$j);
+	return A3($elm_explorations$linear_algebra$Math$Matrix4$makeLookAt, cameraLocation, targetLocation, up);
 };
 var $elm_explorations$linear_algebra$Math$Matrix4$makePerspective = _MJS_m4x4makePerspective;
 var $author$project$World$generalUnif = function (model) {
 	var aspect = model.canvasDimensions.width / model.canvasDimensions.height;
 	return {
-		camera: $author$project$World$makeOverviewCamera(model),
+		camera: $author$project$World$makeHeroCamera(model),
 		perspective: A4($elm_explorations$linear_algebra$Math$Matrix4$makePerspective, 45, aspect, 0.01, 50000),
 		postRotation: $elm_explorations$linear_algebra$Math$Matrix4$identity,
 		postScale: $elm_explorations$linear_algebra$Math$Matrix4$identity,
@@ -8221,17 +8305,11 @@ var $author$project$World$generalUnif = function (model) {
 		translation: $elm_explorations$linear_algebra$Math$Matrix4$identity
 	};
 };
-var $elm_explorations$linear_algebra$Math$Matrix4$makeRotate = _MJS_m4x4makeRotate;
-var $elm_explorations$linear_algebra$Math$Matrix4$mul = _MJS_m4x4mul;
 var $author$project$World$earthUnif = function (model) {
 	var unif = $author$project$World$generalUnif(model);
 	var translation = A2(
 		$elm_explorations$linear_algebra$Math$Matrix4$translate,
 		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, model.earth.locationX, model.earth.locationY, model.earth.locationZ),
-		$elm_explorations$linear_algebra$Math$Matrix4$identity);
-	var scale = A2(
-		$elm_explorations$linear_algebra$Math$Matrix4$scale,
-		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 1, 1, 1),
 		$elm_explorations$linear_algebra$Math$Matrix4$identity);
 	var rotation = A2(
 		$elm_explorations$linear_algebra$Math$Matrix4$mul,
@@ -8245,7 +8323,7 @@ var $author$project$World$earthUnif = function (model) {
 			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 1, 0)));
 	return _Utils_update(
 		unif,
-		{rotation: rotation, scale: scale, translation: translation});
+		{rotation: rotation, translation: translation});
 };
 var $elm_explorations$webgl$WebGL$Internal$DepthTest = F4(
 	function (a, b, c, d) {
@@ -8338,9 +8416,6 @@ var $author$project$World$fireMesh = function () {
 					$author$project$World$icosaMeshList(fireColor)
 				])));
 }();
-var $elm_explorations$linear_algebra$Math$Vector3$cross = _MJS_v3cross;
-var $elm_explorations$linear_algebra$Math$Vector3$j = A3(_MJS_v3, 0, 1, 0);
-var $elm_explorations$linear_algebra$Math$Matrix4$transform = _MJS_v3mul4x4;
 var $author$project$World$heroUnif = function (model) {
 	var unif = $author$project$World$generalUnif(model);
 	var translation = A2(
@@ -8377,7 +8452,7 @@ var $author$project$World$heroUnif = function (model) {
 		$elm_explorations$linear_algebra$Math$Vector3$cross,
 		earthAxis,
 		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 1, 0, 0));
-	var latitudeRotation = A2($elm_explorations$linear_algebra$Math$Matrix4$makeRotate, ($elm$core$Basics$pi / 2) + model.hero.latitude, latitudeAxis);
+	var latitudeRotation = A2($elm_explorations$linear_algebra$Math$Matrix4$makeRotate, ($elm$core$Basics$pi / 2) - model.hero.latitude, latitudeAxis);
 	var longitudeRotation = A2($elm_explorations$linear_algebra$Math$Matrix4$makeRotate, model.hero.longitude, earthAxis);
 	var alignRotation = A2(
 		$elm_explorations$linear_algebra$Math$Matrix4$makeRotate,
@@ -8727,14 +8802,13 @@ var $author$project$World$sunMesh = function () {
 }();
 var $author$project$World$sunUnif = function (model) {
 	var unif = $author$project$World$generalUnif(model);
+	var scale = A2(
+		$elm_explorations$linear_algebra$Math$Matrix4$scale,
+		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 1, 1, 1),
+		$elm_explorations$linear_algebra$Math$Matrix4$identity);
 	return _Utils_update(
 		unif,
-		{
-			scale: A2(
-				$elm_explorations$linear_algebra$Math$Matrix4$scale,
-				A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 1, 1, 1),
-				$elm_explorations$linear_algebra$Math$Matrix4$identity)
-		});
+		{scale: scale});
 };
 var $elm_explorations$webgl$WebGL$Internal$Alpha = function (a) {
 	return {$: 'Alpha', a: a};
