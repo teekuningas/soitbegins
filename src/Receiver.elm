@@ -5,16 +5,16 @@ port module Receiver exposing (messageReceiver, decodeJson,
 import Json.Decode
 
 
+-- Some types and functions for handling
+-- port communication
+
 type alias RecvValue = { earth : RecvValueEarth }
 
 
 type alias RecvValueEarth = { locationX : Float
                             , locationY : Float
                             , locationZ : Float
-                            , rotationTheta : Float
-                            , rotationAxisX : Float
-                            , rotationAxisY : Float
-                            , rotationAxisZ : Float } 
+                            , rotationTheta : Float }
 
 
 port messageReceiver : (String -> msg) -> Sub msg
@@ -26,14 +26,11 @@ decodeJson value = Json.Decode.decodeString msgDecoder value
 
 msgEarthDecoder : Json.Decode.Decoder RecvValueEarth 
 msgEarthDecoder =
-  Json.Decode.map7 RecvValueEarth
+  Json.Decode.map4 RecvValueEarth
     (Json.Decode.field "locationX" Json.Decode.float)
     (Json.Decode.field "locationY" Json.Decode.float)
     (Json.Decode.field "locationZ" Json.Decode.float)
     (Json.Decode.field "rotationTheta" Json.Decode.float)
-    (Json.Decode.field "rotationAxisX" Json.Decode.float)
-    (Json.Decode.field "rotationAxisY" Json.Decode.float)
-    (Json.Decode.field "rotationAxisZ" Json.Decode.float)
     
 
 msgDecoder : Json.Decode.Decoder RecvValue

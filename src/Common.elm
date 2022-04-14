@@ -2,13 +2,18 @@ module Common exposing (Model, viewportSize, meshPositionMap, MeshList, Vertex, 
                         DragState(..), vertexShader, fragmentShader)
 
 import Math.Matrix4 as Mat4 exposing (Mat4)
-import Math.Vector3 as Vec3 exposing (vec3, Vec3)
+import Math.Vector3 as Vec3 exposing (Vec3)
 
 import WebGL exposing (Shader)
+
+
+-- Some global variables
 
 viewportSize : (Int, Int)
 viewportSize = (800, 800)
 
+
+-- Some type definitions
 
 type DragState = Drag | NoDrag
 
@@ -21,18 +26,20 @@ type alias Hero =
   , power : Float
   }
 
+
 type alias Earth = 
   { locationX : Float
   , locationY : Float
   , locationZ : Float
   , rotationTheta : Float
-  , rotationAxis : Vec3
   }
+
 
 type alias Camera = 
   { azimoth : Float
   , elevation : Float
   }
+
 
 type alias Controller = 
   { dragState : DragState 
@@ -41,6 +48,7 @@ type alias Controller =
   , downButtonDown : Bool
   , upButtonDown : Bool
   }
+
 
 type alias UpdateParameters = 
   { msgElapsed : Float
@@ -51,6 +59,7 @@ type alias UpdateParameters =
   , elapsedPrevious : Float
   }
 
+
 type alias Model =
   { hero : Hero
   , earth : Earth
@@ -60,17 +69,6 @@ type alias Model =
   , updateParams : UpdateParameters
   , messages : List String
   }
-
-
-meshPositionMap : (Vec3 -> Vec3) -> MeshList -> MeshList
-meshPositionMap fun mesh =
-  case mesh of
-    [] ->
-      []
-    (v1, v2, v3) :: xs ->
-      [ ( { v1 | position = fun v1.position }
-        , { v2 | position = fun v2.position }
-        , { v3 | position = fun v3.position } ) ] ++ (meshPositionMap fun xs)
 
 
 type alias Uniforms =
@@ -97,6 +95,8 @@ type alias Vertex =
 
 type alias MeshList = List (Vertex, Vertex, Vertex)
 
+
+-- Vertex shader
 
 vertexShader : Shader Vertex Uniforms { vcolor : Vec3 }
 vertexShader =
@@ -125,6 +125,8 @@ vertexShader =
   |]
 
 
+-- Fragment shader
+
 fragmentShader : Shader {} Uniforms { vcolor : Vec3 }
 fragmentShader =
   [glsl|
@@ -135,4 +137,18 @@ fragmentShader =
       gl_FragColor = shade * vec4(vcolor, 1.0);
     }
   |]
+
+
+-- A utility map for Vertex positions
+
+meshPositionMap : (Vec3 -> Vec3) -> MeshList -> MeshList
+meshPositionMap fun mesh =
+  case mesh of
+    [] ->
+      []
+    (v1, v2, v3) :: xs ->
+      [ ( { v1 | position = fun v1.position }
+        , { v2 | position = fun v2.position }
+        , { v3 | position = fun v3.position } ) ] ++ (meshPositionMap fun xs)
+
 

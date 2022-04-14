@@ -35,6 +35,8 @@ import Html.Events.Extra.Touch as Touch
 import WebGL
 
 
+-- Some type definitions
+
 type PointerEvent = 
     MouseUp Mouse.Event
   | MouseDown Mouse.Event
@@ -53,17 +55,18 @@ type Msg = TimeElapsed Time.Posix
   | UpdateTimeMsg Time.Posix
 
 
+-- The model initialization
+
 init : () -> (Model, Cmd Msg)
 init model = 
-  let earth = { locationX = 0
-              , locationY = 0
-              , locationZ = 0
-              , rotationTheta = 0
-              , rotationAxis = vec3 0 0 0 }
+  let earth = { locationX = 100
+              , locationY = 100
+              , locationZ = 100
+              , rotationTheta = 0 }
   in
 
-  ( { hero = { height = 70
-             , latitude = 0
+  ( { hero = { height = 1.15
+             , latitude = 0.5
              , longitude = 0
              , rotationTheta = 0
              , power = 1 } 
@@ -86,6 +89,8 @@ init model =
     }
   , Task.attempt ViewportMsg (getViewportOf "webgl-canvas") ) 
 
+
+-- The view function
 
 view : Model -> Html Msg
 view model =
@@ -142,12 +147,16 @@ view model =
     ]
 
 
+-- Subscriptions
+
 subscriptions : Model -> Sub Msg
 subscriptions _ = 
   batch [ (onAnimationFrame (\x -> TimeElapsed x))
         , (onResize (\width height -> ResizeMsg))
         , (messageReceiver recvJson) ]
 
+
+-- Updates
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
@@ -164,10 +173,7 @@ update msg model =
           newEarth = { oldEarth | locationX = message.earth.locationX,
                                   locationY = message.earth.locationY,
                                   locationZ = message.earth.locationZ,
-                                  rotationTheta = message.earth.rotationTheta,
-                                  rotationAxis = (vec3 message.earth.rotationAxisX
-                                                       message.earth.rotationAxisY
-                                                       message.earth.rotationAxisZ) }
+                                  rotationTheta = message.earth.rotationTheta }
 
           updateParams = model.updateParams
           newUpdateParams = { updateParams | msgEarth = newEarth,
@@ -202,9 +208,13 @@ update msg model =
 
             newPower = max 0 (min 2 (model.hero.power + (timeInBetween*newPowerChange)))
 
+            newHeightChange = (newPower - 1) * timeInBetween / 20000
+            newHeight = max 1 (min 10 (model.hero.height + (timeInBetween*newHeightChange)))
+
             hero = model.hero
             newHero = { hero | rotationTheta = sin (model.updateParams.elapsed / 1000) / 10, 
-                               power = newPower } 
+                               power = newPower,
+                               height = newHeight } 
 
             -- Store time related params
 
@@ -223,17 +233,11 @@ update msg model =
             weightedAve p1 p2 w = 
               p1 + w * (p2 - p1)
 
-            weightedAveVec v1 v2 w =
-              (vec3 (weightedAve (Vec3.getX v1) (Vec3.getX v2) w)
-                    (weightedAve (Vec3.getY v1) (Vec3.getY v2) w)
-                    (weightedAve (Vec3.getZ v1) (Vec3.getZ v2) w))
-
             earth = model.earth
             newEarth = { earth | rotationTheta = weightedAve earthPrevious.rotationTheta earthNext.rotationTheta weight,
                                  locationX = weightedAve earthPrevious.locationX earthNext.locationX weight,
                                  locationY = weightedAve earthPrevious.locationY earthNext.locationY weight,
-                                 locationZ = weightedAve earthPrevious.locationZ earthNext.locationZ weight,
-                                 rotationAxis = weightedAveVec earthPrevious.rotationAxis earthNext.rotationAxis weight
+                                 locationZ = weightedAve earthPrevious.locationZ earthNext.locationZ weight
                        }
 
         in
@@ -410,7 +414,7 @@ main =
                   , update = update }
 
 
--- Helpers
+-- Some helpers
 
 
 recvJson : String -> Msg

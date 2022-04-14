@@ -10,12 +10,16 @@ import Math.Vector3 as Vec3 exposing (vec3, Vec3)
 import WebGL exposing (Mesh)
 
 
+-- Some global controller related variables 
+
 controllerParams : { x: Float, y: Float, size: Float, trans: Float }
 controllerParams = { x = 0.5
                    , y = -0.2 
                    , size = 0.2
                    , trans = 0.3 }
 
+
+-- Controller uniforms
 
 controllerUnif : Model -> Float -> Uniforms
 controllerUnif model shade =
@@ -46,6 +50,8 @@ controllerUnif model shade =
   , shade = shade } 
 
 
+-- Controller meshes
+
 controllerMeshDown : Mesh Vertex
 controllerMeshDown =
   let trans = controllerParams.trans
@@ -60,7 +66,6 @@ controllerMeshDown =
   ]
   |> List.concat
   |> WebGL.triangles
-
 
 controllerMeshUp : Mesh Vertex
 controllerMeshUp =
@@ -78,7 +83,8 @@ controllerMeshUp =
   |> WebGL.triangles
 
 
-
+-- Helpers for deciding if touch / cursor location
+-- is within a control
 
 coordinatesWithinUpButton : Model -> (Float, Float) -> Bool
 coordinatesWithinUpButton model offset = 
@@ -89,13 +95,15 @@ coordinatesWithinDownButton model offset =
   coordinatesWithinButton model offset (-controllerParams.trans - 0.5)
 
 
--- heuristic square-based approach (instead of triangle)
 coordinatesWithinButton : Model -> (Float, Float) -> Float -> Bool
 coordinatesWithinButton model pointerOffset trans =
   let yscale = ((toFloat model.canvasDimensions.height) /
                 (toFloat (Tuple.second viewportSize)))
       xscale = ((toFloat model.canvasDimensions.width) /
                 (toFloat (Tuple.first viewportSize)))
+
+      -- Uses a heuristic square-based approach to decide if 
+      -- the cursor / touch is within a control
 
       size = controllerParams.size
       fixedTrans = (trans * size) / yscale
