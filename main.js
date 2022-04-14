@@ -4287,6 +4287,52 @@ function _Browser_load(url)
 }
 
 
+
+function _Time_now(millisToPosix)
+{
+	return _Scheduler_binding(function(callback)
+	{
+		callback(_Scheduler_succeed(millisToPosix(Date.now())));
+	});
+}
+
+var _Time_setInterval = F2(function(interval, task)
+{
+	return _Scheduler_binding(function(callback)
+	{
+		var id = setInterval(function() { _Scheduler_rawSpawn(task); }, interval);
+		return function() { clearInterval(id); };
+	});
+});
+
+function _Time_here()
+{
+	return _Scheduler_binding(function(callback)
+	{
+		callback(_Scheduler_succeed(
+			A2($elm$time$Time$customZone, -(new Date().getTimezoneOffset()), _List_Nil)
+		));
+	});
+}
+
+
+function _Time_getZoneName()
+{
+	return _Scheduler_binding(function(callback)
+	{
+		try
+		{
+			var name = $elm$time$Time$Name(Intl.DateTimeFormat().resolvedOptions().timeZone);
+		}
+		catch (e)
+		{
+			var name = $elm$time$Time$Offset(new Date().getTimezoneOffset());
+		}
+		callback(_Scheduler_succeed(name));
+	});
+}
+
+
 /*
  * Copyright (c) 2010 Mozilla Corporation
  * Copyright (c) 2010 Vladimir Vukicevic
@@ -5300,52 +5346,6 @@ var _MJS_m4x4makeBasis = F3(function(vx, vy, vz) {
 
     return r;
 });
-
-
-
-function _Time_now(millisToPosix)
-{
-	return _Scheduler_binding(function(callback)
-	{
-		callback(_Scheduler_succeed(millisToPosix(Date.now())));
-	});
-}
-
-var _Time_setInterval = F2(function(interval, task)
-{
-	return _Scheduler_binding(function(callback)
-	{
-		var id = setInterval(function() { _Scheduler_rawSpawn(task); }, interval);
-		return function() { clearInterval(id); };
-	});
-});
-
-function _Time_here()
-{
-	return _Scheduler_binding(function(callback)
-	{
-		callback(_Scheduler_succeed(
-			A2($elm$time$Time$customZone, -(new Date().getTimezoneOffset()), _List_Nil)
-		));
-	});
-}
-
-
-function _Time_getZoneName()
-{
-	return _Scheduler_binding(function(callback)
-	{
-		try
-		{
-			var name = $elm$time$Time$Name(Intl.DateTimeFormat().resolvedOptions().timeZone);
-		}
-		catch (e)
-		{
-			var name = $elm$time$Time$Offset(new Date().getTimezoneOffset());
-		}
-		callback(_Scheduler_succeed(name));
-	});
-}
 
 
 function _WebGL_log(/* msg */) {
@@ -6806,15 +6806,8 @@ var $elm$core$Task$attempt = F2(
 						task))));
 	});
 var $elm$browser$Browser$Dom$getViewportOf = _Browser_getViewportOf;
-var $elm_explorations$linear_algebra$Math$Vector3$vec3 = _MJS_v3;
 var $author$project$Main$init = function (model) {
-	var earth = {
-		locationX: 0,
-		locationY: 0,
-		locationZ: 0,
-		rotationAxis: A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0, 0),
-		rotationTheta: 0
-	};
+	var earth = {locationX: 0, locationY: 0, locationZ: 0, rotationTheta: 0};
 	return _Utils_Tuple2(
 		{
 			camera: {azimoth: 0, elevation: 0},
@@ -6827,7 +6820,7 @@ var $author$project$Main$init = function (model) {
 				upButtonDown: false
 			},
 			earth: earth,
-			hero: {height: 70, latitude: 0, longitude: 0, power: 1, rotationTheta: 0},
+			hero: {height: 1.05, latitude: 0, longitude: 0, power: 1, rotationTheta: 0},
 			messages: _List_Nil,
 			updateParams: {elapsed: 0, elapsedPrevious: 0, msgEarth: earth, msgEarthPrevious: earth, msgElapsed: 0, msgElapsedPrevious: 0}
 		},
@@ -7396,22 +7389,19 @@ var $elm$json$Json$Decode$decodeString = _Json_runOnString;
 var $author$project$Receiver$RecvValue = function (earth) {
 	return {earth: earth};
 };
-var $author$project$Receiver$RecvValueEarth = F7(
-	function (locationX, locationY, locationZ, rotationTheta, rotationAxisX, rotationAxisY, rotationAxisZ) {
-		return {locationX: locationX, locationY: locationY, locationZ: locationZ, rotationAxisX: rotationAxisX, rotationAxisY: rotationAxisY, rotationAxisZ: rotationAxisZ, rotationTheta: rotationTheta};
+var $author$project$Receiver$RecvValueEarth = F4(
+	function (locationX, locationY, locationZ, rotationTheta) {
+		return {locationX: locationX, locationY: locationY, locationZ: locationZ, rotationTheta: rotationTheta};
 	});
 var $elm$json$Json$Decode$float = _Json_decodeFloat;
-var $elm$json$Json$Decode$map7 = _Json_map7;
-var $author$project$Receiver$msgEarthDecoder = A8(
-	$elm$json$Json$Decode$map7,
+var $elm$json$Json$Decode$map4 = _Json_map4;
+var $author$project$Receiver$msgEarthDecoder = A5(
+	$elm$json$Json$Decode$map4,
 	$author$project$Receiver$RecvValueEarth,
 	A2($elm$json$Json$Decode$field, 'locationX', $elm$json$Json$Decode$float),
 	A2($elm$json$Json$Decode$field, 'locationY', $elm$json$Json$Decode$float),
 	A2($elm$json$Json$Decode$field, 'locationZ', $elm$json$Json$Decode$float),
-	A2($elm$json$Json$Decode$field, 'rotationTheta', $elm$json$Json$Decode$float),
-	A2($elm$json$Json$Decode$field, 'rotationAxisX', $elm$json$Json$Decode$float),
-	A2($elm$json$Json$Decode$field, 'rotationAxisY', $elm$json$Json$Decode$float),
-	A2($elm$json$Json$Decode$field, 'rotationAxisZ', $elm$json$Json$Decode$float));
+	A2($elm$json$Json$Decode$field, 'rotationTheta', $elm$json$Json$Decode$float));
 var $author$project$Receiver$msgDecoder = A2(
 	$elm$json$Json$Decode$map,
 	$author$project$Receiver$RecvValue,
@@ -7488,9 +7478,6 @@ var $author$project$Controller$coordinatesWithinUpButton = F2(
 		return A3($author$project$Controller$coordinatesWithinButton, model, offset, $author$project$Controller$controllerParams.trans + 0.5);
 	});
 var $elm$core$Basics$ge = _Utils_ge;
-var $elm_explorations$linear_algebra$Math$Vector3$getX = _MJS_v3getX;
-var $elm_explorations$linear_algebra$Math$Vector3$getY = _MJS_v3getY;
-var $elm_explorations$linear_algebra$Math$Vector3$getZ = _MJS_v3getZ;
 var $elm$core$List$head = function (list) {
 	if (list.b) {
 		var x = list.a;
@@ -7546,13 +7533,7 @@ var $author$project$Main$update = F2(
 				var oldEarth = model.updateParams.msgEarth;
 				var newEarth = _Utils_update(
 					oldEarth,
-					{
-						locationX: message.earth.locationX,
-						locationY: message.earth.locationY,
-						locationZ: message.earth.locationZ,
-						rotationAxis: A3($elm_explorations$linear_algebra$Math$Vector3$vec3, message.earth.rotationAxisX, message.earth.rotationAxisY, message.earth.rotationAxisZ),
-						rotationTheta: message.earth.rotationTheta
-					});
+					{locationX: message.earth.locationX, locationY: message.earth.locationY, locationZ: message.earth.locationZ, rotationTheta: message.earth.rotationTheta});
 				var newUpdateParams = _Utils_update(
 					updateParams,
 					{msgEarth: newEarth, msgEarthPrevious: oldEarth});
@@ -7591,26 +7572,6 @@ var $author$project$Main$update = F2(
 							function (p1, p2, w) {
 								return p1 + (w * (p2 - p1));
 							});
-						var weightedAveVec = F3(
-							function (v1, v2, w) {
-								return A3(
-									$elm_explorations$linear_algebra$Math$Vector3$vec3,
-									A3(
-										weightedAve,
-										$elm_explorations$linear_algebra$Math$Vector3$getX(v1),
-										$elm_explorations$linear_algebra$Math$Vector3$getX(v2),
-										w),
-									A3(
-										weightedAve,
-										$elm_explorations$linear_algebra$Math$Vector3$getY(v1),
-										$elm_explorations$linear_algebra$Math$Vector3$getY(v2),
-										w),
-									A3(
-										weightedAve,
-										$elm_explorations$linear_algebra$Math$Vector3$getZ(v1),
-										$elm_explorations$linear_algebra$Math$Vector3$getZ(v2),
-										w));
-							});
 						var updateParams = model.updateParams;
 						var weight = (updateParams.elapsed - updateParams.msgElapsed) / (updateParams.msgElapsed - updateParams.msgElapsedPrevious);
 						var timeInBetween = model.updateParams.elapsed - model.updateParams.elapsedPrevious;
@@ -7641,7 +7602,6 @@ var $author$project$Main$update = F2(
 								locationX: A3(weightedAve, earthPrevious.locationX, earthNext.locationX, weight),
 								locationY: A3(weightedAve, earthPrevious.locationY, earthNext.locationY, weight),
 								locationZ: A3(weightedAve, earthPrevious.locationZ, earthNext.locationZ, weight),
-								rotationAxis: A3(weightedAveVec, earthPrevious.rotationAxis, earthNext.rotationAxis, weight),
 								rotationTheta: A3(weightedAve, earthPrevious.rotationTheta, earthNext.rotationTheta, weight)
 							});
 						return _Utils_update(
@@ -7898,6 +7858,7 @@ var $elm_explorations$webgl$WebGL$Mesh3 = F2(
 	});
 var $elm_explorations$webgl$WebGL$triangles = $elm_explorations$webgl$WebGL$Mesh3(
 	{elemSize: 3, indexSize: 0, mode: 4});
+var $elm_explorations$linear_algebra$Math$Vector3$vec3 = _MJS_v3;
 var $author$project$Controller$controllerMeshDown = function () {
 	var trans = $author$project$Controller$controllerParams.trans;
 	return $elm_explorations$webgl$WebGL$triangles(
@@ -8121,6 +8082,9 @@ var $author$project$World$icosaMeshList = function (clr) {
 		]);
 };
 var $elm_explorations$linear_algebra$Math$Vector3$scale = _MJS_v3scale;
+var $elm_explorations$linear_algebra$Math$Vector3$getX = _MJS_v3getX;
+var $elm_explorations$linear_algebra$Math$Vector3$getY = _MJS_v3getY;
+var $elm_explorations$linear_algebra$Math$Vector3$getZ = _MJS_v3getZ;
 var $author$project$World$subdivideProject = F2(
 	function (mesh, clr) {
 		var helper = function (m) {
@@ -8183,104 +8147,68 @@ var $author$project$World$earthMesh = function () {
 		$elm_explorations$linear_algebra$Math$Vector3$scale,
 		1 / 255,
 		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 115, 210, 22));
+	var axisColor = A2(
+		$elm_explorations$linear_algebra$Math$Vector3$scale,
+		1 / 255,
+		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 204, 0, 0));
 	return $elm_explorations$webgl$WebGL$triangles(
-		A2(
-			$author$project$World$subdivideProject,
-			A2(
-				$author$project$World$subdivideProject,
-				$author$project$World$icosaMeshList(divideColor),
-				earthColor),
-			divideColor));
+		$elm$core$List$concat(
+			_List_fromArray(
+				[
+					A2(
+					$author$project$World$subdivideProject,
+					A2(
+						$author$project$World$subdivideProject,
+						$author$project$World$icosaMeshList(divideColor),
+						earthColor),
+					divideColor),
+					A2(
+					$author$project$Common$meshPositionMap,
+					$elm_explorations$linear_algebra$Math$Vector3$add(
+						A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 1.5, 0)),
+					A2(
+						$author$project$Common$meshPositionMap,
+						$elm_explorations$linear_algebra$Math$Vector3$scale(0.1),
+						$author$project$World$icosaMeshList(axisColor))),
+					A2(
+					$author$project$Common$meshPositionMap,
+					$elm_explorations$linear_algebra$Math$Vector3$add(
+						A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, -1.5, 0)),
+					A2(
+						$author$project$Common$meshPositionMap,
+						$elm_explorations$linear_algebra$Math$Vector3$scale(0.1),
+						$author$project$World$icosaMeshList(axisColor))),
+					A2(
+					$author$project$Common$meshPositionMap,
+					$elm_explorations$linear_algebra$Math$Vector3$add(
+						A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 1.25, 0)),
+					A2(
+						$author$project$Common$meshPositionMap,
+						$elm_explorations$linear_algebra$Math$Vector3$scale(0.1),
+						$author$project$World$icosaMeshList(axisColor))),
+					A2(
+					$author$project$Common$meshPositionMap,
+					$elm_explorations$linear_algebra$Math$Vector3$add(
+						A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, -1.25, 0)),
+					A2(
+						$author$project$Common$meshPositionMap,
+						$elm_explorations$linear_algebra$Math$Vector3$scale(0.1),
+						$author$project$World$icosaMeshList(axisColor)))
+				])));
 }();
-var $elm$core$Basics$cos = _Basics_cos;
-var $author$project$World$cartesianFromSpherical = function (spherical) {
-	var height = spherical.a;
-	var latitude = spherical.b;
-	var longitude = spherical.c;
-	return _Utils_Tuple3(
-		(height * $elm$core$Basics$sin(latitude)) * $elm$core$Basics$cos(longitude),
-		height * $elm$core$Basics$cos(latitude),
-		(height * $elm$core$Basics$sin(latitude)) * $elm$core$Basics$sin(longitude));
-};
-var $elm_explorations$linear_algebra$Math$Vector3$cross = _MJS_v3cross;
-var $elm_explorations$linear_algebra$Math$Matrix4$makeRotate = _MJS_m4x4makeRotate;
-var $elm_explorations$linear_algebra$Math$Matrix4$transform = _MJS_v3mul4x4;
-var $author$project$World$heroLocation = function (model) {
-	var rotation = A2($elm_explorations$linear_algebra$Math$Matrix4$makeRotate, model.earth.rotationTheta, model.earth.rotationAxis);
-	var longitude = model.hero.longitude;
-	var latitude = model.hero.latitude;
-	var height = model.hero.height;
-	var localLocation = function () {
-		var _v0 = $author$project$World$cartesianFromSpherical(
-			_Utils_Tuple3(height, latitude, longitude));
-		var x = _v0.a;
-		var y = _v0.b;
-		var z = _v0.c;
-		return A3($elm_explorations$linear_algebra$Math$Vector3$vec3, x, y, z);
-	}();
-	var earthLocation = A3($elm_explorations$linear_algebra$Math$Vector3$vec3, model.earth.locationX, model.earth.locationY, model.earth.locationZ);
-	return A2(
-		$elm_explorations$linear_algebra$Math$Vector3$add,
-		A2($elm_explorations$linear_algebra$Math$Matrix4$transform, rotation, localLocation),
-		earthLocation);
-};
-var $author$project$World$makeCamera = function (model) {
-	var longitude = model.hero.longitude;
-	var locStart = A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0, 20);
-	var latitude = model.hero.latitude;
-	var height = model.hero.height;
-	var elevation = model.camera.elevation;
-	var earthRotation = A2($elm_explorations$linear_algebra$Math$Matrix4$makeRotate, model.earth.rotationTheta, model.earth.rotationAxis);
-	var up = A2(
-		$elm_explorations$linear_algebra$Math$Matrix4$transform,
-		earthRotation,
-		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 1, 0));
-	var earthLoc = A3($elm_explorations$linear_algebra$Math$Vector3$vec3, model.earth.locationX, model.earth.locationY, model.earth.locationZ);
-	var cartesianHero = function () {
-		var _v0 = $author$project$World$cartesianFromSpherical(
-			_Utils_Tuple3(height, latitude, longitude));
-		var x = _v0.a;
-		var y = _v0.b;
-		var z = _v0.c;
-		return A3($elm_explorations$linear_algebra$Math$Vector3$vec3, x, y, z);
-	}();
-	var target = A2(
-		$elm_explorations$linear_algebra$Math$Vector3$add,
-		A2($elm_explorations$linear_algebra$Math$Matrix4$transform, earthRotation, cartesianHero),
-		earthLoc);
-	var azimoth = model.camera.azimoth;
-	var locAz = A2(
-		$elm_explorations$linear_algebra$Math$Matrix4$transform,
-		A2(
-			$elm_explorations$linear_algebra$Math$Matrix4$makeRotate,
-			azimoth,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 1, 0)),
-		locStart);
-	var locElv = A2(
-		$elm_explorations$linear_algebra$Math$Matrix4$transform,
-		A2(
-			$elm_explorations$linear_algebra$Math$Matrix4$makeRotate,
-			elevation,
-			A2(
-				$elm_explorations$linear_algebra$Math$Vector3$cross,
-				locAz,
-				A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 1, 0))),
-		locAz);
-	var locTrans = A2($elm_explorations$linear_algebra$Math$Vector3$add, cartesianHero, locElv);
-	var rotatedLoc = A2($elm_explorations$linear_algebra$Math$Matrix4$transform, earthRotation, locTrans);
-	var finalCameraLoc = A2($elm_explorations$linear_algebra$Math$Vector3$add, earthLoc, rotatedLoc);
+var $author$project$World$makeOverviewCamera = function (model) {
 	return A3(
 		$elm_explorations$linear_algebra$Math$Matrix4$makeLookAt,
-		finalCameraLoc,
-		$author$project$World$heroLocation(model),
-		up);
+		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 5, 0, 3),
+		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, model.earth.locationX, model.earth.locationY, model.earth.locationZ),
+		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 1, 0));
 };
 var $elm_explorations$linear_algebra$Math$Matrix4$makePerspective = _MJS_m4x4makePerspective;
 var $author$project$World$generalUnif = function (model) {
 	var aspect = model.canvasDimensions.width / model.canvasDimensions.height;
 	return {
-		camera: $author$project$World$makeCamera(model),
-		perspective: A4($elm_explorations$linear_algebra$Math$Matrix4$makePerspective, 45, aspect, 0.01, 500),
+		camera: $author$project$World$makeOverviewCamera(model),
+		perspective: A4($elm_explorations$linear_algebra$Math$Matrix4$makePerspective, 45, aspect, 0.01, 50000),
 		postRotation: $elm_explorations$linear_algebra$Math$Matrix4$identity,
 		postScale: $elm_explorations$linear_algebra$Math$Matrix4$identity,
 		postTranslation: $elm_explorations$linear_algebra$Math$Matrix4$identity,
@@ -8293,8 +8221,9 @@ var $author$project$World$generalUnif = function (model) {
 		translation: $elm_explorations$linear_algebra$Math$Matrix4$identity
 	};
 };
+var $elm_explorations$linear_algebra$Math$Matrix4$makeRotate = _MJS_m4x4makeRotate;
+var $elm_explorations$linear_algebra$Math$Matrix4$mul = _MJS_m4x4mul;
 var $author$project$World$earthUnif = function (model) {
-	var worldRotationAxis = model.earth.rotationAxis;
 	var unif = $author$project$World$generalUnif(model);
 	var translation = A2(
 		$elm_explorations$linear_algebra$Math$Matrix4$translate,
@@ -8302,9 +8231,18 @@ var $author$project$World$earthUnif = function (model) {
 		$elm_explorations$linear_algebra$Math$Matrix4$identity);
 	var scale = A2(
 		$elm_explorations$linear_algebra$Math$Matrix4$scale,
-		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 50, 50, 50),
+		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 1, 1, 1),
 		$elm_explorations$linear_algebra$Math$Matrix4$identity);
-	var rotation = A2($elm_explorations$linear_algebra$Math$Matrix4$makeRotate, model.earth.rotationTheta, worldRotationAxis);
+	var rotation = A2(
+		$elm_explorations$linear_algebra$Math$Matrix4$mul,
+		A2(
+			$elm_explorations$linear_algebra$Math$Matrix4$makeRotate,
+			(23.5 / 180) * $elm$core$Basics$pi,
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0, 1)),
+		A2(
+			$elm_explorations$linear_algebra$Math$Matrix4$makeRotate,
+			model.earth.rotationTheta,
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 1, 0)));
 	return _Utils_update(
 		unif,
 		{rotation: rotation, scale: scale, translation: translation});
@@ -8400,13 +8338,20 @@ var $author$project$World$fireMesh = function () {
 					$author$project$World$icosaMeshList(fireColor)
 				])));
 }();
+var $elm_explorations$linear_algebra$Math$Vector3$cross = _MJS_v3cross;
 var $elm_explorations$linear_algebra$Math$Vector3$j = A3(_MJS_v3, 0, 1, 0);
-var $elm_explorations$linear_algebra$Math$Matrix4$mul = _MJS_m4x4mul;
+var $elm_explorations$linear_algebra$Math$Matrix4$transform = _MJS_v3mul4x4;
 var $author$project$World$heroUnif = function (model) {
-	var worldRotationAxis = model.earth.rotationAxis;
-	var worldRotation = A2($elm_explorations$linear_algebra$Math$Matrix4$makeRotate, model.earth.rotationTheta, worldRotationAxis);
 	var unif = $author$project$World$generalUnif(model);
-	var heroRotation = A2(
+	var translation = A2(
+		$elm_explorations$linear_algebra$Math$Matrix4$translate,
+		A2($elm_explorations$linear_algebra$Math$Vector3$scale, model.hero.height, $elm_explorations$linear_algebra$Math$Vector3$j),
+		$elm_explorations$linear_algebra$Math$Matrix4$identity);
+	var scale = A2(
+		$elm_explorations$linear_algebra$Math$Matrix4$scale,
+		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.01, 0.01, 0.01),
+		$elm_explorations$linear_algebra$Math$Matrix4$identity);
+	var rotation = A2(
 		$elm_explorations$linear_algebra$Math$Matrix4$mul,
 		A2(
 			$elm_explorations$linear_algebra$Math$Matrix4$makeRotate,
@@ -8416,17 +8361,37 @@ var $author$project$World$heroUnif = function (model) {
 			$elm_explorations$linear_algebra$Math$Matrix4$makeRotate,
 			2 * model.hero.rotationTheta,
 			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 1, 0, 0)));
-	var heightTranslation = A2(
-		$elm_explorations$linear_algebra$Math$Matrix4$translate,
-		A2($elm_explorations$linear_algebra$Math$Vector3$scale, model.hero.height, $elm_explorations$linear_algebra$Math$Vector3$j),
-		$elm_explorations$linear_algebra$Math$Matrix4$identity);
-	var earthTranslation = A2(
+	var postTranslation = A2(
 		$elm_explorations$linear_algebra$Math$Matrix4$translate,
 		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, model.earth.locationX, model.earth.locationY, model.earth.locationZ),
 		$elm_explorations$linear_algebra$Math$Matrix4$identity);
+	var earthAxis = A2(
+		$elm_explorations$linear_algebra$Math$Matrix4$transform,
+		A2(
+			$elm_explorations$linear_algebra$Math$Matrix4$makeRotate,
+			(23.5 / 180) * $elm$core$Basics$pi,
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0, 1)),
+		$elm_explorations$linear_algebra$Math$Vector3$j);
+	var earthRotationRotation = A2($elm_explorations$linear_algebra$Math$Matrix4$makeRotate, model.earth.rotationTheta, earthAxis);
+	var latitudeAxis = A2(
+		$elm_explorations$linear_algebra$Math$Vector3$cross,
+		earthAxis,
+		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 1, 0, 0));
+	var latitudeRotation = A2($elm_explorations$linear_algebra$Math$Matrix4$makeRotate, ($elm$core$Basics$pi / 2) + model.hero.latitude, latitudeAxis);
+	var longitudeRotation = A2($elm_explorations$linear_algebra$Math$Matrix4$makeRotate, model.hero.longitude, earthAxis);
+	var alignRotation = A2(
+		$elm_explorations$linear_algebra$Math$Matrix4$makeRotate,
+		(23.5 / 180) * $elm$core$Basics$pi,
+		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0, 1));
+	var postRotation = A3(
+		$elm$core$List$foldl,
+		$elm_explorations$linear_algebra$Math$Matrix4$mul,
+		$elm_explorations$linear_algebra$Math$Matrix4$identity,
+		_List_fromArray(
+			[alignRotation, latitudeRotation, longitudeRotation, earthRotationRotation]));
 	return _Utils_update(
 		unif,
-		{postRotation: worldRotation, postTranslation: earthTranslation, rotation: heroRotation, translation: heightTranslation});
+		{postRotation: postRotation, postTranslation: postTranslation, rotation: rotation, scale: scale, translation: translation});
 };
 var $author$project$World$fireUnif = function (model) {
 	var unif = $author$project$World$heroUnif(model);
@@ -8533,7 +8498,7 @@ var $author$project$World$heroMesh = function () {
 	var balloonColor = A2(
 		$elm_explorations$linear_algebra$Math$Vector3$scale,
 		1 / 255,
-		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 115, 210, 22));
+		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 237, 212, 0));
 	return $elm_explorations$webgl$WebGL$triangles(
 		$elm$core$List$concat(
 			_List_fromArray(
@@ -8671,7 +8636,6 @@ var $mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$Event = F4(
 	function (keys, changedTouches, targetTouches, touches) {
 		return {changedTouches: changedTouches, keys: keys, targetTouches: targetTouches, touches: touches};
 	});
-var $elm$json$Json$Decode$map4 = _Json_map4;
 var $mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$Touch = F4(
 	function (identifier, clientPos, pagePos, screenPos) {
 		return {clientPos: clientPos, identifier: identifier, pagePos: pagePos, screenPos: screenPos};
@@ -8768,7 +8732,7 @@ var $author$project$World$sunUnif = function (model) {
 		{
 			scale: A2(
 				$elm_explorations$linear_algebra$Math$Matrix4$scale,
-				A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 10, 10, 10),
+				A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 1, 1, 1),
 				$elm_explorations$linear_algebra$Math$Matrix4$identity)
 		});
 };

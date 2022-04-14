@@ -26,7 +26,6 @@ type alias Earth =
   , locationY : Float
   , locationZ : Float
   , rotationTheta : Float
-  , rotationAxis : Vec3
   }
 
 type alias Camera = 

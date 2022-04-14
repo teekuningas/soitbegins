@@ -58,11 +58,10 @@ init model =
   let earth = { locationX = 0
               , locationY = 0
               , locationZ = 0
-              , rotationTheta = 0
-              , rotationAxis = vec3 0 0 0 }
+              , rotationTheta = 0 }
   in
 
-  ( { hero = { height = 70
+  ( { hero = { height = 1.05
              , latitude = 0
              , longitude = 0
              , rotationTheta = 0
@@ -164,10 +163,7 @@ update msg model =
           newEarth = { oldEarth | locationX = message.earth.locationX,
                                   locationY = message.earth.locationY,
                                   locationZ = message.earth.locationZ,
-                                  rotationTheta = message.earth.rotationTheta,
-                                  rotationAxis = (vec3 message.earth.rotationAxisX
-                                                       message.earth.rotationAxisY
-                                                       message.earth.rotationAxisZ) }
+                                  rotationTheta = message.earth.rotationTheta }
 
           updateParams = model.updateParams
           newUpdateParams = { updateParams | msgEarth = newEarth,
@@ -223,17 +219,11 @@ update msg model =
             weightedAve p1 p2 w = 
               p1 + w * (p2 - p1)
 
-            weightedAveVec v1 v2 w =
-              (vec3 (weightedAve (Vec3.getX v1) (Vec3.getX v2) w)
-                    (weightedAve (Vec3.getY v1) (Vec3.getY v2) w)
-                    (weightedAve (Vec3.getZ v1) (Vec3.getZ v2) w))
-
             earth = model.earth
             newEarth = { earth | rotationTheta = weightedAve earthPrevious.rotationTheta earthNext.rotationTheta weight,
                                  locationX = weightedAve earthPrevious.locationX earthNext.locationX weight,
                                  locationY = weightedAve earthPrevious.locationY earthNext.locationY weight,
-                                 locationZ = weightedAve earthPrevious.locationZ earthNext.locationZ weight,
-                                 rotationAxis = weightedAveVec earthPrevious.rotationAxis earthNext.rotationAxis weight
+                                 locationZ = weightedAve earthPrevious.locationZ earthNext.locationZ weight
                        }
 
         in
