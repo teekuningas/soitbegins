@@ -10,7 +10,7 @@ import Receiver exposing (messageReceiver, decodeJson, RecvValue)
 import Controller exposing (controllerMeshUp, controllerMeshDown, controllerUnif, 
                             coordinatesWithinUpButton, coordinatesWithinDownButton)
 
-import Common exposing (Model, DragState(..),
+import Common exposing (Model, GameState(..), DragState(..),
                         viewportSize, vertexShader, fragmentShader)
 
 import Math.Vector3 as Vec3 exposing (vec3)
@@ -23,7 +23,8 @@ import Browser
 import Browser.Dom exposing (getViewportOf, Viewport)
 import Browser.Events exposing (onAnimationFrame, onResize)
 
-import Platform.Sub exposing (batch)
+import Platform.Sub
+import Platform.Cmd
 
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (height, style, width, id)
@@ -86,6 +87,7 @@ init model =
                    , upButtonDown = False
                    , downButtonDown = False } 
     , messages = []
+    , gameState = GameStopped
     }
   , Task.attempt ViewportMsg (getViewportOf "webgl-canvas") ) 
 
@@ -97,7 +99,9 @@ view model =
   let
     upButtonDown = model.controller.upButtonDown
     downButtonDown = model.controller.downButtonDown
+    gameState = model.gameState
   in
+  if gameState == GameRunning then
   div [] 
     [ div [] [ WebGL.toHtml [ 
                    width (Tuple.first viewportSize)
@@ -145,15 +149,18 @@ view model =
                  ]
              ]
     ]
+  else
+  div [] [text (Maybe.withDefault "Starting.." (List.head model.messages)) ]
 
 
 -- Subscriptions
 
 subscriptions : Model -> Sub Msg
 subscriptions _ = 
-  batch [ (onAnimationFrame (\x -> TimeElapsed x))
-        , (onResize (\width height -> ResizeMsg))
-        , (messageReceiver recvJson) ]
+  Platform.Sub.batch 
+    [ (onAnimationFrame (\x -> TimeElapsed x))
+    , (onResize (\width height -> ResizeMsg))
+    , (messageReceiver recvJson) ]
 
 
 -- Updates
@@ -163,7 +170,8 @@ update msg model =
   case msg of 
 
     RecvMsgError message ->
-      ( { model | messages = [message] ++ model.messages }, Cmd.none )
+      ( { model | messages = [message] ++ model.messages,
+                  gameState = GameStopped }, Cmd.none )
 
     -- Receive World parameters through a port.
     -- Store parameters, but do not touch the real thing yet.
@@ -175,24 +183,41 @@ update msg model =
                                   locationZ = message.earth.locationZ,
                                   rotationTheta = message.earth.rotationTheta }
 
+
           updateParams = model.updateParams
           newUpdateParams = { updateParams | msgEarth = newEarth,
                                              msgEarthPrevious = oldEarth }
       in
-        ( { model | messages = [Debug.toString message] ++ model.messages,
-                    updateParams = newUpdateParams}, 
-          -- Also store the time
-          Task.perform UpdateTimeMsg Time.now)
+        ( { model | updateParams = newUpdateParams } 
+        , Task.perform UpdateTimeMsg Time.now)
 
     -- For smooth interpolation we need to collect times 
     -- when messages have been received
 
     UpdateTimeMsg dt ->
-      let updateParams = model.updateParams
-          newUpdateParams = { updateParams | msgElapsed = toFloat (Time.posixToMillis dt),
-                                             msgElapsedPrevious = model.updateParams.msgElapsed }
+      let screenRefresh = if model.gameState == GameStopped then True else False
+          updateParams = model.updateParams
+
+          msgElapsed = toFloat (Time.posixToMillis dt)
+
+          -- If screen refresh, discard the old values
+          msgElapsedPrevious = if screenRefresh then msgElapsed 
+                               else model.updateParams.msgElapsed
+          msgEarthPrevious = if screenRefresh then model.updateParams.msgEarth 
+                             else model.updateParams.msgEarthPrevious
+
+          newUpdateParams = { updateParams | msgElapsed = msgElapsed,
+                                             msgElapsedPrevious = msgElapsedPrevious,
+                                             msgEarthPrevious = msgEarthPrevious }
+
+          cmd = 
+            if screenRefresh
+            then Task.attempt ViewportMsg (getViewportOf "webgl-canvas") 
+            else Cmd.none
+
       in
-        ( { model | updateParams = newUpdateParams }, Cmd.none )
+        ( { model | updateParams = newUpdateParams,
+                    gameState = GameRunning }, cmd )
 
     -- This is called for each animation frame update. Here we construct a interpolated world
     -- which is reflected in the visuals
@@ -423,7 +448,7 @@ recvJson value =
     Ok result ->
       RecvMsg result
     Err errorMessage ->
-      RecvMsgError ("Error while receiving json: " ++ Debug.toString errorMessage)
+      RecvMsgError ("Error while communicating with the server")
 
 
 fixOffset : { x : Int , y: Int } -> { width: Int, height: Int } -> { x : Int, y : Int }

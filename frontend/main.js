@@ -6777,6 +6777,7 @@ var $elm$core$Task$perform = F2(
 				A2($elm$core$Task$map, toMessage, task)));
 	});
 var $elm$browser$Browser$element = _Browser_element;
+var $author$project$Common$GameStopped = {$: 'GameStopped'};
 var $author$project$Common$NoDrag = {$: 'NoDrag'};
 var $author$project$Main$ViewportMsg = function (a) {
 	return {$: 'ViewportMsg', a: a};
@@ -6820,6 +6821,7 @@ var $author$project$Main$init = function (model) {
 				upButtonDown: false
 			},
 			earth: earth,
+			gameState: $author$project$Common$GameStopped,
 			hero: {height: 1.15, latitude: 0.5, longitude: 0, power: 1, rotationTheta: 0},
 			messages: _List_Nil,
 			updateParams: {elapsed: 0, elapsedPrevious: 0, msgEarth: earth, msgEarthPrevious: earth, msgElapsed: 0, msgElapsedPrevious: 0}
@@ -7409,7 +7411,6 @@ var $author$project$Receiver$msgDecoder = A2(
 var $author$project$Receiver$decodeJson = function (value) {
 	return A2($elm$json$Json$Decode$decodeString, $author$project$Receiver$msgDecoder, value);
 };
-var $elm$core$Debug$toString = _Debug_toString;
 var $author$project$Main$recvJson = function (value) {
 	var _v0 = $author$project$Receiver$decodeJson(value);
 	if (_v0.$ === 'Ok') {
@@ -7417,8 +7418,7 @@ var $author$project$Main$recvJson = function (value) {
 		return $author$project$Main$RecvMsg(result);
 	} else {
 		var errorMessage = _v0.a;
-		return $author$project$Main$RecvMsgError(
-			'Error while receiving json: ' + $elm$core$Debug$toString(errorMessage));
+		return $author$project$Main$RecvMsgError('Error while communicating with the server');
 	}
 };
 var $author$project$Main$subscriptions = function (_v0) {
@@ -7438,6 +7438,7 @@ var $author$project$Main$subscriptions = function (_v0) {
 			]));
 };
 var $author$project$Common$Drag = {$: 'Drag'};
+var $author$project$Common$GameRunning = {$: 'GameRunning'};
 var $author$project$Main$UpdateTimeMsg = function (a) {
 	return {$: 'UpdateTimeMsg', a: a};
 };
@@ -7521,6 +7522,7 @@ var $author$project$Main$update = F2(
 					_Utils_update(
 						model,
 						{
+							gameState: $author$project$Common$GameStopped,
 							messages: _Utils_ap(
 								_List_fromArray(
 									[message]),
@@ -7540,30 +7542,27 @@ var $author$project$Main$update = F2(
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
-						{
-							messages: _Utils_ap(
-								_List_fromArray(
-									[
-										$elm$core$Debug$toString(message)
-									]),
-								model.messages),
-							updateParams: newUpdateParams
-						}),
+						{updateParams: newUpdateParams}),
 					A2($elm$core$Task$perform, $author$project$Main$UpdateTimeMsg, $elm$time$Time$now));
 			case 'UpdateTimeMsg':
 				var dt = msg.a;
 				var updateParams = model.updateParams;
+				var screenRefresh = _Utils_eq(model.gameState, $author$project$Common$GameStopped) ? true : false;
+				var msgElapsed = $elm$time$Time$posixToMillis(dt);
+				var msgElapsedPrevious = screenRefresh ? msgElapsed : model.updateParams.msgElapsed;
+				var msgEarthPrevious = screenRefresh ? model.updateParams.msgEarth : model.updateParams.msgEarthPrevious;
 				var newUpdateParams = _Utils_update(
 					updateParams,
-					{
-						msgElapsed: $elm$time$Time$posixToMillis(dt),
-						msgElapsedPrevious: model.updateParams.msgElapsed
-					});
+					{msgEarthPrevious: msgEarthPrevious, msgElapsed: msgElapsed, msgElapsedPrevious: msgElapsedPrevious});
+				var cmd = screenRefresh ? A2(
+					$elm$core$Task$attempt,
+					$author$project$Main$ViewportMsg,
+					$elm$browser$Browser$Dom$getViewportOf('webgl-canvas')) : $elm$core$Platform$Cmd$none;
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
-						{updateParams: newUpdateParams}),
-					$elm$core$Platform$Cmd$none);
+						{gameState: $author$project$Common$GameRunning, updateParams: newUpdateParams}),
+					cmd);
 			case 'TimeElapsed':
 				var dt = msg.a;
 				return _Utils_Tuple2(
@@ -8810,6 +8809,8 @@ var $author$project$World$sunUnif = function (model) {
 		unif,
 		{scale: scale});
 };
+var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
+var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
 var $elm_explorations$webgl$WebGL$Internal$Alpha = function (a) {
 	return {$: 'Alpha', a: a};
 };
@@ -8842,10 +8843,20 @@ var $elm$html$Html$Attributes$width = function (n) {
 		'width',
 		$elm$core$String$fromInt(n));
 };
+var $elm$core$Maybe$withDefault = F2(
+	function (_default, maybe) {
+		if (maybe.$ === 'Just') {
+			var value = maybe.a;
+			return value;
+		} else {
+			return _default;
+		}
+	});
 var $author$project$Main$view = function (model) {
 	var upButtonDown = model.controller.upButtonDown;
+	var gameState = model.gameState;
 	var downButtonDown = model.controller.downButtonDown;
-	return A2(
+	return _Utils_eq(gameState, $author$project$Common$GameRunning) ? A2(
 		$elm$html$Html$div,
 		_List_Nil,
 		_List_fromArray(
@@ -8924,6 +8935,16 @@ var $author$project$Main$view = function (model) {
 									downButtonDown ? 1.0 : 0.5))
 							]))
 					]))
+			])) : A2(
+		$elm$html$Html$div,
+		_List_Nil,
+		_List_fromArray(
+			[
+				$elm$html$Html$text(
+				A2(
+					$elm$core$Maybe$withDefault,
+					'Starting..',
+					$elm$core$List$head(model.messages)))
 			]));
 };
 var $author$project$Main$main = $elm$browser$Browser$element(

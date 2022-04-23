@@ -10,7 +10,6 @@ import Json.Decode
 
 type alias RecvValue = { earth : RecvValueEarth }
 
-
 type alias RecvValueEarth = { locationX : Float
                             , locationY : Float
                             , locationZ : Float
@@ -37,5 +36,4 @@ msgDecoder : Json.Decode.Decoder RecvValue
 msgDecoder = 
   Json.Decode.map RecvValue
     (Json.Decode.field "earth" msgEarthDecoder)
-
 

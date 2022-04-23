@@ -1,4 +1,5 @@
-module Common exposing (Model, viewportSize, meshPositionMap, MeshList, Vertex, Uniforms, 
+module Common exposing (Model, GameState(..), viewportSize, meshPositionMap, 
+                        MeshList, Vertex, Uniforms, 
                         DragState(..), vertexShader, fragmentShader)
 
 import Math.Matrix4 as Mat4 exposing (Mat4)
@@ -16,6 +17,9 @@ viewportSize = (800, 800)
 -- Some type definitions
 
 type DragState = Drag | NoDrag
+
+
+type GameState = GameRunning | GameStopped
 
 
 type alias Hero = 
@@ -68,6 +72,7 @@ type alias Model =
   , controller : Controller
   , updateParams : UpdateParameters
   , messages : List String
+  , gameState : GameState
   }
 
 
