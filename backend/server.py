@@ -19,7 +19,7 @@ state = {
 async def update():
     global counter
     while True:
-        await asyncio.sleep(0.001)
+        await asyncio.sleep(0.1)
 
         # update state
         state['elapsed'] = (datetime.datetime.now().timestamp() * 1000 - 
