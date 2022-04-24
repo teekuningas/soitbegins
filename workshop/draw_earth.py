@@ -1,4 +1,5 @@
 import vispy
+from vispy.io.mesh import write_mesh
 
 import rasterio
 
@@ -32,8 +33,9 @@ void main()
 """
 
 
-# create sphere mesh
+# helper functions
 
+# create sphere mesh
 def icosa_positions():
     phi = (1.0 + np.sqrt(5.0)) * 0.5
     a = 1.0
@@ -67,7 +69,6 @@ def icosa_positions():
 
 
 # define helper to subdivide icosahedrons
-
 def subdivide_project(positions, indices):
 
     new_positions = positions.copy()
@@ -97,26 +98,14 @@ def subdivide_project(positions, indices):
         v2i = triag[1]
         v3i = triag[2]
 
-        def find_existing(vert):
-            return None
-            for pos_idx, pos in enumerate(new_positions):
-                if np.allclose(vert, pos):
-                    return pos_idx + 1
-            
-        mp12i = find_existing(mp12)
-        if not mp12i: 
-            mp12i = len(new_positions) + 1
-            new_positions.append(mp12)
+        mp12i = len(new_positions) + 1
+        new_positions.append(mp12)
 
-        mp13i = find_existing(mp13)
-        if not mp13i: 
-            mp13i = len(new_positions) + 1
-            new_positions.append(mp13)
+        mp13i = len(new_positions) + 1
+        new_positions.append(mp13)
 
-        mp23i = find_existing(mp23)
-        if not mp23i: 
-            mp23i = len(new_positions) + 1
-            new_positions.append(mp23)
+        mp23i = len(new_positions) + 1
+        new_positions.append(mp23)
 
         new_indices.extend([
             [v1i, mp12i, mp13i],
@@ -127,6 +116,32 @@ def subdivide_project(positions, indices):
 
     return new_positions, new_indices
 
+
+# compute outward pointing flat shaded normals
+def compute_normals(positions, indices):
+    normals = []
+    normal_indices = []
+    for tri_idx, tri in enumerate(indices):
+        v1 = positions[tri[0] - 1]
+        v2 = positions[tri[1] - 1]
+        v3 = positions[tri[2] - 1]
+
+        # select a vector perpendicular to the face
+        normal = np.cross(v1-v2, v2-v3)
+
+        # and if pointing inwards,
+        # take the opposite vector
+        dir_ = (v1+v2+v3)/3
+        if np.dot(normal, dir_) < 0:
+            normal = -normal
+
+        normals.append(normal)
+        normal_indices.append([tri_idx+1, tri_idx+1, tri_idx+1])
+
+    return normals, normal_indices
+
+
+# make a sphere
 
 positions = icosa_positions()
 indices = [[ 3, 2, 1 ],
@@ -150,40 +165,79 @@ indices = [[ 3, 2, 1 ],
            [ 6,12, 5 ],
            [11, 9, 5 ]]
 
+# subdivide icosahedron
 positions, indices = subdivide_project(positions, indices)
 positions, indices = subdivide_project(positions, indices)
 positions, indices = subdivide_project(positions, indices)
 positions, indices = subdivide_project(positions, indices)
 positions, indices = subdivide_project(positions, indices)
+
+# compute normals
+normals, normal_indices = compute_normals(positions, indices)
+
+# format so that there equal amount of vv and vn
+vv = []
+vn = []
+ff = []
+
+counter = 0
+for f_idx in range(len(indices)):
+    for v_idx in range(3): 
+        ff.append(counter)
+        vv.append(positions[indices[f_idx][v_idx] - 1])
+        vn.append(normals[normal_indices[f_idx][v_idx] - 1])
+        counter += 1
+
+vv = np.array(vv)
+vn = np.array(vn)
+ff = np.array(ff)
+
+# save the mesh
+write_mesh('output/earth.obj', 
+           vertices=vv, 
+           faces=ff, 
+           normals=vn, 
+           texcoords=None, 
+           name='earth',
+           overwrite=True)
 
 
 # read the GDEM data
+elevs = []
 path = 'data/GDEM-10km-BW.tif'
 with rasterio.open(path) as rds:
 
     # for each position in our mesh
-    for pos_idx, position in enumerate(positions):
+    for vert_idx, vert in enumerate(vv):
 
-        lon = np.arctan2(position[1], position[0])
+        lon = np.arctan2(vert[1], vert[0])
         lon = (lon/np.pi)*180
 
-        lat = np.arcsin(position[2])
+        lat = np.arcsin(vert[2])
         lat = (lat/np.pi)*180
 
         # find corresponding elevation
         elev = list(rds.sample([(lon, lat)]))[0][0]
 
+        elevs.append(elev)
+
         # and scale the pos
-        positions[pos_idx] = position * ( 1 + elev / 1000)
+        vv[vert_idx] = vert * ( 1 + elev / 1000)
+
+counter = {}
+for elev in elevs:
+    counter[elev] = counter.get(elev, 0) + 1
+
+from pprint import pprint
+pprint(counter)
 
 
-import pdb; pdb.set_trace()
 
 # create a program to draw the mesh
 
-V = np.zeros(len(positions), [("a_position", np.float32, 3),
-                              ("a_color",    np.float32, 4)])
-V["a_position"] = positions
+V = np.zeros(len(vv), [("a_position", np.float32, 3),
+                       ("a_color",    np.float32, 4)])
+V["a_position"] = vv
 
 def get_color(pos):
     if np.linalg.norm(pos) <= 1.0:
@@ -191,12 +245,12 @@ def get_color(pos):
     else:
         return [34/255, 139/255, 34/255, 1]
 
-V["a_color"] = [get_color(positions[idx]) for idx in range(len(positions))]
+V["a_color"] = [get_color(vv[idx]) for idx in range(len(vv))]
 
 
 V = V.view(gloo.VertexBuffer)
 
-I = np.array(indices, dtype=np.uint32).flatten() - 1
+I = np.array(ff, dtype=np.uint32)
 I = I.view(gloo.IndexBuffer)
 
 earth = gloo.Program(vertex, fragment)
