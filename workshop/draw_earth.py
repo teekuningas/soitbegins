@@ -204,7 +204,8 @@ write_mesh('output/earth.obj',
 
 # read the GDEM data
 elevs = []
-path = 'data/GDEM-10km-BW.tif'
+# path = 'data/GDEM-10km-BW.tif'
+path = 'data/alwdgg.tif'
 with rasterio.open(path) as rds:
 
     # for each position in our mesh
@@ -222,7 +223,7 @@ with rasterio.open(path) as rds:
         elevs.append(elev)
 
         # and scale the pos
-        vv[vert_idx] = vert * ( 1 + elev / 1000)
+        vv[vert_idx] = vert * ( 1 + elev / 50000)
 
 counter = {}
 for elev in elevs:
@@ -240,8 +241,10 @@ V = np.zeros(len(vv), [("a_position", np.float32, 3),
 V["a_position"] = vv
 
 def get_color(pos):
-    if np.linalg.norm(pos) <= 1.0:
+    if np.linalg.norm(pos) <= 0.97:
         return [0, 0, 1, 1]
+    elif np.linalg.norm(pos) >= 1.03:
+        return [139/255, 69/255, 19/255, 1]
     else:
         return [34/255, 139/255, 34/255, 1]
 
