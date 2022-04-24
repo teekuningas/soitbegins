@@ -40,7 +40,7 @@ generalUnif model =
   , postTranslation =
       Mat4.identity
   , perspective = 
-      Mat4.makePerspective 45 aspect 0.01 50000
+      Mat4.makePerspective 45 aspect 0.001 100000
   , camera = 
       makeHeroCamera model
   , shade = 0.75 } 
@@ -52,7 +52,7 @@ sunUnif : Model -> Uniforms
 sunUnif model =
   let unif = generalUnif model
       -- Sun lies at the origin but is scaled
-      scale = (Mat4.scale (vec3 1 1 1) Mat4.identity)
+      scale = (Mat4.scale (vec3 2 2 2) Mat4.identity)
   in { unif | scale = scale}
 
 
@@ -61,6 +61,8 @@ sunUnif model =
 earthUnif : Model -> Uniforms
 earthUnif model = 
   let unif = generalUnif model
+
+      scale = (Mat4.scale (vec3 10 10 10) Mat4.identity)
 
       -- Tilt and rotate along the correct axis
       rotation = (Mat4.mul 
@@ -87,7 +89,7 @@ heroUnif model =
   let unif = generalUnif model
 
       -- Hero size
-      scale = (Mat4.scale (vec3 0.01 0.01 0.01) Mat4.identity)
+      scale = (Mat4.scale (vec3 0.001 0.001 0.001) Mat4.identity)
 
       -- Hero wiggling
       rotation = Mat4.mul (Mat4.makeRotate (3 * model.hero.rotationTheta) (vec3 0 1 0))
@@ -155,7 +157,12 @@ earthMesh =
       axisColor = Vec3.scale (1/255) (vec3 204 0 0) -- red
   in 
     [
-    (subdivideProject (subdivideProject (icosaMeshList divideColor) earthColor) divideColor),
+    -- (subdivideProject divideColor (subdivideProject earthColor (icosaMeshList divideColor))),
+    (subdivideProject divideColor <| 
+     subdivideProject earthColor <| 
+     subdivideProject divideColor <| 
+     subdivideProject earthColor <| 
+     icosaMeshList divideColor),
     (meshPositionMap (Vec3.add (vec3 0 1.5 0))
      (meshPositionMap (Vec3.scale 0.1) (icosaMeshList axisColor))),
     (meshPositionMap (Vec3.add (vec3 0 -1.5 0))
@@ -175,9 +182,10 @@ earthMesh =
 sunMesh : Mesh Vertex
 sunMesh = 
   let sunColor = Vec3.scale (1/255) (vec3 237 212 0) -- yellow
-  in 
-    (subdivideProject (subdivideProject (icosaMeshList sunColor) sunColor) sunColor)
-    |> WebGL.triangles
+  in icosaMeshList sunColor
+  |> subdivideProject sunColor
+  |> subdivideProject sunColor
+  |> WebGL.triangles
 
 
 -- Constructs a simple mesh for hero
@@ -192,7 +200,7 @@ heroMesh =
        (Vec3.add (vec3 0 4 0)) 
        (meshPositionMap 
         (Vec3.scale 2) 
-        (subdivideProject (icosaMeshList balloonColor) balloonColor))
+        (subdivideProject balloonColor (icosaMeshList balloonColor)))
     ]
     |> List.concat
     |> WebGL.triangles
@@ -306,8 +314,8 @@ face color a b c d =
 -- Helper to subdivide icosahedrons to
 -- make better spheres
 
-subdivideProject : MeshList -> Vec3 -> MeshList
-subdivideProject mesh clr =
+subdivideProject : Vec3 -> MeshList -> MeshList
+subdivideProject clr mesh =
   let helper m =
         case m of 
           [] -> 
@@ -436,7 +444,7 @@ makeHeroCamera model =
       -- Find out the camera location.
       -- Sits behind the hero.
       -- Also apply the user controlled parameters azimoth and elevation.
-      locStart = vec3 0 0 0.15
+      locStart = vec3 0 0 0.05
       locAz = Mat4.transform (Mat4.makeRotate azimoth (vec3 0 1 0)) locStart
       locElv = Mat4.transform (Mat4.makeRotate elevation 
                                (Vec3.cross locAz (vec3 0 1 0))) locAz

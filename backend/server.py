@@ -10,7 +10,7 @@ time_at_beginning = datetime.datetime.now().timestamp() * 1000
 
 state = {
     'elapsed': 0,
-    'earth': {'locationX': 5,
+    'earth': {'locationX': 100,
               'locationY': 0,
               'locationZ': 0,
               'rotationTheta': 0}
@@ -25,7 +25,7 @@ async def update():
         state['elapsed'] = (datetime.datetime.now().timestamp() * 1000 - 
                             time_at_beginning)
 
-        state['earth']['rotationTheta'] = state['elapsed'] / 2000
+        state['earth']['rotationTheta'] = state['elapsed'] / 100000
 
 
 def process_incoming(incoming):

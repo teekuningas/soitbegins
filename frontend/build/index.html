@@ -27,7 +27,8 @@ function myCallback() {
   let newTime = Date.now(); 
   let elapsed = newTime - oldTime;
 
-  var socket = new WebSocket('wss://soitbegins.teekuningas.net/world'); 
+  var socket = new WebSocket('ws://localhost:8765'); 
+  // var socket = new WebSocket('wss://soitbegins.teekuningas.net/world'); 
   socket.addEventListener('open', function (event) {
       socket.send('{}');
   });

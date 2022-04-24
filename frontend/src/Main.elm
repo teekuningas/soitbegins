@@ -66,7 +66,7 @@ init model =
               , rotationTheta = 0 }
   in
 
-  ( { hero = { height = 1.15
+  ( { hero = { height = 1.01
              , latitude = 0.5
              , longitude = 0
              , rotationTheta = 0
