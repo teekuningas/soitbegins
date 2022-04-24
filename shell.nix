@@ -5,9 +5,10 @@
     python39Full
     python39Packages.pip
     python39Packages.pyqt5
+    python39Packages.vispy
     qt5Full
-    gcc
     freetype
+    gcc
     glib
     zlib
     xorg.libX11

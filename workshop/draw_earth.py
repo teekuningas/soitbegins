@@ -1,3 +1,5 @@
+import vispy
+
 import rasterio
 
 import numpy as np
@@ -174,6 +176,8 @@ with rasterio.open(path) as rds:
         # and scale the pos
         positions[pos_idx] = position * ( 1 + elev / 1000)
 
+
+import pdb; pdb.set_trace()
 
 # create a program to draw the mesh
 
