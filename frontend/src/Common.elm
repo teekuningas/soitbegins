@@ -1,4 +1,4 @@
-module Common exposing (Model, GameState(..), viewportSize, meshPositionMap, 
+module Common exposing (Model, GameState(..), ConnectionState(..), viewportSize, meshPositionMap, 
                         MeshList, Vertex, Uniforms, 
                         DragState(..), vertexShader, fragmentShader)
 
@@ -19,7 +19,8 @@ viewportSize = (800, 800)
 type DragState = Drag | NoDrag
 
 
-type GameState = GameRunning | GameStopped
+type GameState = MainMenu | FlightMode
+type ConnectionState = Connected | Disconnected
 
 
 type alias Hero = 
@@ -73,6 +74,7 @@ type alias Model =
   , updateParams : UpdateParameters
   , messages : List String
   , gameState : GameState
+  , connectionState : ConnectionState
   }
 
 

@@ -10,7 +10,7 @@ import Receiver exposing (messageReceiver, decodeJson, RecvValue)
 import Controller exposing (controllerMeshUp, controllerMeshDown, controllerUnif, 
                             coordinatesWithinUpButton, coordinatesWithinDownButton)
 
-import Common exposing (Model, GameState(..), DragState(..),
+import Common exposing (Model, GameState(..), ConnectionState(..), DragState(..),
                         viewportSize, vertexShader, fragmentShader)
 
 import Math.Vector3 as Vec3 exposing (vec3)
@@ -26,10 +26,10 @@ import Browser.Events exposing (onAnimationFrame, onResize)
 import Platform.Sub
 import Platform.Cmd
 
-import Html exposing (Html, div, text)
-import Html.Attributes exposing (height, style, width, id)
+import Html exposing (Html, div, text, button, p)
+import Html.Attributes exposing (height, style, width, id, class)
 
-import Html.Events
+import Html.Events exposing (onClick)
 import Html.Events.Extra.Mouse as Mouse
 import Html.Events.Extra.Touch as Touch
 
@@ -54,6 +54,7 @@ type Msg = TimeElapsed Time.Posix
   | RecvMsg RecvValue
   | RecvMsgError String
   | UpdateTimeMsg Time.Posix
+  | StartGameMsg
 
 
 -- The model initialization
@@ -87,7 +88,8 @@ init model =
                    , upButtonDown = False
                    , downButtonDown = False } 
     , messages = []
-    , gameState = GameStopped
+    , gameState = MainMenu
+    , connectionState = Disconnected
     }
   , Task.attempt ViewportMsg (getViewportOf "webgl-canvas") ) 
 
@@ -99,59 +101,64 @@ view model =
   let
     upButtonDown = model.controller.upButtonDown
     downButtonDown = model.controller.downButtonDown
+    connectionState = model.connectionState
     gameState = model.gameState
   in
-  if gameState == GameRunning then
-  div [] 
-    [ div [] [ WebGL.toHtml [ 
-                   width (Tuple.first viewportSize)
-                 , height (Tuple.second viewportSize)
-                 , style "display" "block"
-                 , style "height" "90vh"
-                 , style "width" "100vw"
-                 , id "webgl-canvas"
-                 , Touch.onEnd (PointerEventMsg << TouchUp)
-                 , Touch.onStart (PointerEventMsg << TouchDown)
-                 , Touch.onMove (PointerEventMsg << TouchMove)
-                 , Mouse.onUp (PointerEventMsg << MouseUp)
-                 , Mouse.onDown (PointerEventMsg << MouseDown)
-                 , Mouse.onMove (PointerEventMsg << MouseMove) ]
-                 [ (WebGL.entity
-                   vertexShader
-                   fragmentShader
-                   heroMesh
-                   (heroUnif model))
-                 , (WebGL.entity
-                   vertexShader
-                   fragmentShader
-                   fireMesh
-                   (fireUnif model))
-                 , (WebGL.entity
-                   vertexShader
-                   fragmentShader
-                   earthMesh
-                   (earthUnif model))
-                 , (WebGL.entity
-                   vertexShader
-                   fragmentShader
-                   sunMesh
-                   (sunUnif model))
-                 , (WebGL.entity
-                   vertexShader
-                   fragmentShader
-                   controllerMeshUp
-                   (controllerUnif model (if upButtonDown then 1.0 else 0.5)))
-                 , (WebGL.entity
-                   vertexShader
-                   fragmentShader
-                   controllerMeshDown
-                   (controllerUnif model (if downButtonDown then 1.0 else 0.5)))
+  case (gameState, connectionState) of 
+    (MainMenu, _) -> 
+      div [ class "main-menu-container" ] 
+          [ p [] [ text "So it begins (the grand hot air balloon adventure)" ]
+          , button [ onClick StartGameMsg ] [ text "Start here" ] ]
+    (FlightMode, Disconnected) -> 
+      div [] [text (Maybe.withDefault "Starting.." (List.head model.messages)) ]
+    (FlightMode, Connected) ->
+      div [] 
+        [ div [] [ WebGL.toHtml [ 
+                     width (Tuple.first viewportSize)
+                   , height (Tuple.second viewportSize)
+                   , style "display" "block"
+                   , style "height" "90vh"
+                   , style "width" "100vw"
+                   , id "webgl-canvas"
+                   , Touch.onEnd (PointerEventMsg << TouchUp)
+                   , Touch.onStart (PointerEventMsg << TouchDown)
+                   , Touch.onMove (PointerEventMsg << TouchMove)
+                   , Mouse.onUp (PointerEventMsg << MouseUp)
+                   , Mouse.onDown (PointerEventMsg << MouseDown)
+                   , Mouse.onMove (PointerEventMsg << MouseMove) ]
+                   [ (WebGL.entity
+                     vertexShader
+                     fragmentShader
+                     heroMesh
+                     (heroUnif model))
+                   , (WebGL.entity
+                     vertexShader
+                     fragmentShader
+                     fireMesh
+                     (fireUnif model))
+                   , (WebGL.entity
+                     vertexShader
+                     fragmentShader
+                     earthMesh
+                     (earthUnif model))
+                   , (WebGL.entity
+                     vertexShader
+                     fragmentShader
+                     sunMesh
+                     (sunUnif model))
+                   , (WebGL.entity
+                     vertexShader
+                     fragmentShader
+                     controllerMeshUp
+                     (controllerUnif model (if upButtonDown then 1.0 else 0.5)))
+                   , (WebGL.entity
+                     vertexShader
+                     fragmentShader
+                     controllerMeshDown
+                     (controllerUnif model (if downButtonDown then 1.0 else 0.5)))
+                   ]
                  ]
-             ]
-    ]
-  else
-  div [] [text (Maybe.withDefault "Starting.." (List.head model.messages)) ]
-
+        ]
 
 -- Subscriptions
 
@@ -168,10 +175,13 @@ subscriptions _ =
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of 
+    StartGameMsg ->
+      ( { model | gameState = FlightMode }, 
+          Task.attempt ViewportMsg (getViewportOf "webgl-canvas") )
 
     RecvMsgError message ->
       ( { model | messages = [message] ++ model.messages,
-                  gameState = GameStopped }, Cmd.none )
+                  connectionState = Disconnected }, Cmd.none )
 
     -- Receive World parameters through a port.
     -- Store parameters, but do not touch the real thing yet.
@@ -195,7 +205,7 @@ update msg model =
     -- when messages have been received
 
     UpdateTimeMsg dt ->
-      let screenRefresh = if model.gameState == GameStopped then True else False
+      let screenRefresh = if model.connectionState == Disconnected then True else False
           updateParams = model.updateParams
 
           msgElapsed = toFloat (Time.posixToMillis dt)
@@ -217,7 +227,7 @@ update msg model =
 
       in
         ( { model | updateParams = newUpdateParams,
-                    gameState = GameRunning }, cmd )
+                    connectionState = Connected }, cmd )
 
     -- This is called for each animation frame update. Here we construct a interpolated world
     -- which is reflected in the visuals

@@ -6777,7 +6777,8 @@ var $elm$core$Task$perform = F2(
 				A2($elm$core$Task$map, toMessage, task)));
 	});
 var $elm$browser$Browser$element = _Browser_element;
-var $author$project$Common$GameStopped = {$: 'GameStopped'};
+var $author$project$Common$Disconnected = {$: 'Disconnected'};
+var $author$project$Common$MainMenu = {$: 'MainMenu'};
 var $author$project$Common$NoDrag = {$: 'NoDrag'};
 var $author$project$Main$ViewportMsg = function (a) {
 	return {$: 'ViewportMsg', a: a};
@@ -6813,6 +6814,7 @@ var $author$project$Main$init = function (model) {
 		{
 			camera: {azimoth: 0, elevation: 0},
 			canvasDimensions: {height: 0, width: 0},
+			connectionState: $author$project$Common$Disconnected,
 			controller: {
 				downButtonDown: false,
 				dragState: $author$project$Common$NoDrag,
@@ -6821,7 +6823,7 @@ var $author$project$Main$init = function (model) {
 				upButtonDown: false
 			},
 			earth: earth,
-			gameState: $author$project$Common$GameStopped,
+			gameState: $author$project$Common$MainMenu,
 			hero: {height: 1.01, latitude: 0.5, longitude: 0, power: 1, rotationTheta: 0},
 			messages: _List_Nil,
 			updateParams: {elapsed: 0, elapsedPrevious: 0, msgEarth: earth, msgEarthPrevious: earth, msgElapsed: 0, msgElapsedPrevious: 0}
@@ -7437,8 +7439,9 @@ var $author$project$Main$subscriptions = function (_v0) {
 				$author$project$Receiver$messageReceiver($author$project$Main$recvJson)
 			]));
 };
+var $author$project$Common$Connected = {$: 'Connected'};
 var $author$project$Common$Drag = {$: 'Drag'};
-var $author$project$Common$GameRunning = {$: 'GameRunning'};
+var $author$project$Common$FlightMode = {$: 'FlightMode'};
 var $author$project$Main$UpdateTimeMsg = function (a) {
 	return {$: 'UpdateTimeMsg', a: a};
 };
@@ -7516,13 +7519,22 @@ var $elm$core$Basics$sin = _Basics_sin;
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
+			case 'StartGameMsg':
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{gameState: $author$project$Common$FlightMode}),
+					A2(
+						$elm$core$Task$attempt,
+						$author$project$Main$ViewportMsg,
+						$elm$browser$Browser$Dom$getViewportOf('webgl-canvas')));
 			case 'RecvMsgError':
 				var message = msg.a;
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
 						{
-							gameState: $author$project$Common$GameStopped,
+							connectionState: $author$project$Common$Disconnected,
 							messages: _Utils_ap(
 								_List_fromArray(
 									[message]),
@@ -7547,7 +7559,7 @@ var $author$project$Main$update = F2(
 			case 'UpdateTimeMsg':
 				var dt = msg.a;
 				var updateParams = model.updateParams;
-				var screenRefresh = _Utils_eq(model.gameState, $author$project$Common$GameStopped) ? true : false;
+				var screenRefresh = _Utils_eq(model.connectionState, $author$project$Common$Disconnected) ? true : false;
 				var msgElapsed = $elm$time$Time$posixToMillis(dt);
 				var msgElapsedPrevious = screenRefresh ? msgElapsed : model.updateParams.msgElapsed;
 				var msgEarthPrevious = screenRefresh ? model.updateParams.msgEarth : model.updateParams.msgEarthPrevious;
@@ -7561,7 +7573,7 @@ var $author$project$Main$update = F2(
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
-						{gameState: $author$project$Common$GameRunning, updateParams: newUpdateParams}),
+						{connectionState: $author$project$Common$Connected, updateParams: newUpdateParams}),
 					cmd);
 			case 'TimeElapsed':
 				var dt = msg.a;
@@ -7799,6 +7811,7 @@ var $author$project$Main$MouseUp = function (a) {
 var $author$project$Main$PointerEventMsg = function (a) {
 	return {$: 'PointerEventMsg', a: a};
 };
+var $author$project$Main$StartGameMsg = {$: 'StartGameMsg'};
 var $author$project$Main$TouchDown = function (a) {
 	return {$: 'TouchDown', a: a};
 };
@@ -7808,6 +7821,16 @@ var $author$project$Main$TouchMove = function (a) {
 var $author$project$Main$TouchUp = function (a) {
 	return {$: 'TouchUp', a: a};
 };
+var $elm$html$Html$button = _VirtualDom_node('button');
+var $elm$json$Json$Encode$string = _Json_wrap;
+var $elm$html$Html$Attributes$stringProperty = F2(
+	function (key, string) {
+		return A2(
+			_VirtualDom_property,
+			key,
+			$elm$json$Json$Encode$string(string));
+	});
+var $elm$html$Html$Attributes$class = $elm$html$Html$Attributes$stringProperty('className');
 var $author$project$Common$Vertex = F2(
 	function (color, position) {
 		return {color: color, position: position};
@@ -8601,20 +8624,28 @@ var $author$project$World$heroMesh = function () {
 							$author$project$World$icosaMeshList(balloonColor))))
 				])));
 }();
-var $elm$json$Json$Encode$string = _Json_wrap;
-var $elm$html$Html$Attributes$stringProperty = F2(
-	function (key, string) {
-		return A2(
-			_VirtualDom_property,
-			key,
-			$elm$json$Json$Encode$string(string));
-	});
 var $elm$html$Html$Attributes$id = $elm$html$Html$Attributes$stringProperty('id');
+var $elm$virtual_dom$VirtualDom$Normal = function (a) {
+	return {$: 'Normal', a: a};
+};
+var $elm$virtual_dom$VirtualDom$on = _VirtualDom_on;
+var $elm$html$Html$Events$on = F2(
+	function (event, decoder) {
+		return A2(
+			$elm$virtual_dom$VirtualDom$on,
+			event,
+			$elm$virtual_dom$VirtualDom$Normal(decoder));
+	});
+var $elm$html$Html$Events$onClick = function (msg) {
+	return A2(
+		$elm$html$Html$Events$on,
+		'click',
+		$elm$json$Json$Decode$succeed(msg));
+};
 var $mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$defaultOptions = {preventDefault: true, stopPropagation: false};
 var $elm$virtual_dom$VirtualDom$Custom = function (a) {
 	return {$: 'Custom', a: a};
 };
-var $elm$virtual_dom$VirtualDom$on = _VirtualDom_on;
 var $elm$html$Html$Events$custom = F2(
 	function (event, decoder) {
 		return A2(
@@ -8793,6 +8824,7 @@ var $mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$onMove = A2($mpizenbe
 var $mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$onMove = A2($mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$onWithOptions, 'touchmove', $mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$defaultOptions);
 var $mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$onStart = A2($mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$onWithOptions, 'touchstart', $mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$defaultOptions);
 var $mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$onUp = A2($mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$onWithOptions, 'mouseup', $mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$defaultOptions);
+var $elm$html$Html$p = _VirtualDom_node('p');
 var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
 var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
 var $author$project$World$sunMesh = function () {
@@ -8866,96 +8898,136 @@ var $author$project$Main$view = function (model) {
 	var upButtonDown = model.controller.upButtonDown;
 	var gameState = model.gameState;
 	var downButtonDown = model.controller.downButtonDown;
-	return _Utils_eq(gameState, $author$project$Common$GameRunning) ? A2(
-		$elm$html$Html$div,
-		_List_Nil,
-		_List_fromArray(
-			[
-				A2(
+	var connectionState = model.connectionState;
+	var _v0 = _Utils_Tuple2(gameState, connectionState);
+	if (_v0.a.$ === 'MainMenu') {
+		var _v1 = _v0.a;
+		return A2(
+			$elm$html$Html$div,
+			_List_fromArray(
+				[
+					$elm$html$Html$Attributes$class('main-menu-container')
+				]),
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$p,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$elm$html$Html$text('So it begins (the grand hot air balloon adventure)')
+						])),
+					A2(
+					$elm$html$Html$button,
+					_List_fromArray(
+						[
+							$elm$html$Html$Events$onClick($author$project$Main$StartGameMsg)
+						]),
+					_List_fromArray(
+						[
+							$elm$html$Html$text('Start here')
+						]))
+				]));
+	} else {
+		if (_v0.b.$ === 'Disconnected') {
+			var _v2 = _v0.a;
+			var _v3 = _v0.b;
+			return A2(
+				$elm$html$Html$div,
+				_List_Nil,
+				_List_fromArray(
+					[
+						$elm$html$Html$text(
+						A2(
+							$elm$core$Maybe$withDefault,
+							'Starting..',
+							$elm$core$List$head(model.messages)))
+					]));
+		} else {
+			var _v4 = _v0.a;
+			var _v5 = _v0.b;
+			return A2(
 				$elm$html$Html$div,
 				_List_Nil,
 				_List_fromArray(
 					[
 						A2(
-						$elm_explorations$webgl$WebGL$toHtml,
+						$elm$html$Html$div,
+						_List_Nil,
 						_List_fromArray(
 							[
-								$elm$html$Html$Attributes$width($author$project$Common$viewportSize.a),
-								$elm$html$Html$Attributes$height($author$project$Common$viewportSize.b),
-								A2($elm$html$Html$Attributes$style, 'display', 'block'),
-								A2($elm$html$Html$Attributes$style, 'height', '90vh'),
-								A2($elm$html$Html$Attributes$style, 'width', '100vw'),
-								$elm$html$Html$Attributes$id('webgl-canvas'),
-								$mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$onEnd(
-								A2($elm$core$Basics$composeL, $author$project$Main$PointerEventMsg, $author$project$Main$TouchUp)),
-								$mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$onStart(
-								A2($elm$core$Basics$composeL, $author$project$Main$PointerEventMsg, $author$project$Main$TouchDown)),
-								$mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$onMove(
-								A2($elm$core$Basics$composeL, $author$project$Main$PointerEventMsg, $author$project$Main$TouchMove)),
-								$mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$onUp(
-								A2($elm$core$Basics$composeL, $author$project$Main$PointerEventMsg, $author$project$Main$MouseUp)),
-								$mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$onDown(
-								A2($elm$core$Basics$composeL, $author$project$Main$PointerEventMsg, $author$project$Main$MouseDown)),
-								$mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$onMove(
-								A2($elm$core$Basics$composeL, $author$project$Main$PointerEventMsg, $author$project$Main$MouseMove))
-							]),
-						_List_fromArray(
-							[
-								A4(
-								$elm_explorations$webgl$WebGL$entity,
-								$author$project$Common$vertexShader,
-								$author$project$Common$fragmentShader,
-								$author$project$World$heroMesh,
-								$author$project$World$heroUnif(model)),
-								A4(
-								$elm_explorations$webgl$WebGL$entity,
-								$author$project$Common$vertexShader,
-								$author$project$Common$fragmentShader,
-								$author$project$World$fireMesh,
-								$author$project$World$fireUnif(model)),
-								A4(
-								$elm_explorations$webgl$WebGL$entity,
-								$author$project$Common$vertexShader,
-								$author$project$Common$fragmentShader,
-								$author$project$World$earthMesh,
-								$author$project$World$earthUnif(model)),
-								A4(
-								$elm_explorations$webgl$WebGL$entity,
-								$author$project$Common$vertexShader,
-								$author$project$Common$fragmentShader,
-								$author$project$World$sunMesh,
-								$author$project$World$sunUnif(model)),
-								A4(
-								$elm_explorations$webgl$WebGL$entity,
-								$author$project$Common$vertexShader,
-								$author$project$Common$fragmentShader,
-								$author$project$Controller$controllerMeshUp,
 								A2(
-									$author$project$Controller$controllerUnif,
-									model,
-									upButtonDown ? 1.0 : 0.5)),
-								A4(
-								$elm_explorations$webgl$WebGL$entity,
-								$author$project$Common$vertexShader,
-								$author$project$Common$fragmentShader,
-								$author$project$Controller$controllerMeshDown,
-								A2(
-									$author$project$Controller$controllerUnif,
-									model,
-									downButtonDown ? 1.0 : 0.5))
+								$elm_explorations$webgl$WebGL$toHtml,
+								_List_fromArray(
+									[
+										$elm$html$Html$Attributes$width($author$project$Common$viewportSize.a),
+										$elm$html$Html$Attributes$height($author$project$Common$viewportSize.b),
+										A2($elm$html$Html$Attributes$style, 'display', 'block'),
+										A2($elm$html$Html$Attributes$style, 'height', '90vh'),
+										A2($elm$html$Html$Attributes$style, 'width', '100vw'),
+										$elm$html$Html$Attributes$id('webgl-canvas'),
+										$mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$onEnd(
+										A2($elm$core$Basics$composeL, $author$project$Main$PointerEventMsg, $author$project$Main$TouchUp)),
+										$mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$onStart(
+										A2($elm$core$Basics$composeL, $author$project$Main$PointerEventMsg, $author$project$Main$TouchDown)),
+										$mpizenberg$elm_pointer_events$Html$Events$Extra$Touch$onMove(
+										A2($elm$core$Basics$composeL, $author$project$Main$PointerEventMsg, $author$project$Main$TouchMove)),
+										$mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$onUp(
+										A2($elm$core$Basics$composeL, $author$project$Main$PointerEventMsg, $author$project$Main$MouseUp)),
+										$mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$onDown(
+										A2($elm$core$Basics$composeL, $author$project$Main$PointerEventMsg, $author$project$Main$MouseDown)),
+										$mpizenberg$elm_pointer_events$Html$Events$Extra$Mouse$onMove(
+										A2($elm$core$Basics$composeL, $author$project$Main$PointerEventMsg, $author$project$Main$MouseMove))
+									]),
+								_List_fromArray(
+									[
+										A4(
+										$elm_explorations$webgl$WebGL$entity,
+										$author$project$Common$vertexShader,
+										$author$project$Common$fragmentShader,
+										$author$project$World$heroMesh,
+										$author$project$World$heroUnif(model)),
+										A4(
+										$elm_explorations$webgl$WebGL$entity,
+										$author$project$Common$vertexShader,
+										$author$project$Common$fragmentShader,
+										$author$project$World$fireMesh,
+										$author$project$World$fireUnif(model)),
+										A4(
+										$elm_explorations$webgl$WebGL$entity,
+										$author$project$Common$vertexShader,
+										$author$project$Common$fragmentShader,
+										$author$project$World$earthMesh,
+										$author$project$World$earthUnif(model)),
+										A4(
+										$elm_explorations$webgl$WebGL$entity,
+										$author$project$Common$vertexShader,
+										$author$project$Common$fragmentShader,
+										$author$project$World$sunMesh,
+										$author$project$World$sunUnif(model)),
+										A4(
+										$elm_explorations$webgl$WebGL$entity,
+										$author$project$Common$vertexShader,
+										$author$project$Common$fragmentShader,
+										$author$project$Controller$controllerMeshUp,
+										A2(
+											$author$project$Controller$controllerUnif,
+											model,
+											upButtonDown ? 1.0 : 0.5)),
+										A4(
+										$elm_explorations$webgl$WebGL$entity,
+										$author$project$Common$vertexShader,
+										$author$project$Common$fragmentShader,
+										$author$project$Controller$controllerMeshDown,
+										A2(
+											$author$project$Controller$controllerUnif,
+											model,
+											downButtonDown ? 1.0 : 0.5))
+									]))
 							]))
-					]))
-			])) : A2(
-		$elm$html$Html$div,
-		_List_Nil,
-		_List_fromArray(
-			[
-				$elm$html$Html$text(
-				A2(
-					$elm$core$Maybe$withDefault,
-					'Starting..',
-					$elm$core$List$head(model.messages)))
-			]));
+					]));
+		}
+	}
 };
 var $author$project$Main$main = $elm$browser$Browser$element(
 	{init: $author$project$Main$init, subscriptions: $author$project$Main$subscriptions, update: $author$project$Main$update, view: $author$project$Main$view});
