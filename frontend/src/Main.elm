@@ -11,7 +11,8 @@ import Controller exposing (controllerMeshUp, controllerMeshDown, controllerUnif
                             coordinatesWithinUpButton, coordinatesWithinDownButton)
 
 import Common exposing (Model, GameState(..), ConnectionState(..), DragState(..),
-                        viewportSize, vertexShader, fragmentShader)
+                        viewportSize, vertexShader, fragmentShader,
+                        Vertex)
 
 import Math.Vector3 as Vec3 exposing (vec3)
 
@@ -29,11 +30,21 @@ import Platform.Cmd
 import Html exposing (Html, div, text, button, p)
 import Html.Attributes exposing (height, style, width, id, class)
 
+import Http
+import Length exposing (Meters)
+import Quantity exposing (Unitless)
+import Obj.Decode
+import Obj.Decode exposing (ObjCoordinates)
+import TriangularMesh exposing (TriangularMesh)
+import Point3d exposing (Point3d)
+import Vector3d exposing (Vector3d)
+
+
 import Html.Events exposing (onClick)
 import Html.Events.Extra.Mouse as Mouse
 import Html.Events.Extra.Touch as Touch
 
-import WebGL
+import WebGL exposing (Mesh)
 
 
 -- Some type definitions
@@ -55,6 +66,7 @@ type Msg = TimeElapsed Time.Posix
   | RecvMsgError String
   | UpdateTimeMsg Time.Posix
   | StartGameMsg
+  | EarthMeshLoaded (Result Http.Error (Mesh Vertex))
 
 
 -- The model initialization
@@ -64,7 +76,9 @@ init model =
   let earth = { locationX = 100
               , locationY = 100
               , locationZ = 100
-              , rotationTheta = 0 }
+              , rotationTheta = 0 
+              , mesh = Nothing }
+      earthObjUrl = "https://soitbegins.teekuningas.net/earth.obj.txt"
   in
 
   ( { hero = { height = 1.01
@@ -91,7 +105,13 @@ init model =
     , gameState = MainMenu
     , connectionState = Disconnected
     }
-  , Task.attempt ViewportMsg (getViewportOf "webgl-canvas") ) 
+  , Cmd.batch [ Task.attempt ViewportMsg (getViewportOf "webgl-canvas")
+              , Http.get { url = earthObjUrl
+                         , expect = (Obj.Decode.expectObj 
+                                     EarthMeshLoaded 
+                                     Length.meters 
+                                     objMeshDecoder) }
+              ] ) 
 
 
 -- The view function
@@ -103,15 +123,14 @@ view model =
     downButtonDown = model.controller.downButtonDown
     connectionState = model.connectionState
     gameState = model.gameState
+    maybeMesh = model.earth.mesh
   in
-  case (gameState, connectionState) of 
-    (MainMenu, _) -> 
+  case (gameState, connectionState, maybeMesh) of 
+    (MainMenu, _, _) -> 
       div [ class "main-menu-container" ] 
           [ p [] [ text "So it begins (the grand hot air balloon adventure)" ]
           , button [ onClick StartGameMsg ] [ text "Start here" ] ]
-    (FlightMode, Disconnected) -> 
-      div [] [text (Maybe.withDefault "Starting.." (List.head model.messages)) ]
-    (FlightMode, Connected) ->
+    (FlightMode, Connected, Just earthMesh) ->
       div [] 
         [ div [] [ WebGL.toHtml [ 
                      width (Tuple.first viewportSize)
@@ -159,6 +178,8 @@ view model =
                    ]
                  ]
         ]
+    (FlightMode, _, _) -> 
+      div [] [text (Maybe.withDefault "Starting.." (List.head model.messages)) ]
 
 -- Subscriptions
 
@@ -229,7 +250,8 @@ update msg model =
         ( { model | updateParams = newUpdateParams,
                     connectionState = Connected }, cmd )
 
-    -- This is called for each animation frame update. Here we construct a interpolated world
+    -- This is called for each animation frame update. 
+    -- Here we construct a interpolated world
     -- which is reflected in the visuals
 
     TimeElapsed dt ->
@@ -238,8 +260,8 @@ update msg model =
 
             timeInBetween = model.updateParams.elapsed - model.updateParams.elapsedPrevious
 
-            newPowerChange = (if model.controller.upButtonDown then 0.001
-                              else (if model.controller.downButtonDown then -0.001 else 0))
+            newPowerChange = (if model.controller.upButtonDown then 0.0001
+                              else (if model.controller.downButtonDown then -0.0001 else 0))
 
             newPower = max 0 (min 2 (model.hero.power + (timeInBetween*newPowerChange)))
 
@@ -438,6 +460,18 @@ update msg model =
         Err errMsg -> (model, Cmd.none)
 
 
+    -- Load meshes
+
+    EarthMeshLoaded result -> 
+      let oldEarth = model.earth 
+          earth = { oldEarth | mesh = Result.toMaybe result }
+         
+      in ( { model | earth = earth }
+
+         , Task.attempt ViewportMsg (getViewportOf "webgl-canvas") 
+         )
+
+
 -- Here it begins.
 
 
@@ -467,3 +501,16 @@ fixOffset offset viewport = { x = round (toFloat (offset.x * (Tuple.first viewpo
                               y = round (toFloat (offset.y * (Tuple.second viewportSize)) / 
                                          (toFloat viewport.height)) }
 
+
+triangularMeshToMeshVertex : 
+  (TriangularMesh
+    { position : Point3d Meters ObjCoordinates
+    , normal : Vector3d Unitless ObjCoordinates
+    }
+  ) -> Mesh Vertex
+triangularMeshToMeshVertex triangularMesh = earthMesh 
+
+
+objMeshDecoder : Obj.Decode.Decoder (Mesh Vertex)
+objMeshDecoder = 
+  Obj.Decode.map triangularMeshToMeshVertex Obj.Decode.faces

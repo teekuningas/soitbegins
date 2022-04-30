@@ -5,7 +5,7 @@ module Common exposing (Model, GameState(..), ConnectionState(..), viewportSize,
 import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector3 as Vec3 exposing (Vec3)
 
-import WebGL exposing (Shader)
+import WebGL exposing (Shader, Mesh)
 
 
 -- Some global variables
@@ -37,6 +37,7 @@ type alias Earth =
   , locationY : Float
   , locationZ : Float
   , rotationTheta : Float
+  , mesh : Maybe (Mesh Vertex)
   }
 
 

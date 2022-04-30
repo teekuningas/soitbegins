@@ -96,12 +96,6 @@ function _Utils_eq(x, y)
 
 function _Utils_eqHelp(x, y, depth, stack)
 {
-	if (depth > 100)
-	{
-		stack.push(_Utils_Tuple2(x,y));
-		return true;
-	}
-
 	if (x === y)
 	{
 		return true;
@@ -111,6 +105,12 @@ function _Utils_eqHelp(x, y, depth, stack)
 	{
 		typeof x === 'function' && _Debug_crash(5);
 		return false;
+	}
+
+	if (depth > 100)
+	{
+		stack.push(_Utils_Tuple2(x,y));
+		return true;
 	}
 
 	/**/
@@ -171,7 +171,7 @@ function _Utils_cmp(x, y, ord)
 	//*/
 
 	/**_UNUSED/
-	if (!x.$)
+	if (typeof x.$ === 'undefined')
 	//*/
 	/**/
 	if (x.$[0] === '#')
@@ -633,6 +633,16 @@ function _Debug_toAnsiString(ansi, value)
 		return _Debug_ctorColor(ansi, tag) + output;
 	}
 
+	if (typeof DataView === 'function' && value instanceof DataView)
+	{
+		return _Debug_stringColor(ansi, '<' + value.byteLength + ' bytes>');
+	}
+
+	if (typeof File !== 'undefined' && value instanceof File)
+	{
+		return _Debug_internalColor(ansi, '<' + value.name + '>');
+	}
+
 	if (typeof value === 'object')
 	{
 		var output = [];
@@ -698,9 +708,13 @@ function _Debug_fadeColor(ansi, string)
 
 function _Debug_internalColor(ansi, string)
 {
-	return ansi ? '\x1b[94m' + string + '\x1b[0m' : string;
+	return ansi ? '\x1b[36m' + string + '\x1b[0m' : string;
 }
 
+function _Debug_toHexDigit(n)
+{
+	return String.fromCharCode(n < 10 ? 48 + n : 55 + n);
+}
 
 
 // CRASH
@@ -847,7 +861,7 @@ var _String_cons = F2(function(chr, str)
 function _String_uncons(string)
 {
 	var word = string.charCodeAt(0);
-	return word
+	return !isNaN(word)
 		? $elm$core$Maybe$Just(
 			0xD800 <= word && word <= 0xDBFF
 				? _Utils_Tuple2(_Utils_chr(string[0] + string[1]), string.slice(2))
@@ -1171,9 +1185,7 @@ function _Char_fromCode(code)
 			? String.fromCharCode(code)
 			:
 		(code -= 0x10000,
-			String.fromCharCode(Math.floor(code / 0x400) + 0xD800)
-			+
-			String.fromCharCode(code % 0x400 + 0xDC00)
+			String.fromCharCode(Math.floor(code / 0x400) + 0xD800, code % 0x400 + 0xDC00)
 		)
 	);
 }
@@ -1226,21 +1238,56 @@ function _Json_fail(msg)
 	};
 }
 
-var _Json_decodeInt = { $: 2 };
-var _Json_decodeBool = { $: 3 };
-var _Json_decodeFloat = { $: 4 };
-var _Json_decodeValue = { $: 5 };
-var _Json_decodeString = { $: 6 };
+function _Json_decodePrim(decoder)
+{
+	return { $: 2, b: decoder };
+}
 
-function _Json_decodeList(decoder) { return { $: 7, b: decoder }; }
-function _Json_decodeArray(decoder) { return { $: 8, b: decoder }; }
+var _Json_decodeInt = _Json_decodePrim(function(value) {
+	return (typeof value !== 'number')
+		? _Json_expecting('an INT', value)
+		:
+	(-2147483647 < value && value < 2147483647 && (value | 0) === value)
+		? $elm$core$Result$Ok(value)
+		:
+	(isFinite(value) && !(value % 1))
+		? $elm$core$Result$Ok(value)
+		: _Json_expecting('an INT', value);
+});
 
-function _Json_decodeNull(value) { return { $: 9, c: value }; }
+var _Json_decodeBool = _Json_decodePrim(function(value) {
+	return (typeof value === 'boolean')
+		? $elm$core$Result$Ok(value)
+		: _Json_expecting('a BOOL', value);
+});
+
+var _Json_decodeFloat = _Json_decodePrim(function(value) {
+	return (typeof value === 'number')
+		? $elm$core$Result$Ok(value)
+		: _Json_expecting('a FLOAT', value);
+});
+
+var _Json_decodeValue = _Json_decodePrim(function(value) {
+	return $elm$core$Result$Ok(_Json_wrap(value));
+});
+
+var _Json_decodeString = _Json_decodePrim(function(value) {
+	return (typeof value === 'string')
+		? $elm$core$Result$Ok(value)
+		: (value instanceof String)
+			? $elm$core$Result$Ok(value + '')
+			: _Json_expecting('a STRING', value);
+});
+
+function _Json_decodeList(decoder) { return { $: 3, b: decoder }; }
+function _Json_decodeArray(decoder) { return { $: 4, b: decoder }; }
+
+function _Json_decodeNull(value) { return { $: 5, c: value }; }
 
 var _Json_decodeField = F2(function(field, decoder)
 {
 	return {
-		$: 10,
+		$: 6,
 		d: field,
 		b: decoder
 	};
@@ -1249,7 +1296,7 @@ var _Json_decodeField = F2(function(field, decoder)
 var _Json_decodeIndex = F2(function(index, decoder)
 {
 	return {
-		$: 11,
+		$: 7,
 		e: index,
 		b: decoder
 	};
@@ -1258,7 +1305,7 @@ var _Json_decodeIndex = F2(function(index, decoder)
 function _Json_decodeKeyValuePairs(decoder)
 {
 	return {
-		$: 12,
+		$: 8,
 		b: decoder
 	};
 }
@@ -1266,7 +1313,7 @@ function _Json_decodeKeyValuePairs(decoder)
 function _Json_mapMany(f, decoders)
 {
 	return {
-		$: 13,
+		$: 9,
 		f: f,
 		g: decoders
 	};
@@ -1275,7 +1322,7 @@ function _Json_mapMany(f, decoders)
 var _Json_andThen = F2(function(callback, decoder)
 {
 	return {
-		$: 14,
+		$: 10,
 		b: decoder,
 		h: callback
 	};
@@ -1284,7 +1331,7 @@ var _Json_andThen = F2(function(callback, decoder)
 function _Json_oneOf(decoders)
 {
 	return {
-		$: 15,
+		$: 11,
 		g: decoders
 	};
 }
@@ -1357,61 +1404,29 @@ function _Json_runHelp(decoder, value)
 {
 	switch (decoder.$)
 	{
-		case 3:
-			return (typeof value === 'boolean')
-				? $elm$core$Result$Ok(value)
-				: _Json_expecting('a BOOL', value);
-
 		case 2:
-			if (typeof value !== 'number') {
-				return _Json_expecting('an INT', value);
-			}
+			return decoder.b(value);
 
-			if (-2147483647 < value && value < 2147483647 && (value | 0) === value) {
-				return $elm$core$Result$Ok(value);
-			}
-
-			if (isFinite(value) && !(value % 1)) {
-				return $elm$core$Result$Ok(value);
-			}
-
-			return _Json_expecting('an INT', value);
-
-		case 4:
-			return (typeof value === 'number')
-				? $elm$core$Result$Ok(value)
-				: _Json_expecting('a FLOAT', value);
-
-		case 6:
-			return (typeof value === 'string')
-				? $elm$core$Result$Ok(value)
-				: (value instanceof String)
-					? $elm$core$Result$Ok(value + '')
-					: _Json_expecting('a STRING', value);
-
-		case 9:
+		case 5:
 			return (value === null)
 				? $elm$core$Result$Ok(decoder.c)
 				: _Json_expecting('null', value);
 
-		case 5:
-			return $elm$core$Result$Ok(_Json_wrap(value));
-
-		case 7:
-			if (!Array.isArray(value))
+		case 3:
+			if (!_Json_isArray(value))
 			{
 				return _Json_expecting('a LIST', value);
 			}
 			return _Json_runArrayDecoder(decoder.b, value, _List_fromArray);
 
-		case 8:
-			if (!Array.isArray(value))
+		case 4:
+			if (!_Json_isArray(value))
 			{
 				return _Json_expecting('an ARRAY', value);
 			}
 			return _Json_runArrayDecoder(decoder.b, value, _Json_toElmArray);
 
-		case 10:
+		case 6:
 			var field = decoder.d;
 			if (typeof value !== 'object' || value === null || !(field in value))
 			{
@@ -1420,9 +1435,9 @@ function _Json_runHelp(decoder, value)
 			var result = _Json_runHelp(decoder.b, value[field]);
 			return ($elm$core$Result$isOk(result)) ? result : $elm$core$Result$Err(A2($elm$json$Json$Decode$Field, field, result.a));
 
-		case 11:
+		case 7:
 			var index = decoder.e;
-			if (!Array.isArray(value))
+			if (!_Json_isArray(value))
 			{
 				return _Json_expecting('an ARRAY', value);
 			}
@@ -1433,8 +1448,8 @@ function _Json_runHelp(decoder, value)
 			var result = _Json_runHelp(decoder.b, value[index]);
 			return ($elm$core$Result$isOk(result)) ? result : $elm$core$Result$Err(A2($elm$json$Json$Decode$Index, index, result.a));
 
-		case 12:
-			if (typeof value !== 'object' || value === null || Array.isArray(value))
+		case 8:
+			if (typeof value !== 'object' || value === null || _Json_isArray(value))
 			{
 				return _Json_expecting('an OBJECT', value);
 			}
@@ -1455,7 +1470,7 @@ function _Json_runHelp(decoder, value)
 			}
 			return $elm$core$Result$Ok($elm$core$List$reverse(keyValuePairs));
 
-		case 13:
+		case 9:
 			var answer = decoder.f;
 			var decoders = decoder.g;
 			for (var i = 0; i < decoders.length; i++)
@@ -1469,13 +1484,13 @@ function _Json_runHelp(decoder, value)
 			}
 			return $elm$core$Result$Ok(answer);
 
-		case 14:
+		case 10:
 			var result = _Json_runHelp(decoder.b, value);
 			return (!$elm$core$Result$isOk(result))
 				? result
 				: _Json_runHelp(decoder.h(result.a), value);
 
-		case 15:
+		case 11:
 			var errors = _List_Nil;
 			for (var temp = decoder.g; temp.b; temp = temp.b) // WHILE_CONS
 			{
@@ -1512,6 +1527,11 @@ function _Json_runArrayDecoder(decoder, value, toElmValue)
 	return $elm$core$Result$Ok(toElmValue(array));
 }
 
+function _Json_isArray(value)
+{
+	return Array.isArray(value) || (typeof FileList !== 'undefined' && value instanceof FileList);
+}
+
 function _Json_toElmArray(array)
 {
 	return A2($elm$core$Array$initialize, array.length, function(i) { return array[i]; });
@@ -1543,34 +1563,30 @@ function _Json_equality(x, y)
 		case 1:
 			return x.a === y.a;
 
-		case 3:
 		case 2:
-		case 4:
-		case 6:
-		case 5:
-			return true;
+			return x.b === y.b;
 
-		case 9:
+		case 5:
 			return x.c === y.c;
 
-		case 7:
+		case 3:
+		case 4:
 		case 8:
-		case 12:
 			return _Json_equality(x.b, y.b);
 
-		case 10:
+		case 6:
 			return x.d === y.d && _Json_equality(x.b, y.b);
 
-		case 11:
+		case 7:
 			return x.e === y.e && _Json_equality(x.b, y.b);
 
-		case 13:
+		case 9:
 			return x.f === y.f && _Json_listEquality(x.g, y.g);
 
-		case 14:
+		case 10:
 			return x.h === y.h && _Json_equality(x.b, y.b);
 
-		case 15:
+		case 11:
 			return _Json_listEquality(x.g, y.g);
 	}
 }
@@ -1858,19 +1874,19 @@ function _Platform_initialize(flagDecoder, args, init, update, subscriptions, st
 	var result = A2(_Json_run, flagDecoder, _Json_wrap(args ? args['flags'] : undefined));
 	$elm$core$Result$isOk(result) || _Debug_crash(2 /**/, _Json_errorToString(result.a) /**/);
 	var managers = {};
-	result = init(result.a);
-	var model = result.a;
+	var initPair = init(result.a);
+	var model = initPair.a;
 	var stepper = stepperBuilder(sendToApp, model);
 	var ports = _Platform_setupEffects(managers, sendToApp);
 
 	function sendToApp(msg, viewMetadata)
 	{
-		result = A2(update, msg, model);
-		stepper(model = result.a, viewMetadata);
-		_Platform_dispatchEffects(managers, result.b, subscriptions(model));
+		var pair = A2(update, msg, model);
+		stepper(model = pair.a, viewMetadata);
+		_Platform_enqueueEffects(managers, pair.b, subscriptions(model));
 	}
 
-	_Platform_dispatchEffects(managers, result.b, subscriptions(model));
+	_Platform_enqueueEffects(managers, initPair.b, subscriptions(model));
 
 	return ports ? { ports: ports } : {};
 }
@@ -2028,6 +2044,51 @@ var _Platform_map = F2(function(tagger, bag)
 
 
 // PIPE BAGS INTO EFFECT MANAGERS
+//
+// Effects must be queued!
+//
+// Say your init contains a synchronous command, like Time.now or Time.here
+//
+//   - This will produce a batch of effects (FX_1)
+//   - The synchronous task triggers the subsequent `update` call
+//   - This will produce a batch of effects (FX_2)
+//
+// If we just start dispatching FX_2, subscriptions from FX_2 can be processed
+// before subscriptions from FX_1. No good! Earlier versions of this code had
+// this problem, leading to these reports:
+//
+//   https://github.com/elm/core/issues/980
+//   https://github.com/elm/core/pull/981
+//   https://github.com/elm/compiler/issues/1776
+//
+// The queue is necessary to avoid ordering issues for synchronous commands.
+
+
+// Why use true/false here? Why not just check the length of the queue?
+// The goal is to detect "are we currently dispatching effects?" If we
+// are, we need to bail and let the ongoing while loop handle things.
+//
+// Now say the queue has 1 element. When we dequeue the final element,
+// the queue will be empty, but we are still actively dispatching effects.
+// So you could get queue jumping in a really tricky category of cases.
+//
+var _Platform_effectsQueue = [];
+var _Platform_effectsActive = false;
+
+
+function _Platform_enqueueEffects(managers, cmdBag, subBag)
+{
+	_Platform_effectsQueue.push({ p: managers, q: cmdBag, r: subBag });
+
+	if (_Platform_effectsActive) return;
+
+	_Platform_effectsActive = true;
+	for (var fx; fx = _Platform_effectsQueue.shift(); )
+	{
+		_Platform_dispatchEffects(fx.p, fx.q, fx.r);
+	}
+	_Platform_effectsActive = false;
+}
 
 
 function _Platform_dispatchEffects(managers, cmdBag, subBag)
@@ -2065,8 +2126,8 @@ function _Platform_gatherEffects(isCmd, bag, effectsDict, taggers)
 
 		case 3:
 			_Platform_gatherEffects(isCmd, bag.o, effectsDict, {
-				p: bag.n,
-				q: taggers
+				s: bag.n,
+				t: taggers
 			});
 			return;
 	}
@@ -2077,9 +2138,9 @@ function _Platform_toEffect(isCmd, home, taggers, value)
 {
 	function applyTaggers(x)
 	{
-		for (var temp = taggers; temp; temp = temp.q)
+		for (var temp = taggers; temp; temp = temp.t)
 		{
-			x = temp.p(x);
+			x = temp.s(x);
 		}
 		return x;
 	}
@@ -2126,7 +2187,7 @@ function _Platform_outgoingPort(name, converter)
 	_Platform_checkPortName(name);
 	_Platform_effectManagers[name] = {
 		e: _Platform_outgoingPortMap,
-		r: converter,
+		u: converter,
 		a: _Platform_setupOutgoingPort
 	};
 	return _Platform_leaf(name);
@@ -2139,7 +2200,7 @@ var _Platform_outgoingPortMap = F2(function(tagger, value) { return value; });
 function _Platform_setupOutgoingPort(name)
 {
 	var subs = [];
-	var converter = _Platform_effectManagers[name].r;
+	var converter = _Platform_effectManagers[name].u;
 
 	// CREATE MANAGER
 
@@ -2196,7 +2257,7 @@ function _Platform_incomingPort(name, converter)
 	_Platform_checkPortName(name);
 	_Platform_effectManagers[name] = {
 		f: _Platform_incomingPortMap,
-		r: converter,
+		u: converter,
 		a: _Platform_setupIncomingPort
 	};
 	return _Platform_leaf(name);
@@ -2215,7 +2276,7 @@ var _Platform_incomingPortMap = F2(function(tagger, finalTagger)
 function _Platform_setupIncomingPort(name, sendToApp)
 {
 	var subs = _List_Nil;
-	var converter = _Platform_effectManagers[name].r;
+	var converter = _Platform_effectManagers[name].u;
 
 	// CREATE MANAGER
 
@@ -2778,7 +2839,7 @@ function _VirtualDom_applyFacts(domNode, eventNode, facts)
 		key === 'a4'
 			? _VirtualDom_applyAttrsNS(domNode, value)
 			:
-		(key !== 'value' || key !== 'checked' || domNode[key] !== value) && (domNode[key] = value);
+		((key !== 'value' && key !== 'checked') || domNode[key] !== value) && (domNode[key] = value);
 	}
 }
 
@@ -2807,7 +2868,7 @@ function _VirtualDom_applyAttrs(domNode, attrs)
 	for (var key in attrs)
 	{
 		var value = attrs[key];
-		value
+		typeof value !== 'undefined'
 			? domNode.setAttribute(key, value)
 			: domNode.removeAttribute(key);
 	}
@@ -2826,7 +2887,7 @@ function _VirtualDom_applyAttrsNS(domNode, nsAttrs)
 		var namespace = pair.f;
 		var value = pair.o;
 
-		value
+		typeof value !== 'undefined'
 			? domNode.setAttributeNS(namespace, key, value)
 			: domNode.removeAttributeNS(namespace, key);
 	}
@@ -3289,6 +3350,9 @@ function _VirtualDom_diffKeyedKids(xParent, yParent, patches, rootIndex)
 		var xNode = x.b;
 		var yNode = y.b;
 
+		var newMatch = undefined;
+		var oldMatch = undefined;
+
 		// check if keys match
 
 		if (xKey === yKey)
@@ -3311,14 +3375,14 @@ function _VirtualDom_diffKeyedKids(xParent, yParent, patches, rootIndex)
 		{
 			var xNextKey = xNext.a;
 			var xNextNode = xNext.b;
-			var oldMatch = yKey === xNextKey;
+			oldMatch = yKey === xNextKey;
 		}
 
 		if (yNext)
 		{
 			var yNextKey = yNext.a;
 			var yNextNode = yNext.b;
-			var newMatch = xKey === yNextKey;
+			newMatch = xKey === yNextKey;
 		}
 
 
@@ -3853,6 +3917,7 @@ function _VirtualDom_dekey(keyedNode)
 
 
 
+
 // ELEMENT
 
 
@@ -3928,10 +3993,15 @@ var _Browser_document = _Debugger_document || F4(function(impl, flagDecoder, deb
 // ANIMATION
 
 
+var _Browser_cancelAnimationFrame =
+	typeof cancelAnimationFrame !== 'undefined'
+		? cancelAnimationFrame
+		: function(id) { clearTimeout(id); };
+
 var _Browser_requestAnimationFrame =
 	typeof requestAnimationFrame !== 'undefined'
 		? requestAnimationFrame
-		: function(callback) { setTimeout(callback, 1000 / 60); };
+		: function(callback) { return setTimeout(callback, 1000 / 60); };
 
 
 function _Browser_makeAnimator(model, draw)
@@ -3981,7 +4051,7 @@ function _Browser_application(impl)
 
 			return F2(function(domNode, event)
 			{
-				if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button < 1 && !domNode.target && !domNode.download)
+				if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button < 1 && !domNode.target && !domNode.hasAttribute('download'))
 				{
 					event.preventDefault();
 					var href = domNode.href;
@@ -4093,12 +4163,12 @@ function _Browser_rAF()
 {
 	return _Scheduler_binding(function(callback)
 	{
-		var id = requestAnimationFrame(function() {
+		var id = _Browser_requestAnimationFrame(function() {
 			callback(_Scheduler_succeed(Date.now()));
 		});
 
 		return function() {
-			cancelAnimationFrame(id);
+			_Browser_cancelAnimationFrame(id);
 		};
 	});
 }
@@ -4288,49 +4358,215 @@ function _Browser_load(url)
 
 
 
-function _Time_now(millisToPosix)
-{
-	return _Scheduler_binding(function(callback)
-	{
-		callback(_Scheduler_succeed(millisToPosix(Date.now())));
-	});
-}
+// SEND REQUEST
 
-var _Time_setInterval = F2(function(interval, task)
+var _Http_toTask = F3(function(router, toTask, request)
 {
 	return _Scheduler_binding(function(callback)
 	{
-		var id = setInterval(function() { _Scheduler_rawSpawn(task); }, interval);
-		return function() { clearInterval(id); };
+		function done(response) {
+			callback(toTask(request.expect.a(response)));
+		}
+
+		var xhr = new XMLHttpRequest();
+		xhr.addEventListener('error', function() { done($elm$http$Http$NetworkError_); });
+		xhr.addEventListener('timeout', function() { done($elm$http$Http$Timeout_); });
+		xhr.addEventListener('load', function() { done(_Http_toResponse(request.expect.b, xhr)); });
+		$elm$core$Maybe$isJust(request.tracker) && _Http_track(router, xhr, request.tracker.a);
+
+		try {
+			xhr.open(request.method, request.url, true);
+		} catch (e) {
+			return done($elm$http$Http$BadUrl_(request.url));
+		}
+
+		_Http_configureRequest(xhr, request);
+
+		request.body.a && xhr.setRequestHeader('Content-Type', request.body.a);
+		xhr.send(request.body.b);
+
+		return function() { xhr.c = true; xhr.abort(); };
 	});
 });
 
-function _Time_here()
+
+// CONFIGURE
+
+function _Http_configureRequest(xhr, request)
 {
-	return _Scheduler_binding(function(callback)
+	for (var headers = request.headers; headers.b; headers = headers.b) // WHILE_CONS
 	{
-		callback(_Scheduler_succeed(
-			A2($elm$time$Time$customZone, -(new Date().getTimezoneOffset()), _List_Nil)
-		));
+		xhr.setRequestHeader(headers.a.a, headers.a.b);
+	}
+	xhr.timeout = request.timeout.a || 0;
+	xhr.responseType = request.expect.d;
+	xhr.withCredentials = request.allowCookiesFromOtherDomains;
+}
+
+
+// RESPONSES
+
+function _Http_toResponse(toBody, xhr)
+{
+	return A2(
+		200 <= xhr.status && xhr.status < 300 ? $elm$http$Http$GoodStatus_ : $elm$http$Http$BadStatus_,
+		_Http_toMetadata(xhr),
+		toBody(xhr.response)
+	);
+}
+
+
+// METADATA
+
+function _Http_toMetadata(xhr)
+{
+	return {
+		url: xhr.responseURL,
+		statusCode: xhr.status,
+		statusText: xhr.statusText,
+		headers: _Http_parseHeaders(xhr.getAllResponseHeaders())
+	};
+}
+
+
+// HEADERS
+
+function _Http_parseHeaders(rawHeaders)
+{
+	if (!rawHeaders)
+	{
+		return $elm$core$Dict$empty;
+	}
+
+	var headers = $elm$core$Dict$empty;
+	var headerPairs = rawHeaders.split('\r\n');
+	for (var i = headerPairs.length; i--; )
+	{
+		var headerPair = headerPairs[i];
+		var index = headerPair.indexOf(': ');
+		if (index > 0)
+		{
+			var key = headerPair.substring(0, index);
+			var value = headerPair.substring(index + 2);
+
+			headers = A3($elm$core$Dict$update, key, function(oldValue) {
+				return $elm$core$Maybe$Just($elm$core$Maybe$isJust(oldValue)
+					? value + ', ' + oldValue.a
+					: value
+				);
+			}, headers);
+		}
+	}
+	return headers;
+}
+
+
+// EXPECT
+
+var _Http_expect = F3(function(type, toBody, toValue)
+{
+	return {
+		$: 0,
+		d: type,
+		b: toBody,
+		a: toValue
+	};
+});
+
+var _Http_mapExpect = F2(function(func, expect)
+{
+	return {
+		$: 0,
+		d: expect.d,
+		b: expect.b,
+		a: function(x) { return func(expect.a(x)); }
+	};
+});
+
+function _Http_toDataView(arrayBuffer)
+{
+	return new DataView(arrayBuffer);
+}
+
+
+// BODY and PARTS
+
+var _Http_emptyBody = { $: 0 };
+var _Http_pair = F2(function(a, b) { return { $: 0, a: a, b: b }; });
+
+function _Http_toFormData(parts)
+{
+	for (var formData = new FormData(); parts.b; parts = parts.b) // WHILE_CONS
+	{
+		var part = parts.a;
+		formData.append(part.a, part.b);
+	}
+	return formData;
+}
+
+var _Http_bytesToBlob = F2(function(mime, bytes)
+{
+	return new Blob([bytes], { type: mime });
+});
+
+
+// PROGRESS
+
+function _Http_track(router, xhr, tracker)
+{
+	// TODO check out lengthComputable on loadstart event
+
+	xhr.upload.addEventListener('progress', function(event) {
+		if (xhr.c) { return; }
+		_Scheduler_rawSpawn(A2($elm$core$Platform$sendToSelf, router, _Utils_Tuple2(tracker, $elm$http$Http$Sending({
+			sent: event.loaded,
+			size: event.total
+		}))));
+	});
+	xhr.addEventListener('progress', function(event) {
+		if (xhr.c) { return; }
+		_Scheduler_rawSpawn(A2($elm$core$Platform$sendToSelf, router, _Utils_Tuple2(tracker, $elm$http$Http$Receiving({
+			received: event.loaded,
+			size: event.lengthComputable ? $elm$core$Maybe$Just(event.total) : $elm$core$Maybe$Nothing
+		}))));
 	});
 }
 
 
-function _Time_getZoneName()
+var _Bitwise_and = F2(function(a, b)
 {
-	return _Scheduler_binding(function(callback)
-	{
-		try
-		{
-			var name = $elm$time$Time$Name(Intl.DateTimeFormat().resolvedOptions().timeZone);
-		}
-		catch (e)
-		{
-			var name = $elm$time$Time$Offset(new Date().getTimezoneOffset());
-		}
-		callback(_Scheduler_succeed(name));
-	});
-}
+	return a & b;
+});
+
+var _Bitwise_or = F2(function(a, b)
+{
+	return a | b;
+});
+
+var _Bitwise_xor = F2(function(a, b)
+{
+	return a ^ b;
+});
+
+function _Bitwise_complement(a)
+{
+	return ~a;
+};
+
+var _Bitwise_shiftLeftBy = F2(function(offset, a)
+{
+	return a << offset;
+});
+
+var _Bitwise_shiftRightBy = F2(function(offset, a)
+{
+	return a >> offset;
+});
+
+var _Bitwise_shiftRightZfBy = F2(function(offset, a)
+{
+	return a >>> offset;
+});
 
 
 /*
@@ -4500,7 +4736,7 @@ var _MJS_v3toRecord = function(a) {
     return { x: a[0], y: a[1], z: a[2] };
 };
 
-var _MJS_v3fromRecord3 = function(r) {
+var _MJS_v3fromRecord = function(r) {
     return new Float64Array([r.x, r.y, r.z]);
 };
 
@@ -4548,19 +4784,19 @@ var _MJS_v3lengthSquared = function(a) {
     return a[0] * a[0] + a[1] * a[1] + a[2] * a[2];
 };
 
-var _MJS_v3distance = function(a, b) {
+var _MJS_v3distance = F2(function(a, b) {
     var dx = a[0] - b[0];
     var dy = a[1] - b[1];
     var dz = a[2] - b[2];
     return Math.sqrt(dx * dx + dy * dy + dz * dz);
-};
+});
 
-var _MJS_v3distanceSquared = function(a, b) {
+var _MJS_v3distanceSquared = F2(function(a, b) {
     var dx = a[0] - b[0];
     var dy = a[1] - b[1];
     var dz = a[2] - b[2];
     return dx * dx + dy * dy + dz * dz;
-};
+});
 
 function _MJS_v3normalizeLocal(a, r) {
     if (r === undefined) {
@@ -4847,8 +5083,7 @@ var _MJS_m4x4inverse = function(m) {
 };
 
 var _MJS_m4x4inverseOrthonormal = function(m) {
-    var r = new Float64Array(16);
-    _MJS_m4x4transposeLocal(m, r);
+    var r = _MJS_m4x4transposeLocal(m);
     var t = [m[12], m[13], m[14]];
     r[3] = r[7] = r[11] = 0;
     r[12] = -_MJS_v3dotLocal([r[0], r[4], r[8]], t);
@@ -5348,9 +5583,51 @@ var _MJS_m4x4makeBasis = F3(function(vx, vy, vz) {
 });
 
 
-function _WebGL_log(/* msg */) {
-  // console.log(msg);
+
+function _Time_now(millisToPosix)
+{
+	return _Scheduler_binding(function(callback)
+	{
+		callback(_Scheduler_succeed(millisToPosix(Date.now())));
+	});
 }
+
+var _Time_setInterval = F2(function(interval, task)
+{
+	return _Scheduler_binding(function(callback)
+	{
+		var id = setInterval(function() { _Scheduler_rawSpawn(task); }, interval);
+		return function() { clearInterval(id); };
+	});
+});
+
+function _Time_here()
+{
+	return _Scheduler_binding(function(callback)
+	{
+		callback(_Scheduler_succeed(
+			A2($elm$time$Time$customZone, -(new Date().getTimezoneOffset()), _List_Nil)
+		));
+	});
+}
+
+
+function _Time_getZoneName()
+{
+	return _Scheduler_binding(function(callback)
+	{
+		try
+		{
+			var name = $elm$time$Time$Name(Intl.DateTimeFormat().resolvedOptions().timeZone);
+		}
+		catch (e)
+		{
+			var name = $elm$time$Time$Offset(new Date().getTimezoneOffset());
+		}
+		callback(_Scheduler_succeed(name));
+	});
+}
+
 
 var _WebGL_guid = 0;
 
@@ -5385,148 +5662,280 @@ var _WebGL_entity = F5(function (settings, vert, frag, mesh, uniforms) {
 });
 
 // eslint-disable-next-line no-unused-vars
-var _WebGL_enableBlend = F2(function (gl, setting) {
-  gl.enable(gl.BLEND);
+var _WebGL_enableBlend = F2(function (cache, setting) {
+  var blend = cache.blend;
+  blend.toggle = cache.toggle;
+
+  if (!blend.enabled) {
+    cache.gl.enable(cache.gl.BLEND);
+    blend.enabled = true;
+  }
+
   // a   b   c   d   e   f   g h i j
   // eq1 f11 f12 eq2 f21 f22 r g b a
-  gl.blendEquationSeparate(setting.a, setting.d);
-  gl.blendFuncSeparate(setting.b, setting.c, setting.e, setting.f);
-  gl.blendColor(setting.g, setting.h, setting.i, setting.j);
+  if (blend.a !== setting.a || blend.d !== setting.d) {
+    cache.gl.blendEquationSeparate(setting.a, setting.d);
+    blend.a = setting.a;
+    blend.d = setting.d;
+  }
+  if (blend.b !== setting.b || blend.c !== setting.c || blend.e !== setting.e || blend.f !== setting.f) {
+    cache.gl.blendFuncSeparate(setting.b, setting.c, setting.e, setting.f);
+    blend.b = setting.b;
+    blend.c = setting.c;
+    blend.e = setting.e;
+    blend.f = setting.f;
+  }
+  if (blend.g !== setting.g || blend.h !== setting.h || blend.i !== setting.i || blend.j !== setting.j) {
+    cache.gl.blendColor(setting.g, setting.h, setting.i, setting.j);
+    blend.g = setting.g;
+    blend.h = setting.h;
+    blend.i = setting.i;
+    blend.j = setting.j;
+  }
 });
 
 // eslint-disable-next-line no-unused-vars
-var _WebGL_enableDepthTest = F2(function (gl, setting) {
-  gl.enable(gl.DEPTH_TEST);
+var _WebGL_enableDepthTest = F2(function (cache, setting) {
+  var depthTest = cache.depthTest;
+  depthTest.toggle = cache.toggle;
+
+  if (!depthTest.enabled) {
+    cache.gl.enable(cache.gl.DEPTH_TEST);
+    depthTest.enabled = true;
+  }
+
   // a    b    c    d
   // func mask near far
-  gl.depthFunc(setting.a);
-  gl.depthMask(setting.b);
-  gl.depthRange(setting.c, setting.d);
+  if (depthTest.a !== setting.a) {
+    cache.gl.depthFunc(setting.a);
+    depthTest.a = setting.a;
+  }
+  if (depthTest.b !== setting.b) {
+    cache.gl.depthMask(setting.b);
+    depthTest.b = setting.b;
+  }
+  if (depthTest.c !== setting.c || depthTest.d !== setting.d) {
+    cache.gl.depthRange(setting.c, setting.d);
+    depthTest.c = setting.c;
+    depthTest.d = setting.d;
+  }
 });
 
 // eslint-disable-next-line no-unused-vars
-var _WebGL_enableStencilTest = F2(function (gl, setting) {
-  gl.enable(gl.STENCIL_TEST);
+var _WebGL_enableStencilTest = F2(function (cache, setting) {
+  var stencilTest = cache.stencilTest;
+  stencilTest.toggle = cache.toggle;
+
+  if (!stencilTest.enabled) {
+    cache.gl.enable(cache.gl.STENCIL_TEST);
+    stencilTest.enabled = true;
+  }
+
   // a   b    c         d     e     f      g      h     i     j      k
   // ref mask writeMask test1 fail1 zfail1 zpass1 test2 fail2 zfail2 zpass2
-  gl.stencilFuncSeparate(gl.FRONT, setting.d, setting.a, setting.b);
-  gl.stencilOpSeparate(gl.FRONT, setting.e, setting.f, setting.g);
-  gl.stencilMaskSeparate(gl.FRONT, setting.c);
-  gl.stencilFuncSeparate(gl.BACK, setting.h, setting.a, setting.b);
-  gl.stencilOpSeparate(gl.BACK, setting.i, setting.j, setting.k);
-  gl.stencilMaskSeparate(gl.BACK, setting.c);
+  if (stencilTest.d !== setting.d || stencilTest.a !== setting.a || stencilTest.b !== setting.b) {
+    cache.gl.stencilFuncSeparate(cache.gl.FRONT, setting.d, setting.a, setting.b);
+    stencilTest.d = setting.d;
+    // a and b are set in the cache.gl.BACK diffing because they should be the same
+  }
+  if (stencilTest.e !== setting.e || stencilTest.f !== setting.f || stencilTest.g !== setting.g) {
+    cache.gl.stencilOpSeparate(cache.gl.FRONT, setting.e, setting.f, setting.g);
+    stencilTest.e = setting.e;
+    stencilTest.f = setting.f;
+    stencilTest.g = setting.g;
+  }
+  if (stencilTest.c !== setting.c) {
+    cache.gl.stencilMask(setting.c);
+    stencilTest.c = setting.c;
+  }
+  if (stencilTest.h !== setting.h || stencilTest.a !== setting.a || stencilTest.b !== setting.b) {
+    cache.gl.stencilFuncSeparate(cache.gl.BACK, setting.h, setting.a, setting.b);
+    stencilTest.h = setting.h;
+    stencilTest.a = setting.a;
+    stencilTest.b = setting.b;
+  }
+  if (stencilTest.i !== setting.i || stencilTest.j !== setting.j || stencilTest.k !== setting.k) {
+    cache.gl.stencilOpSeparate(cache.gl.BACK, setting.i, setting.j, setting.k);
+    stencilTest.i = setting.i;
+    stencilTest.j = setting.j;
+    stencilTest.k = setting.k;
+  }
 });
 
 // eslint-disable-next-line no-unused-vars
-var _WebGL_enableScissor = F2(function (gl, setting) {
-  gl.enable(gl.SCISSOR_TEST);
-  gl.scissor(setting.a, setting.b, setting.c, setting.d);
+var _WebGL_enableScissor = F2(function (cache, setting) {
+  var scissor = cache.scissor;
+  scissor.toggle = cache.toggle;
+
+  if (!scissor.enabled) {
+    cache.gl.enable(cache.gl.SCISSOR_TEST);
+    scissor.enabled = true;
+  }
+
+  if (scissor.a !== setting.a || scissor.b !== setting.b || scissor.c !== setting.c || scissor.d !== setting.d) {
+    cache.gl.scissor(setting.a, setting.b, setting.c, setting.d);
+    scissor.a = setting.a;
+    scissor.b = setting.b;
+    scissor.c = setting.c;
+    scissor.d = setting.d;
+  }
 });
 
 // eslint-disable-next-line no-unused-vars
-var _WebGL_enableColorMask = F2(function (gl, setting) {
-  gl.colorMask(setting.a, setting.b, setting.c, setting.d);
+var _WebGL_enableColorMask = F2(function (cache, setting) {
+  var colorMask = cache.colorMask;
+  colorMask.toggle = cache.toggle;
+  colorMask.enabled = true;
+
+  if (colorMask.a !== setting.a || colorMask.b !== setting.b || colorMask.c !== setting.c || colorMask.d !== setting.d) {
+    cache.gl.colorMask(setting.a, setting.b, setting.c, setting.d);
+    colorMask.a = setting.a;
+    colorMask.b = setting.b;
+    colorMask.c = setting.c;
+    colorMask.d = setting.d;
+  }
 });
 
 // eslint-disable-next-line no-unused-vars
-var _WebGL_enableCullFace = F2(function (gl, setting) {
-  gl.enable(gl.CULL_FACE);
-  gl.cullFace(setting.a);
+var _WebGL_enableCullFace = F2(function (cache, setting) {
+  var cullFace = cache.cullFace;
+  cullFace.toggle = cache.toggle;
+
+  if (!cullFace.enabled) {
+    cache.gl.enable(cache.gl.CULL_FACE);
+    cullFace.enabled = true;
+  }
+
+  if (cullFace.a !== setting.a) {
+    cache.gl.cullFace(setting.a);
+    cullFace.a = setting.a;
+  }
 });
 
 // eslint-disable-next-line no-unused-vars
-var _WebGL_enablePolygonOffset = F2(function (gl, setting) {
-  gl.enable(gl.POLYGON_OFFSET_FILL);
-  gl.polygonOffset(setting.a, setting.b);
+var _WebGL_enablePolygonOffset = F2(function (cache, setting) {
+  var polygonOffset = cache.polygonOffset;
+  polygonOffset.toggle = cache.toggle;
+
+  if (!polygonOffset.enabled) {
+    cache.gl.enable(cache.gl.POLYGON_OFFSET_FILL);
+    polygonOffset.enabled = true;
+  }
+
+  if (polygonOffset.a !== setting.a || polygonOffset.b !== setting.b) {
+    cache.gl.polygonOffset(setting.a, setting.b);
+    polygonOffset.a = setting.a;
+    polygonOffset.b = setting.b;
+  }
 });
 
 // eslint-disable-next-line no-unused-vars
-var _WebGL_enableSampleCoverage = F2(function (gl, setting) {
-  gl.enable(gl.SAMPLE_COVERAGE);
-  gl.sampleCoverage(setting.a, setting.b);
+var _WebGL_enableSampleCoverage = F2(function (cache, setting) {
+  var sampleCoverage = cache.sampleCoverage;
+  sampleCoverage.toggle = cache.toggle;
+
+  if (!sampleCoverage.enabled) {
+    cache.gl.enable(cache.gl.SAMPLE_COVERAGE);
+    sampleCoverage.enabled = true;
+  }
+
+  if (sampleCoverage.a !== setting.a || sampleCoverage.b !== setting.b) {
+    cache.gl.sampleCoverage(setting.a, setting.b);
+    sampleCoverage.a = setting.a;
+    sampleCoverage.b = setting.b;
+  }
 });
 
 // eslint-disable-next-line no-unused-vars
-var _WebGL_enableSampleAlphaToCoverage = F2(function (gl, setting) {
-  gl.enable(gl.SAMPLE_ALPHA_TO_COVERAGE);
-});
+var _WebGL_enableSampleAlphaToCoverage = function (cache) {
+  var sampleAlphaToCoverage = cache.sampleAlphaToCoverage;
+  sampleAlphaToCoverage.toggle = cache.toggle;
 
-// eslint-disable-next-line no-unused-vars
+  if (!sampleAlphaToCoverage.enabled) {
+    cache.gl.enable(cache.gl.SAMPLE_ALPHA_TO_COVERAGE);
+    sampleAlphaToCoverage.enabled = true;
+  }
+};
+
 var _WebGL_disableBlend = function (cache) {
-  cache.gl.disable(cache.gl.BLEND);
+  if (cache.blend.enabled) {
+    cache.gl.disable(cache.gl.BLEND);
+    cache.blend.enabled = false;
+  }
 };
 
-// eslint-disable-next-line no-unused-vars
 var _WebGL_disableDepthTest = function (cache) {
-  cache.gl.disable(cache.gl.DEPTH_TEST);
-  cache.gl.depthMask(true);
+  if (cache.depthTest.enabled) {
+    cache.gl.disable(cache.gl.DEPTH_TEST);
+    cache.depthTest.enabled = false;
+  }
 };
 
-// eslint-disable-next-line no-unused-vars
 var _WebGL_disableStencilTest = function (cache) {
-  cache.gl.disable(cache.gl.STENCIL_TEST);
-  cache.gl.stencilMask(cache.STENCIL_WRITEMASK);
+  if (cache.stencilTest.enabled) {
+    cache.gl.disable(cache.gl.STENCIL_TEST);
+    cache.stencilTest.enabled = false;
+  }
 };
 
-// eslint-disable-next-line no-unused-vars
 var _WebGL_disableScissor = function (cache) {
-  cache.gl.disable(cache.gl.SCISSOR_TEST);
+  if (cache.scissor.enabled) {
+    cache.gl.disable(cache.gl.SCISSOR_TEST);
+    cache.scissor.enabled = false;
+  }
 };
 
-// eslint-disable-next-line no-unused-vars
 var _WebGL_disableColorMask = function (cache) {
-  cache.gl.colorMask(true, true, true, true);
+  var colorMask = cache.colorMask;
+  if (!colorMask.a || !colorMask.b || !colorMask.c || !colorMask.d) {
+    cache.gl.colorMask(true, true, true, true);
+    colorMask.a = true;
+    colorMask.b = true;
+    colorMask.c = true;
+    colorMask.d = true;
+  }
 };
 
-// eslint-disable-next-line no-unused-vars
 var _WebGL_disableCullFace = function (cache) {
   cache.gl.disable(cache.gl.CULL_FACE);
 };
 
-// eslint-disable-next-line no-unused-vars
 var _WebGL_disablePolygonOffset = function (cache) {
   cache.gl.disable(cache.gl.POLYGON_OFFSET_FILL);
 };
 
-// eslint-disable-next-line no-unused-vars
 var _WebGL_disableSampleCoverage = function (cache) {
   cache.gl.disable(cache.gl.SAMPLE_COVERAGE);
 };
 
-// eslint-disable-next-line no-unused-vars
 var _WebGL_disableSampleAlphaToCoverage = function (cache) {
   cache.gl.disable(cache.gl.SAMPLE_ALPHA_TO_COVERAGE);
 };
 
+var _WebGL_settings = ['blend', 'depthTest', 'stencilTest', 'scissor', 'colorMask', 'cullFace', 'polygonOffset', 'sampleCoverage', 'sampleAlphaToCoverage'];
+var _WebGL_disableFunctions = [_WebGL_disableBlend, _WebGL_disableDepthTest, _WebGL_disableStencilTest, _WebGL_disableScissor, _WebGL_disableColorMask, _WebGL_disableCullFace, _WebGL_disablePolygonOffset, _WebGL_disableSampleCoverage, _WebGL_disableSampleAlphaToCoverage];
+
 function _WebGL_doCompile(gl, src, type) {
-
   var shader = gl.createShader(type);
-  _WebGL_log('Created shader');
-
-  gl.shaderSource(shader, src);
+  // Enable OES_standard_derivatives extension
+  gl.shaderSource(shader, '#extension GL_OES_standard_derivatives : enable\n' + src);
   gl.compileShader(shader);
-  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    throw gl.getShaderInfoLog(shader);
-  }
-
   return shader;
-
 }
 
 function _WebGL_doLink(gl, vshader, fshader) {
-
   var program = gl.createProgram();
-  _WebGL_log('Created program');
 
   gl.attachShader(program, vshader);
   gl.attachShader(program, fshader);
   gl.linkProgram(program);
   if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    throw gl.getProgramInfoLog(program);
+    throw ('Link failed: ' + gl.getProgramInfoLog(program) +
+      '\nvs info-log: ' + gl.getShaderInfoLog(vshader) +
+      '\nfs info-log: ' + gl.getShaderInfoLog(fshader));
   }
 
   return program;
-
 }
 
 function _WebGL_getAttributeInfo(gl, type) {
@@ -5599,8 +6008,6 @@ function _WebGL_doBindAttribute(gl, attribute, mesh, attributes) {
   }, mesh.b);
 
   var buffer = gl.createBuffer();
-  _WebGL_log('Created attribute buffer ' + attribute.name);
-
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
   gl.bufferData(gl.ARRAY_BUFFER, array, gl.STATIC_DRAW);
   return buffer;
@@ -5625,7 +6032,6 @@ function _WebGL_doBindAttribute(gl, attribute, mesh, attributes) {
  */
 function _WebGL_doBindSetup(gl, mesh) {
   if (mesh.a.indexSize > 0) {
-    _WebGL_log('Created index buffer');
     var indexBuffer = gl.createBuffer();
     var indices = _WebGL_makeIndexedBuffer(mesh.c, mesh.a.indexSize);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
@@ -5650,10 +6056,10 @@ function _WebGL_doBindSetup(gl, mesh) {
  *
  *  @param {List} indicesList the list of indices
  *  @param {Number} indexSize the size of the index
- *  @return {Uint16Array} indices
+ *  @return {Uint32Array} indices
  */
 function _WebGL_makeIndexedBuffer(indicesList, indexSize) {
-  var indices = new Uint16Array(_WebGL_listLength(indicesList) * indexSize);
+  var indices = new Uint32Array(_WebGL_listLength(indicesList) * indexSize);
   var fillOffset = 0;
   var i;
   _WebGL_listEach(function (elem) {
@@ -5673,16 +6079,26 @@ function _WebGL_getProgID(vertID, fragID) {
 }
 
 var _WebGL_drawGL = F2(function (model, domNode) {
-
-  var gl = model.f.gl;
+  var cache = model.f;
+  var gl = cache.gl;
 
   if (!gl) {
     return domNode;
   }
 
   gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+
+  if (!cache.depthTest.b) {
+    gl.depthMask(true);
+    cache.depthTest.b = true;
+  }
+  if (cache.stencilTest.c !== cache.STENCIL_WRITEMASK) {
+    gl.stencilMask(cache.STENCIL_WRITEMASK);
+    cache.stencilTest.c = cache.STENCIL_WRITEMASK;
+  }
+  _WebGL_disableScissor(cache);
+  _WebGL_disableColorMask(cache);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
-  _WebGL_log('Drawing');
 
   function drawEntity(entity) {
     if (!entity.d.b.b) {
@@ -5691,35 +6107,37 @@ var _WebGL_drawGL = F2(function (model, domNode) {
 
     var progid;
     var program;
+    var i;
+
     if (entity.b.id && entity.c.id) {
       progid = _WebGL_getProgID(entity.b.id, entity.c.id);
-      program = model.f.programs[progid];
+      program = cache.programs[progid];
     }
 
     if (!program) {
 
       var vshader;
       if (entity.b.id) {
-        vshader = model.f.shaders[entity.b.id];
+        vshader = cache.shaders[entity.b.id];
       } else {
         entity.b.id = _WebGL_guid++;
       }
 
       if (!vshader) {
         vshader = _WebGL_doCompile(gl, entity.b.src, gl.VERTEX_SHADER);
-        model.f.shaders[entity.b.id] = vshader;
+        cache.shaders[entity.b.id] = vshader;
       }
 
       var fshader;
       if (entity.c.id) {
-        fshader = model.f.shaders[entity.c.id];
+        fshader = cache.shaders[entity.c.id];
       } else {
         entity.c.id = _WebGL_guid++;
       }
 
       if (!fshader) {
         fshader = _WebGL_doCompile(gl, entity.c.src, gl.FRAGMENT_SHADER);
-        model.f.shaders[entity.c.id] = fshader;
+        cache.shaders[entity.c.id] = fshader;
       }
 
       var glProgram = _WebGL_doLink(gl, vshader, fshader);
@@ -5727,47 +6145,56 @@ var _WebGL_drawGL = F2(function (model, domNode) {
       program = {
         glProgram: glProgram,
         attributes: Object.assign({}, entity.b.attributes, entity.c.attributes),
-        uniformSetters: _WebGL_createUniformSetters(
-          gl,
-          model,
-          glProgram,
-          Object.assign({}, entity.b.uniforms, entity.c.uniforms)
-        )
+        currentUniforms: {},
+        activeAttributes: [],
+        activeAttributeLocations: []
       };
 
-      progid = _WebGL_getProgID(entity.b.id, entity.c.id);
-      model.f.programs[progid] = program;
+      program.uniformSetters = _WebGL_createUniformSetters(
+        gl,
+        model,
+        program,
+        Object.assign({}, entity.b.uniforms, entity.c.uniforms)
+      );
 
+      var numActiveAttributes = gl.getProgramParameter(glProgram, gl.ACTIVE_ATTRIBUTES);
+      for (i = 0; i < numActiveAttributes; i++) {
+        var attribute = gl.getActiveAttrib(glProgram, i);
+        var attribLocation = gl.getAttribLocation(glProgram, attribute.name);
+        program.activeAttributes.push(attribute);
+        program.activeAttributeLocations.push(attribLocation);
+      }
+
+      progid = _WebGL_getProgID(entity.b.id, entity.c.id);
+      cache.programs[progid] = program;
     }
 
-    gl.useProgram(program.glProgram);
+    if (cache.lastProgId !== progid) {
+      gl.useProgram(program.glProgram);
+      cache.lastProgId = progid;
+    }
 
     _WebGL_setUniforms(program.uniformSetters, entity.e);
 
-    var buffer = model.f.buffers.get(entity.d);
+    var buffer = cache.buffers.get(entity.d);
 
     if (!buffer) {
       buffer = _WebGL_doBindSetup(gl, entity.d);
-      model.f.buffers.set(entity.d, buffer);
+      cache.buffers.set(entity.d, buffer);
     }
 
-    var numAttributes = gl.getProgramParameter(program.glProgram, gl.ACTIVE_ATTRIBUTES);
-
-    for (var i = 0; i < numAttributes; i++) {
-      var attribute = gl.getActiveAttrib(program.glProgram, i);
-
-      var attribLocation = gl.getAttribLocation(program.glProgram, attribute.name);
-      gl.enableVertexAttribArray(attribLocation);
+    for (i = 0; i < program.activeAttributes.length; i++) {
+      attribute = program.activeAttributes[i];
+      attribLocation = program.activeAttributeLocations[i];
 
       if (buffer.buffers[attribute.name] === undefined) {
         buffer.buffers[attribute.name] = _WebGL_doBindAttribute(gl, attribute, entity.d, program.attributes);
       }
-      var attributeBuffer = buffer.buffers[attribute.name];
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer.buffers[attribute.name]);
+
       var attributeInfo = _WebGL_getAttributeInfo(gl, attribute.type);
-
-      gl.bindBuffer(gl.ARRAY_BUFFER, attributeBuffer);
-
       if (attributeInfo.arraySize === 1) {
+        gl.enableVertexAttribArray(attribLocation);
         gl.vertexAttribPointer(attribLocation, attributeInfo.size, attributeInfo.baseType, false, 0, 0);
       } else {
         // Point to four vec4 in case of mat4
@@ -5779,17 +6206,26 @@ var _WebGL_drawGL = F2(function (model, domNode) {
         }
       }
     }
-    _WebGL_listEach($elm_explorations$webgl$WebGL$Internal$enableSetting(gl), entity.a);
+
+    // Apply all the new settings
+    cache.toggle = !cache.toggle;
+    _WebGL_listEach($elm_explorations$webgl$WebGL$Internal$enableSetting(cache), entity.a);
+    // Disable the settings that were applied in the previous draw call
+    for (i = 0; i < _WebGL_settings.length; i++) {
+      var setting = cache[_WebGL_settings[i]];
+      if (setting.toggle !== cache.toggle && setting.enabled) {
+        _WebGL_disableFunctions[i](cache);
+        setting.enabled = false;
+        setting.toggle = cache.toggle;
+      }
+    }
 
     if (buffer.indexBuffer) {
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer.indexBuffer);
-      gl.drawElements(entity.d.a.mode, buffer.numIndices, gl.UNSIGNED_SHORT, 0);
+      gl.drawElements(entity.d.a.mode, buffer.numIndices, gl.UNSIGNED_INT, 0);
     } else {
       gl.drawArrays(entity.d.a.mode, 0, buffer.numIndices);
     }
-
-    _WebGL_listEach($elm_explorations$webgl$WebGL$Internal$disableSetting(model.f), entity.a);
-
   }
 
   _WebGL_listEach(drawEntity, model.g);
@@ -5797,62 +6233,88 @@ var _WebGL_drawGL = F2(function (model, domNode) {
 });
 
 function _WebGL_createUniformSetters(gl, model, program, uniformsMap) {
+  var glProgram = program.glProgram;
+  var currentUniforms = program.currentUniforms;
   var textureCounter = 0;
-  function createUniformSetter(program, uniform) {
-    var uniformLocation = gl.getUniformLocation(program, uniform.name);
+  var cache = model.f;
+  function createUniformSetter(glProgram, uniform) {
+    var uniformName = uniform.name;
+    var uniformLocation = gl.getUniformLocation(glProgram, uniformName);
     switch (uniform.type) {
       case gl.INT:
         return function (value) {
-          gl.uniform1i(uniformLocation, value);
+          if (currentUniforms[uniformName] !== value) {
+            gl.uniform1i(uniformLocation, value);
+            currentUniforms[uniformName] = value;
+          }
         };
       case gl.FLOAT:
         return function (value) {
-          gl.uniform1f(uniformLocation, value);
+          if (currentUniforms[uniformName] !== value) {
+            gl.uniform1f(uniformLocation, value);
+            currentUniforms[uniformName] = value;
+          }
         };
       case gl.FLOAT_VEC2:
         return function (value) {
-          gl.uniform2fv(uniformLocation, new Float32Array(value));
+          if (currentUniforms[uniformName] !== value) {
+            gl.uniform2f(uniformLocation, value[0], value[1]);
+            currentUniforms[uniformName] = value;
+          }
         };
       case gl.FLOAT_VEC3:
         return function (value) {
-          gl.uniform3fv(uniformLocation, new Float32Array(value));
+          if (currentUniforms[uniformName] !== value) {
+            gl.uniform3f(uniformLocation, value[0], value[1], value[2]);
+            currentUniforms[uniformName] = value;
+          }
         };
       case gl.FLOAT_VEC4:
         return function (value) {
-          gl.uniform4fv(uniformLocation, new Float32Array(value));
+          if (currentUniforms[uniformName] !== value) {
+            gl.uniform4f(uniformLocation, value[0], value[1], value[2], value[3]);
+            currentUniforms[uniformName] = value;
+          }
         };
       case gl.FLOAT_MAT4:
         return function (value) {
-          gl.uniformMatrix4fv(uniformLocation, false, new Float32Array(value));
+          if (currentUniforms[uniformName] !== value) {
+            gl.uniformMatrix4fv(uniformLocation, false, new Float32Array(value));
+            currentUniforms[uniformName] = value;
+          }
         };
       case gl.SAMPLER_2D:
         var currentTexture = textureCounter++;
         return function (texture) {
           gl.activeTexture(gl.TEXTURE0 + currentTexture);
-          var tex = model.f.textures.get(texture);
+          var tex = cache.textures.get(texture);
           if (!tex) {
-            _WebGL_log('Created texture');
             tex = texture.createTexture(gl);
-            model.f.textures.set(texture, tex);
+            cache.textures.set(texture, tex);
           }
           gl.bindTexture(gl.TEXTURE_2D, tex);
-          gl.uniform1i(uniformLocation, currentTexture);
+          if (currentUniforms[uniformName] !== texture) {
+            gl.uniform1i(uniformLocation, currentTexture);
+            currentUniforms[uniformName] = texture;
+          }
         };
       case gl.BOOL:
         return function (value) {
-          gl.uniform1i(uniformLocation, value);
+          if (currentUniforms[uniformName] !== value) {
+            gl.uniform1i(uniformLocation, value);
+            currentUniforms[uniformName] = value;
+          }
         };
       default:
-        _WebGL_log('Unsupported uniform type: ' + uniform.type);
         return function () { };
     }
   }
 
   var uniformSetters = {};
-  var numUniforms = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
+  var numUniforms = gl.getProgramParameter(glProgram, gl.ACTIVE_UNIFORMS);
   for (var i = 0; i < numUniforms; i++) {
-    var uniform = gl.getActiveUniform(program, i);
-    uniformSetters[uniformsMap[uniform.name] || uniform.name] = createUniformSetter(program, uniform);
+    var uniform = gl.getActiveUniform(glProgram, i);
+    uniformSetters[uniformsMap[uniform.name] || uniform.name] = createUniformSetter(glProgram, uniform);
   }
 
   return uniformSetters;
@@ -5948,7 +6410,6 @@ function _WebGL_render(model) {
     return A2($elm_explorations$webgl$WebGL$Internal$enableOption, options, option);
   }, model.h);
 
-  _WebGL_log('Render canvas');
   var canvas = _VirtualDom_doc.createElement('canvas');
   var gl = canvas.getContext && (
     canvas.getContext('webgl', options.contextAttributes) ||
@@ -5960,9 +6421,28 @@ function _WebGL_render(model) {
       sceneSetting(gl);
     });
 
+    // Activate extensions
+    gl.getExtension('OES_standard_derivatives');
+    gl.getExtension('OES_element_index_uint');
+
     model.f.gl = gl;
+
+    // Cache the current settings in order to diff them to avoid redundant calls
+    // https://emscripten.org/docs/optimizing/Optimizing-WebGL.html#avoid-redundant-calls
+    model.f.toggle = false; // used to diff the settings from the previous and current draw calls
+    model.f.blend = { enabled: false, toggle: false };
+    model.f.depthTest = { enabled: false, toggle: false };
+    model.f.stencilTest = { enabled: false, toggle: false };
+    model.f.scissor = { enabled: false, toggle: false };
+    model.f.colorMask = { enabled: false, toggle: false };
+    model.f.cullFace = { enabled: false, toggle: false };
+    model.f.polygonOffset = { enabled: false, toggle: false };
+    model.f.sampleCoverage = { enabled: false, toggle: false };
+    model.f.sampleAlphaToCoverage = { enabled: false, toggle: false };
+
     model.f.shaders = [];
     model.f.programs = {};
+    model.f.lastProgId = null;
     model.f.buffers = new WeakMap();
     model.f.textures = new WeakMap();
     // Memorize the initial stencil write mask, because
@@ -6778,6 +7258,9 @@ var $elm$core$Task$perform = F2(
 	});
 var $elm$browser$Browser$element = _Browser_element;
 var $author$project$Common$Disconnected = {$: 'Disconnected'};
+var $author$project$Main$EarthMeshLoaded = function (a) {
+	return {$: 'EarthMeshLoaded', a: a};
+};
 var $author$project$Common$MainMenu = {$: 'MainMenu'};
 var $author$project$Common$NoDrag = {$: 'NoDrag'};
 var $author$project$Main$ViewportMsg = function (a) {
@@ -6807,9 +7290,2483 @@ var $elm$core$Task$attempt = F2(
 							$elm$core$Result$Ok),
 						task))));
 	});
+var $elm$core$Platform$Cmd$batch = _Platform_batch;
+var $elm$http$Http$BadBody = function (a) {
+	return {$: 'BadBody', a: a};
+};
+var $elm$http$Http$BadStatus = function (a) {
+	return {$: 'BadStatus', a: a};
+};
+var $elm$http$Http$BadUrl = function (a) {
+	return {$: 'BadUrl', a: a};
+};
+var $elm$http$Http$NetworkError = {$: 'NetworkError'};
+var $elm$http$Http$Timeout = {$: 'Timeout'};
+var $w0rm$elm_obj_file$Obj$Decode$FaceElement = F2(
+	function (a, b) {
+		return {$: 'FaceElement', a: a, b: b};
+	});
+var $w0rm$elm_obj_file$Obj$Decode$LineElement = F2(
+	function (a, b) {
+		return {$: 'LineElement', a: a, b: b};
+	});
+var $w0rm$elm_obj_file$Obj$Decode$PointsElement = F2(
+	function (a, b) {
+		return {$: 'PointsElement', a: a, b: b};
+	});
+var $w0rm$elm_obj_file$Obj$Decode$Group = F4(
+	function (a, b, c, d) {
+		return {$: 'Group', a: a, b: b, c: c, d: d};
+	});
+var $w0rm$elm_obj_file$Obj$Decode$addNonEmptyGroup = F7(
+	function (object_, material_, groups_, faceElements, lineElements, pointsElements, groups) {
+		if (faceElements.b) {
+			return A2(
+				$elm$core$List$cons,
+				A4(
+					$w0rm$elm_obj_file$Obj$Decode$Group,
+					{groups: groups_, material: material_, object: object_},
+					faceElements,
+					lineElements,
+					pointsElements),
+				groups);
+		} else {
+			if (lineElements.b) {
+				return A2(
+					$elm$core$List$cons,
+					A4(
+						$w0rm$elm_obj_file$Obj$Decode$Group,
+						{groups: groups_, material: material_, object: object_},
+						faceElements,
+						lineElements,
+						pointsElements),
+					groups);
+			} else {
+				if (pointsElements.b) {
+					return A2(
+						$elm$core$List$cons,
+						A4(
+							$w0rm$elm_obj_file$Obj$Decode$Group,
+							{groups: groups_, material: material_, object: object_},
+							faceElements,
+							lineElements,
+							pointsElements),
+						groups);
+				} else {
+					return groups;
+				}
+			}
+		}
+	});
+var $elm$core$List$any = F2(
+	function (isOkay, list) {
+		any:
+		while (true) {
+			if (!list.b) {
+				return false;
+			} else {
+				var x = list.a;
+				var xs = list.b;
+				if (isOkay(x)) {
+					return true;
+				} else {
+					var $temp$isOkay = isOkay,
+						$temp$list = xs;
+					isOkay = $temp$isOkay;
+					list = $temp$list;
+					continue any;
+				}
+			}
+		}
+	});
+var $elm$core$List$drop = F2(
+	function (n, list) {
+		drop:
+		while (true) {
+			if (n <= 0) {
+				return list;
+			} else {
+				if (!list.b) {
+					return list;
+				} else {
+					var x = list.a;
+					var xs = list.b;
+					var $temp$n = n - 1,
+						$temp$list = xs;
+					n = $temp$n;
+					list = $temp$list;
+					continue drop;
+				}
+			}
+		}
+	});
+var $w0rm$elm_obj_file$Obj$Decode$formatError = F2(
+	function (lineno, error) {
+		return $elm$core$Result$Err(
+			'Line ' + ($elm$core$String$fromInt(lineno) + (': ' + error)));
+	});
+var $elm$core$Array$fromListHelp = F3(
+	function (list, nodeList, nodeListSize) {
+		fromListHelp:
+		while (true) {
+			var _v0 = A2($elm$core$Elm$JsArray$initializeFromList, $elm$core$Array$branchFactor, list);
+			var jsArray = _v0.a;
+			var remainingItems = _v0.b;
+			if (_Utils_cmp(
+				$elm$core$Elm$JsArray$length(jsArray),
+				$elm$core$Array$branchFactor) < 0) {
+				return A2(
+					$elm$core$Array$builderToArray,
+					true,
+					{nodeList: nodeList, nodeListSize: nodeListSize, tail: jsArray});
+			} else {
+				var $temp$list = remainingItems,
+					$temp$nodeList = A2(
+					$elm$core$List$cons,
+					$elm$core$Array$Leaf(jsArray),
+					nodeList),
+					$temp$nodeListSize = nodeListSize + 1;
+				list = $temp$list;
+				nodeList = $temp$nodeList;
+				nodeListSize = $temp$nodeListSize;
+				continue fromListHelp;
+			}
+		}
+	});
+var $elm$core$Array$fromList = function (list) {
+	if (!list.b) {
+		return $elm$core$Array$empty;
+	} else {
+		return A3($elm$core$Array$fromListHelp, list, _List_Nil, 0);
+	}
+};
+var $ianmackenzie$elm_geometry$Geometry$Types$Point3d = function (a) {
+	return {$: 'Point3d', a: a};
+};
+var $ianmackenzie$elm_geometry$Point3d$fromMeters = function (givenCoordinates) {
+	return $ianmackenzie$elm_geometry$Geometry$Types$Point3d(givenCoordinates);
+};
+var $elm$core$Basics$isNaN = _Basics_isNaN;
+var $elm$core$Array$length = function (_v0) {
+	var len = _v0.a;
+	return len;
+};
+var $elm$core$Basics$negate = function (n) {
+	return -n;
+};
+var $w0rm$elm_obj_file$Obj$Decode$parseIndices = F2(
+	function (list, vertices) {
+		parseIndices:
+		while (true) {
+			if (list.b) {
+				var first = list.a;
+				var more = list.b;
+				var _v1 = A2($elm$core$String$split, '/', first);
+				if (_v1.b) {
+					var pComponent = _v1.a;
+					var uvnComponents = _v1.b;
+					var _v2 = $elm$core$String$toInt(pComponent);
+					if (_v2.$ === 'Just') {
+						var p = _v2.a;
+						if (uvnComponents.b) {
+							var uvComponent = uvnComponents.a;
+							var nComponents = uvnComponents.b;
+							var _v4 = $elm$core$String$toInt(uvComponent);
+							if (_v4.$ === 'Just') {
+								var uv = _v4.a;
+								if (nComponents.b) {
+									var nComponent = nComponents.a;
+									var _v6 = $elm$core$String$toInt(nComponent);
+									if (_v6.$ === 'Just') {
+										var n = _v6.a;
+										var $temp$list = more,
+											$temp$vertices = A2(
+											$elm$core$List$cons,
+											{n: n - 1, p: p - 1, uv: uv - 1},
+											vertices);
+										list = $temp$list;
+										vertices = $temp$vertices;
+										continue parseIndices;
+									} else {
+										return _List_Nil;
+									}
+								} else {
+									var $temp$list = more,
+										$temp$vertices = A2(
+										$elm$core$List$cons,
+										{n: -1, p: p - 1, uv: uv - 1},
+										vertices);
+									list = $temp$list;
+									vertices = $temp$vertices;
+									continue parseIndices;
+								}
+							} else {
+								if (nComponents.b) {
+									var nComponent = nComponents.a;
+									var _v8 = $elm$core$String$toInt(nComponent);
+									if (_v8.$ === 'Just') {
+										var n = _v8.a;
+										var $temp$list = more,
+											$temp$vertices = A2(
+											$elm$core$List$cons,
+											{n: n - 1, p: p - 1, uv: -1},
+											vertices);
+										list = $temp$list;
+										vertices = $temp$vertices;
+										continue parseIndices;
+									} else {
+										return _List_Nil;
+									}
+								} else {
+									var $temp$list = more,
+										$temp$vertices = A2(
+										$elm$core$List$cons,
+										{n: -1, p: p - 1, uv: -1},
+										vertices);
+									list = $temp$list;
+									vertices = $temp$vertices;
+									continue parseIndices;
+								}
+							}
+						} else {
+							var $temp$list = more,
+								$temp$vertices = A2(
+								$elm$core$List$cons,
+								{n: -1, p: p - 1, uv: -1},
+								vertices);
+							list = $temp$list;
+							vertices = $temp$vertices;
+							continue parseIndices;
+						}
+					} else {
+						return _List_Nil;
+					}
+				} else {
+					return _List_Nil;
+				}
+			} else {
+				return vertices;
+			}
+		}
+	});
+var $w0rm$elm_obj_file$Obj$Decode$nanXyz = {x: 0 / 0, y: 0 / 0, z: 0 / 0};
+var $elm$core$String$toFloat = _String_toFloat;
+var $w0rm$elm_obj_file$Obj$Decode$parseNormal = function (list) {
+	if ((list.b && list.b.b) && list.b.b.b) {
+		var sx = list.a;
+		var _v1 = list.b;
+		var sy = _v1.a;
+		var _v2 = _v1.b;
+		var sz = _v2.a;
+		var _v3 = $elm$core$String$toFloat(sx);
+		if (_v3.$ === 'Just') {
+			var x = _v3.a;
+			var _v4 = $elm$core$String$toFloat(sy);
+			if (_v4.$ === 'Just') {
+				var y = _v4.a;
+				var _v5 = $elm$core$String$toFloat(sz);
+				if (_v5.$ === 'Just') {
+					var z = _v5.a;
+					return {x: x, y: y, z: z};
+				} else {
+					return $w0rm$elm_obj_file$Obj$Decode$nanXyz;
+				}
+			} else {
+				return $w0rm$elm_obj_file$Obj$Decode$nanXyz;
+			}
+		} else {
+			return $w0rm$elm_obj_file$Obj$Decode$nanXyz;
+		}
+	} else {
+		return $w0rm$elm_obj_file$Obj$Decode$nanXyz;
+	}
+};
+var $w0rm$elm_obj_file$Obj$Decode$parsePosition = F2(
+	function (units, list) {
+		if ((list.b && list.b.b) && list.b.b.b) {
+			var sx = list.a;
+			var _v1 = list.b;
+			var sy = _v1.a;
+			var _v2 = _v1.b;
+			var sz = _v2.a;
+			var _v3 = $elm$core$String$toFloat(sx);
+			if (_v3.$ === 'Just') {
+				var x = _v3.a;
+				var _v4 = $elm$core$String$toFloat(sy);
+				if (_v4.$ === 'Just') {
+					var y = _v4.a;
+					var _v5 = $elm$core$String$toFloat(sz);
+					if (_v5.$ === 'Just') {
+						var z = _v5.a;
+						return {
+							x: units(x),
+							y: units(y),
+							z: units(z)
+						};
+					} else {
+						return $w0rm$elm_obj_file$Obj$Decode$nanXyz;
+					}
+				} else {
+					return $w0rm$elm_obj_file$Obj$Decode$nanXyz;
+				}
+			} else {
+				return $w0rm$elm_obj_file$Obj$Decode$nanXyz;
+			}
+		} else {
+			return $w0rm$elm_obj_file$Obj$Decode$nanXyz;
+		}
+	});
+var $w0rm$elm_obj_file$Obj$Decode$nanUv = _Utils_Tuple2(0 / 0, 0 / 0);
+var $w0rm$elm_obj_file$Obj$Decode$parseUv = function (list) {
+	if (list.b) {
+		if (list.b.b) {
+			var su = list.a;
+			var _v1 = list.b;
+			var sv = _v1.a;
+			var _v2 = $elm$core$String$toFloat(su);
+			if (_v2.$ === 'Just') {
+				var u = _v2.a;
+				var _v3 = $elm$core$String$toFloat(sv);
+				if (_v3.$ === 'Just') {
+					var v = _v3.a;
+					return _Utils_Tuple2(u, v);
+				} else {
+					return $w0rm$elm_obj_file$Obj$Decode$nanUv;
+				}
+			} else {
+				return $w0rm$elm_obj_file$Obj$Decode$nanUv;
+			}
+		} else {
+			var su = list.a;
+			var _v4 = $elm$core$String$toFloat(su);
+			if (_v4.$ === 'Just') {
+				var u = _v4.a;
+				return _Utils_Tuple2(u, 0);
+			} else {
+				return $w0rm$elm_obj_file$Obj$Decode$nanUv;
+			}
+		}
+	} else {
+		return $w0rm$elm_obj_file$Obj$Decode$nanUv;
+	}
+};
+var $elm$core$Array$repeat = F2(
+	function (n, e) {
+		return A2(
+			$elm$core$Array$initialize,
+			n,
+			function (_v0) {
+				return e;
+			});
+	});
+var $w0rm$elm_obj_file$Obj$Decode$skipCommands = _List_fromArray(
+	['s', 'mg', 'mtllib', 'bevel', 'c_interp', 'd_interp', 'lod', 'shadow_obj', 'trace_obj', 'ctech', 'stech', 'cstype', 'deg', 'bmat', 'step', 'curv', 'curv2', 'surf', 'parm', 'trim', 'hole', 'scrv', 'sp', 'end', 'con', 'call', 'scmp', 'csh']);
+var $ianmackenzie$elm_geometry$Geometry$Types$Direction3d = function (a) {
+	return {$: 'Direction3d', a: a};
+};
+var $ianmackenzie$elm_geometry$Direction3d$unsafe = function (givenComponents) {
+	return $ianmackenzie$elm_geometry$Geometry$Types$Direction3d(givenComponents);
+};
+var $elm$core$String$words = _String_words;
+var $w0rm$elm_obj_file$Obj$Decode$decodeHelp = function (units) {
+	return function (decode) {
+		return function (lines) {
+			return function (lineno) {
+				return function (positions) {
+					return function (normals) {
+						return function (uvs) {
+							return function (groups) {
+								return function (object_) {
+									return function (material_) {
+										return function (groups_) {
+											return function (faceElements) {
+												return function (lineElements) {
+													return function (pointsElements) {
+														decodeHelp:
+														while (true) {
+															if (lines.b) {
+																var line = lines.a;
+																var remainingLines = lines.b;
+																var words = $elm$core$String$words(line);
+																var startsWith = function () {
+																	if (words.b) {
+																		var firstWord = words.a;
+																		return firstWord;
+																	} else {
+																		return '';
+																	}
+																}();
+																var remainingWords = A2($elm$core$List$drop, 1, words);
+																if (startsWith === 'v') {
+																	var position = A2($w0rm$elm_obj_file$Obj$Decode$parsePosition, units, remainingWords);
+																	var x = position.x;
+																	if ($elm$core$Basics$isNaN(x)) {
+																		return A2($w0rm$elm_obj_file$Obj$Decode$formatError, lineno, 'Invalid position format');
+																	} else {
+																		var $temp$units = units,
+																			$temp$decode = decode,
+																			$temp$lines = remainingLines,
+																			$temp$lineno = lineno + 1,
+																			$temp$positions = A2(
+																			$elm$core$List$cons,
+																			$ianmackenzie$elm_geometry$Point3d$fromMeters(position),
+																			positions),
+																			$temp$normals = normals,
+																			$temp$uvs = uvs,
+																			$temp$groups = groups,
+																			$temp$object_ = object_,
+																			$temp$material_ = material_,
+																			$temp$groups_ = groups_,
+																			$temp$faceElements = faceElements,
+																			$temp$lineElements = lineElements,
+																			$temp$pointsElements = pointsElements;
+																		units = $temp$units;
+																		decode = $temp$decode;
+																		lines = $temp$lines;
+																		lineno = $temp$lineno;
+																		positions = $temp$positions;
+																		normals = $temp$normals;
+																		uvs = $temp$uvs;
+																		groups = $temp$groups;
+																		object_ = $temp$object_;
+																		material_ = $temp$material_;
+																		groups_ = $temp$groups_;
+																		faceElements = $temp$faceElements;
+																		lineElements = $temp$lineElements;
+																		pointsElements = $temp$pointsElements;
+																		continue decodeHelp;
+																	}
+																} else {
+																	if (startsWith === 'vt') {
+																		var uv = $w0rm$elm_obj_file$Obj$Decode$parseUv(remainingWords);
+																		var u = uv.a;
+																		if ($elm$core$Basics$isNaN(u)) {
+																			return A2($w0rm$elm_obj_file$Obj$Decode$formatError, lineno, 'Invalid texture coordinates format');
+																		} else {
+																			var $temp$units = units,
+																				$temp$decode = decode,
+																				$temp$lines = remainingLines,
+																				$temp$lineno = lineno + 1,
+																				$temp$positions = positions,
+																				$temp$normals = normals,
+																				$temp$uvs = A2($elm$core$List$cons, uv, uvs),
+																				$temp$groups = groups,
+																				$temp$object_ = object_,
+																				$temp$material_ = material_,
+																				$temp$groups_ = groups_,
+																				$temp$faceElements = faceElements,
+																				$temp$lineElements = lineElements,
+																				$temp$pointsElements = pointsElements;
+																			units = $temp$units;
+																			decode = $temp$decode;
+																			lines = $temp$lines;
+																			lineno = $temp$lineno;
+																			positions = $temp$positions;
+																			normals = $temp$normals;
+																			uvs = $temp$uvs;
+																			groups = $temp$groups;
+																			object_ = $temp$object_;
+																			material_ = $temp$material_;
+																			groups_ = $temp$groups_;
+																			faceElements = $temp$faceElements;
+																			lineElements = $temp$lineElements;
+																			pointsElements = $temp$pointsElements;
+																			continue decodeHelp;
+																		}
+																	} else {
+																		if (startsWith === 'vn') {
+																			var normal = $w0rm$elm_obj_file$Obj$Decode$parseNormal(remainingWords);
+																			var x = normal.x;
+																			if ($elm$core$Basics$isNaN(x)) {
+																				return A2($w0rm$elm_obj_file$Obj$Decode$formatError, lineno, 'Invalid normal vector format');
+																			} else {
+																				var $temp$units = units,
+																					$temp$decode = decode,
+																					$temp$lines = remainingLines,
+																					$temp$lineno = lineno + 1,
+																					$temp$positions = positions,
+																					$temp$normals = A2(
+																					$elm$core$List$cons,
+																					$ianmackenzie$elm_geometry$Direction3d$unsafe(normal),
+																					normals),
+																					$temp$uvs = uvs,
+																					$temp$groups = groups,
+																					$temp$object_ = object_,
+																					$temp$material_ = material_,
+																					$temp$groups_ = groups_,
+																					$temp$faceElements = faceElements,
+																					$temp$lineElements = lineElements,
+																					$temp$pointsElements = pointsElements;
+																				units = $temp$units;
+																				decode = $temp$decode;
+																				lines = $temp$lines;
+																				lineno = $temp$lineno;
+																				positions = $temp$positions;
+																				normals = $temp$normals;
+																				uvs = $temp$uvs;
+																				groups = $temp$groups;
+																				object_ = $temp$object_;
+																				material_ = $temp$material_;
+																				groups_ = $temp$groups_;
+																				faceElements = $temp$faceElements;
+																				lineElements = $temp$lineElements;
+																				pointsElements = $temp$pointsElements;
+																				continue decodeHelp;
+																			}
+																		} else {
+																			if (startsWith === 'f') {
+																				var _v1 = A2($w0rm$elm_obj_file$Obj$Decode$parseIndices, remainingWords, _List_Nil);
+																				if (_v1.b) {
+																					if (_v1.b.b && _v1.b.b.b) {
+																						var vertices = _v1;
+																						var _v2 = vertices.b;
+																						var _v3 = _v2.b;
+																						var $temp$units = units,
+																							$temp$decode = decode,
+																							$temp$lines = remainingLines,
+																							$temp$lineno = lineno + 1,
+																							$temp$positions = positions,
+																							$temp$normals = normals,
+																							$temp$uvs = uvs,
+																							$temp$groups = groups,
+																							$temp$object_ = object_,
+																							$temp$material_ = material_,
+																							$temp$groups_ = groups_,
+																							$temp$faceElements = A2(
+																							$elm$core$List$cons,
+																							A2($w0rm$elm_obj_file$Obj$Decode$FaceElement, lineno, vertices),
+																							faceElements),
+																							$temp$lineElements = lineElements,
+																							$temp$pointsElements = pointsElements;
+																						units = $temp$units;
+																						decode = $temp$decode;
+																						lines = $temp$lines;
+																						lineno = $temp$lineno;
+																						positions = $temp$positions;
+																						normals = $temp$normals;
+																						uvs = $temp$uvs;
+																						groups = $temp$groups;
+																						object_ = $temp$object_;
+																						material_ = $temp$material_;
+																						groups_ = $temp$groups_;
+																						faceElements = $temp$faceElements;
+																						lineElements = $temp$lineElements;
+																						pointsElements = $temp$pointsElements;
+																						continue decodeHelp;
+																					} else {
+																						return A2($w0rm$elm_obj_file$Obj$Decode$formatError, lineno, 'Face has less than three vertices');
+																					}
+																				} else {
+																					if (!remainingWords.b) {
+																						return A2($w0rm$elm_obj_file$Obj$Decode$formatError, lineno, 'Face has less than three vertices');
+																					} else {
+																						return A2($w0rm$elm_obj_file$Obj$Decode$formatError, lineno, 'Invalid face format');
+																					}
+																				}
+																			} else {
+																				if (startsWith === 'l') {
+																					var _v5 = A2($w0rm$elm_obj_file$Obj$Decode$parseIndices, remainingWords, _List_Nil);
+																					if (_v5.b) {
+																						if (_v5.b.b) {
+																							var vertices = _v5;
+																							var _v6 = vertices.b;
+																							var $temp$units = units,
+																								$temp$decode = decode,
+																								$temp$lines = remainingLines,
+																								$temp$lineno = lineno + 1,
+																								$temp$positions = positions,
+																								$temp$normals = normals,
+																								$temp$uvs = uvs,
+																								$temp$groups = groups,
+																								$temp$object_ = object_,
+																								$temp$material_ = material_,
+																								$temp$groups_ = groups_,
+																								$temp$faceElements = faceElements,
+																								$temp$lineElements = A2(
+																								$elm$core$List$cons,
+																								A2($w0rm$elm_obj_file$Obj$Decode$LineElement, lineno, vertices),
+																								lineElements),
+																								$temp$pointsElements = pointsElements;
+																							units = $temp$units;
+																							decode = $temp$decode;
+																							lines = $temp$lines;
+																							lineno = $temp$lineno;
+																							positions = $temp$positions;
+																							normals = $temp$normals;
+																							uvs = $temp$uvs;
+																							groups = $temp$groups;
+																							object_ = $temp$object_;
+																							material_ = $temp$material_;
+																							groups_ = $temp$groups_;
+																							faceElements = $temp$faceElements;
+																							lineElements = $temp$lineElements;
+																							pointsElements = $temp$pointsElements;
+																							continue decodeHelp;
+																						} else {
+																							return A2($w0rm$elm_obj_file$Obj$Decode$formatError, lineno, 'Line has less than two vertices');
+																						}
+																					} else {
+																						if (!remainingWords.b) {
+																							return A2($w0rm$elm_obj_file$Obj$Decode$formatError, lineno, 'Line has less than two vertices');
+																						} else {
+																							return A2($w0rm$elm_obj_file$Obj$Decode$formatError, lineno, 'Invalid line format');
+																						}
+																					}
+																				} else {
+																					if (startsWith === 'p') {
+																						var _v8 = A2($w0rm$elm_obj_file$Obj$Decode$parseIndices, remainingWords, _List_Nil);
+																						if (_v8.b) {
+																							var vertices = _v8;
+																							var $temp$units = units,
+																								$temp$decode = decode,
+																								$temp$lines = remainingLines,
+																								$temp$lineno = lineno + 1,
+																								$temp$positions = positions,
+																								$temp$normals = normals,
+																								$temp$uvs = uvs,
+																								$temp$groups = groups,
+																								$temp$object_ = object_,
+																								$temp$material_ = material_,
+																								$temp$groups_ = groups_,
+																								$temp$faceElements = faceElements,
+																								$temp$lineElements = lineElements,
+																								$temp$pointsElements = A2(
+																								$elm$core$List$cons,
+																								A2($w0rm$elm_obj_file$Obj$Decode$PointsElement, lineno, vertices),
+																								pointsElements);
+																							units = $temp$units;
+																							decode = $temp$decode;
+																							lines = $temp$lines;
+																							lineno = $temp$lineno;
+																							positions = $temp$positions;
+																							normals = $temp$normals;
+																							uvs = $temp$uvs;
+																							groups = $temp$groups;
+																							object_ = $temp$object_;
+																							material_ = $temp$material_;
+																							groups_ = $temp$groups_;
+																							faceElements = $temp$faceElements;
+																							lineElements = $temp$lineElements;
+																							pointsElements = $temp$pointsElements;
+																							continue decodeHelp;
+																						} else {
+																							if (!remainingWords.b) {
+																								return A2($w0rm$elm_obj_file$Obj$Decode$formatError, lineno, 'Points element has no vertices');
+																							} else {
+																								return A2($w0rm$elm_obj_file$Obj$Decode$formatError, lineno, 'Invalid points format');
+																							}
+																						}
+																					} else {
+																						if (startsWith === 'o') {
+																							if (remainingWords.b) {
+																								var newObject = remainingWords.a;
+																								var $temp$units = units,
+																									$temp$decode = decode,
+																									$temp$lines = remainingLines,
+																									$temp$lineno = lineno + 1,
+																									$temp$positions = positions,
+																									$temp$normals = normals,
+																									$temp$uvs = uvs,
+																									$temp$groups = A7($w0rm$elm_obj_file$Obj$Decode$addNonEmptyGroup, object_, material_, groups_, faceElements, lineElements, pointsElements, groups),
+																									$temp$object_ = $elm$core$Maybe$Just(newObject),
+																									$temp$material_ = material_,
+																									$temp$groups_ = groups_,
+																									$temp$faceElements = _List_Nil,
+																									$temp$lineElements = _List_Nil,
+																									$temp$pointsElements = _List_Nil;
+																								units = $temp$units;
+																								decode = $temp$decode;
+																								lines = $temp$lines;
+																								lineno = $temp$lineno;
+																								positions = $temp$positions;
+																								normals = $temp$normals;
+																								uvs = $temp$uvs;
+																								groups = $temp$groups;
+																								object_ = $temp$object_;
+																								material_ = $temp$material_;
+																								groups_ = $temp$groups_;
+																								faceElements = $temp$faceElements;
+																								lineElements = $temp$lineElements;
+																								pointsElements = $temp$pointsElements;
+																								continue decodeHelp;
+																							} else {
+																								return A2($w0rm$elm_obj_file$Obj$Decode$formatError, lineno, 'No object name');
+																							}
+																						} else {
+																							if (startsWith === 'g') {
+																								if (!remainingWords.b) {
+																									var $temp$units = units,
+																										$temp$decode = decode,
+																										$temp$lines = remainingLines,
+																										$temp$lineno = lineno + 1,
+																										$temp$positions = positions,
+																										$temp$normals = normals,
+																										$temp$uvs = uvs,
+																										$temp$groups = A7($w0rm$elm_obj_file$Obj$Decode$addNonEmptyGroup, object_, material_, groups_, faceElements, lineElements, pointsElements, groups),
+																										$temp$object_ = object_,
+																										$temp$material_ = material_,
+																										$temp$groups_ = _List_fromArray(
+																										['default']),
+																										$temp$faceElements = _List_Nil,
+																										$temp$lineElements = _List_Nil,
+																										$temp$pointsElements = _List_Nil;
+																									units = $temp$units;
+																									decode = $temp$decode;
+																									lines = $temp$lines;
+																									lineno = $temp$lineno;
+																									positions = $temp$positions;
+																									normals = $temp$normals;
+																									uvs = $temp$uvs;
+																									groups = $temp$groups;
+																									object_ = $temp$object_;
+																									material_ = $temp$material_;
+																									groups_ = $temp$groups_;
+																									faceElements = $temp$faceElements;
+																									lineElements = $temp$lineElements;
+																									pointsElements = $temp$pointsElements;
+																									continue decodeHelp;
+																								} else {
+																									var newGroups = remainingWords;
+																									var $temp$units = units,
+																										$temp$decode = decode,
+																										$temp$lines = remainingLines,
+																										$temp$lineno = lineno + 1,
+																										$temp$positions = positions,
+																										$temp$normals = normals,
+																										$temp$uvs = uvs,
+																										$temp$groups = A7($w0rm$elm_obj_file$Obj$Decode$addNonEmptyGroup, object_, material_, groups_, faceElements, lineElements, pointsElements, groups),
+																										$temp$object_ = object_,
+																										$temp$material_ = material_,
+																										$temp$groups_ = newGroups,
+																										$temp$faceElements = _List_Nil,
+																										$temp$lineElements = _List_Nil,
+																										$temp$pointsElements = _List_Nil;
+																									units = $temp$units;
+																									decode = $temp$decode;
+																									lines = $temp$lines;
+																									lineno = $temp$lineno;
+																									positions = $temp$positions;
+																									normals = $temp$normals;
+																									uvs = $temp$uvs;
+																									groups = $temp$groups;
+																									object_ = $temp$object_;
+																									material_ = $temp$material_;
+																									groups_ = $temp$groups_;
+																									faceElements = $temp$faceElements;
+																									lineElements = $temp$lineElements;
+																									pointsElements = $temp$pointsElements;
+																									continue decodeHelp;
+																								}
+																							} else {
+																								if (startsWith === 'usemtl') {
+																									if (remainingWords.b) {
+																										var newMaterial = remainingWords.a;
+																										var $temp$units = units,
+																											$temp$decode = decode,
+																											$temp$lines = remainingLines,
+																											$temp$lineno = lineno + 1,
+																											$temp$positions = positions,
+																											$temp$normals = normals,
+																											$temp$uvs = uvs,
+																											$temp$groups = A7($w0rm$elm_obj_file$Obj$Decode$addNonEmptyGroup, object_, material_, groups_, faceElements, lineElements, pointsElements, groups),
+																											$temp$object_ = object_,
+																											$temp$material_ = $elm$core$Maybe$Just(newMaterial),
+																											$temp$groups_ = groups_,
+																											$temp$faceElements = _List_Nil,
+																											$temp$lineElements = _List_Nil,
+																											$temp$pointsElements = _List_Nil;
+																										units = $temp$units;
+																										decode = $temp$decode;
+																										lines = $temp$lines;
+																										lineno = $temp$lineno;
+																										positions = $temp$positions;
+																										normals = $temp$normals;
+																										uvs = $temp$uvs;
+																										groups = $temp$groups;
+																										object_ = $temp$object_;
+																										material_ = $temp$material_;
+																										groups_ = $temp$groups_;
+																										faceElements = $temp$faceElements;
+																										lineElements = $temp$lineElements;
+																										pointsElements = $temp$pointsElements;
+																										continue decodeHelp;
+																									} else {
+																										return A2($w0rm$elm_obj_file$Obj$Decode$formatError, lineno, 'No material name');
+																									}
+																								} else {
+																									if ((startsWith === '') || ((A2($elm$core$String$left, 1, startsWith) === '#') || A2(
+																										$elm$core$List$any,
+																										$elm$core$Basics$eq(startsWith),
+																										$w0rm$elm_obj_file$Obj$Decode$skipCommands))) {
+																										var $temp$units = units,
+																											$temp$decode = decode,
+																											$temp$lines = remainingLines,
+																											$temp$lineno = lineno + 1,
+																											$temp$positions = positions,
+																											$temp$normals = normals,
+																											$temp$uvs = uvs,
+																											$temp$groups = groups,
+																											$temp$object_ = object_,
+																											$temp$material_ = material_,
+																											$temp$groups_ = groups_,
+																											$temp$faceElements = faceElements,
+																											$temp$lineElements = lineElements,
+																											$temp$pointsElements = pointsElements;
+																										units = $temp$units;
+																										decode = $temp$decode;
+																										lines = $temp$lines;
+																										lineno = $temp$lineno;
+																										positions = $temp$positions;
+																										normals = $temp$normals;
+																										uvs = $temp$uvs;
+																										groups = $temp$groups;
+																										object_ = $temp$object_;
+																										material_ = $temp$material_;
+																										groups_ = $temp$groups_;
+																										faceElements = $temp$faceElements;
+																										lineElements = $temp$lineElements;
+																										pointsElements = $temp$pointsElements;
+																										continue decodeHelp;
+																									} else {
+																										return A2(
+																											$w0rm$elm_obj_file$Obj$Decode$formatError,
+																											lineno,
+																											'Invalid OBJ syntax \'' + (($elm$core$String$length(line) > 20) ? (A2($elm$core$String$left, 20, line) + '...\'') : (line + '\'')));
+																									}
+																								}
+																							}
+																						}
+																					}
+																				}
+																			}
+																		}
+																	}
+																}
+															} else {
+																var positions_ = $elm$core$Array$fromList(
+																	$elm$core$List$reverse(positions));
+																return A3(
+																	decode,
+																	{
+																		indexMap: A2(
+																			$elm$core$Array$repeat,
+																			$elm$core$Array$length(positions_),
+																			_List_Nil),
+																		normals: $elm$core$Array$fromList(
+																			$elm$core$List$reverse(normals)),
+																		positions: positions_,
+																		uvs: $elm$core$Array$fromList(
+																			$elm$core$List$reverse(uvs))
+																	},
+																	_List_Nil,
+																	A7($w0rm$elm_obj_file$Obj$Decode$addNonEmptyGroup, object_, material_, groups_, faceElements, lineElements, pointsElements, groups));
+															}
+														}
+													};
+												};
+											};
+										};
+									};
+								};
+							};
+						};
+					};
+				};
+			};
+		};
+	};
+};
+var $ianmackenzie$elm_units$Length$inMeters = function (_v0) {
+	var numMeters = _v0.a;
+	return numMeters;
+};
+var $elm$core$String$lines = _String_lines;
+var $w0rm$elm_obj_file$Obj$Decode$decodeString = F3(
+	function (units, _v0, content) {
+		var decode = _v0.a;
+		var unitsFn = function (n) {
+			return $ianmackenzie$elm_units$Length$inMeters(
+				units(n));
+		};
+		return $w0rm$elm_obj_file$Obj$Decode$decodeHelp(unitsFn)(decode)(
+			$elm$core$String$lines(content))(1)(_List_Nil)(_List_Nil)(_List_Nil)(_List_Nil)($elm$core$Maybe$Nothing)($elm$core$Maybe$Nothing)(
+			_List_fromArray(
+				['default']))(_List_Nil)(_List_Nil)(_List_Nil);
+	});
+var $elm$http$Http$BadStatus_ = F2(
+	function (a, b) {
+		return {$: 'BadStatus_', a: a, b: b};
+	});
+var $elm$http$Http$BadUrl_ = function (a) {
+	return {$: 'BadUrl_', a: a};
+};
+var $elm$http$Http$GoodStatus_ = F2(
+	function (a, b) {
+		return {$: 'GoodStatus_', a: a, b: b};
+	});
+var $elm$http$Http$NetworkError_ = {$: 'NetworkError_'};
+var $elm$http$Http$Receiving = function (a) {
+	return {$: 'Receiving', a: a};
+};
+var $elm$http$Http$Sending = function (a) {
+	return {$: 'Sending', a: a};
+};
+var $elm$http$Http$Timeout_ = {$: 'Timeout_'};
+var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
+var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
+var $elm$core$Maybe$isJust = function (maybe) {
+	if (maybe.$ === 'Just') {
+		return true;
+	} else {
+		return false;
+	}
+};
+var $elm$core$Platform$sendToSelf = _Platform_sendToSelf;
+var $elm$core$Basics$compare = _Utils_compare;
+var $elm$core$Dict$get = F2(
+	function (targetKey, dict) {
+		get:
+		while (true) {
+			if (dict.$ === 'RBEmpty_elm_builtin') {
+				return $elm$core$Maybe$Nothing;
+			} else {
+				var key = dict.b;
+				var value = dict.c;
+				var left = dict.d;
+				var right = dict.e;
+				var _v1 = A2($elm$core$Basics$compare, targetKey, key);
+				switch (_v1.$) {
+					case 'LT':
+						var $temp$targetKey = targetKey,
+							$temp$dict = left;
+						targetKey = $temp$targetKey;
+						dict = $temp$dict;
+						continue get;
+					case 'EQ':
+						return $elm$core$Maybe$Just(value);
+					default:
+						var $temp$targetKey = targetKey,
+							$temp$dict = right;
+						targetKey = $temp$targetKey;
+						dict = $temp$dict;
+						continue get;
+				}
+			}
+		}
+	});
+var $elm$core$Dict$Black = {$: 'Black'};
+var $elm$core$Dict$RBNode_elm_builtin = F5(
+	function (a, b, c, d, e) {
+		return {$: 'RBNode_elm_builtin', a: a, b: b, c: c, d: d, e: e};
+	});
+var $elm$core$Dict$Red = {$: 'Red'};
+var $elm$core$Dict$balance = F5(
+	function (color, key, value, left, right) {
+		if ((right.$ === 'RBNode_elm_builtin') && (right.a.$ === 'Red')) {
+			var _v1 = right.a;
+			var rK = right.b;
+			var rV = right.c;
+			var rLeft = right.d;
+			var rRight = right.e;
+			if ((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Red')) {
+				var _v3 = left.a;
+				var lK = left.b;
+				var lV = left.c;
+				var lLeft = left.d;
+				var lRight = left.e;
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					$elm$core$Dict$Red,
+					key,
+					value,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, lK, lV, lLeft, lRight),
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, rK, rV, rLeft, rRight));
+			} else {
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					color,
+					rK,
+					rV,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, key, value, left, rLeft),
+					rRight);
+			}
+		} else {
+			if ((((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Red')) && (left.d.$ === 'RBNode_elm_builtin')) && (left.d.a.$ === 'Red')) {
+				var _v5 = left.a;
+				var lK = left.b;
+				var lV = left.c;
+				var _v6 = left.d;
+				var _v7 = _v6.a;
+				var llK = _v6.b;
+				var llV = _v6.c;
+				var llLeft = _v6.d;
+				var llRight = _v6.e;
+				var lRight = left.e;
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					$elm$core$Dict$Red,
+					lK,
+					lV,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, llK, llV, llLeft, llRight),
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, key, value, lRight, right));
+			} else {
+				return A5($elm$core$Dict$RBNode_elm_builtin, color, key, value, left, right);
+			}
+		}
+	});
+var $elm$core$Dict$insertHelp = F3(
+	function (key, value, dict) {
+		if (dict.$ === 'RBEmpty_elm_builtin') {
+			return A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, key, value, $elm$core$Dict$RBEmpty_elm_builtin, $elm$core$Dict$RBEmpty_elm_builtin);
+		} else {
+			var nColor = dict.a;
+			var nKey = dict.b;
+			var nValue = dict.c;
+			var nLeft = dict.d;
+			var nRight = dict.e;
+			var _v1 = A2($elm$core$Basics$compare, key, nKey);
+			switch (_v1.$) {
+				case 'LT':
+					return A5(
+						$elm$core$Dict$balance,
+						nColor,
+						nKey,
+						nValue,
+						A3($elm$core$Dict$insertHelp, key, value, nLeft),
+						nRight);
+				case 'EQ':
+					return A5($elm$core$Dict$RBNode_elm_builtin, nColor, nKey, value, nLeft, nRight);
+				default:
+					return A5(
+						$elm$core$Dict$balance,
+						nColor,
+						nKey,
+						nValue,
+						nLeft,
+						A3($elm$core$Dict$insertHelp, key, value, nRight));
+			}
+		}
+	});
+var $elm$core$Dict$insert = F3(
+	function (key, value, dict) {
+		var _v0 = A3($elm$core$Dict$insertHelp, key, value, dict);
+		if ((_v0.$ === 'RBNode_elm_builtin') && (_v0.a.$ === 'Red')) {
+			var _v1 = _v0.a;
+			var k = _v0.b;
+			var v = _v0.c;
+			var l = _v0.d;
+			var r = _v0.e;
+			return A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, k, v, l, r);
+		} else {
+			var x = _v0;
+			return x;
+		}
+	});
+var $elm$core$Dict$getMin = function (dict) {
+	getMin:
+	while (true) {
+		if ((dict.$ === 'RBNode_elm_builtin') && (dict.d.$ === 'RBNode_elm_builtin')) {
+			var left = dict.d;
+			var $temp$dict = left;
+			dict = $temp$dict;
+			continue getMin;
+		} else {
+			return dict;
+		}
+	}
+};
+var $elm$core$Dict$moveRedLeft = function (dict) {
+	if (((dict.$ === 'RBNode_elm_builtin') && (dict.d.$ === 'RBNode_elm_builtin')) && (dict.e.$ === 'RBNode_elm_builtin')) {
+		if ((dict.e.d.$ === 'RBNode_elm_builtin') && (dict.e.d.a.$ === 'Red')) {
+			var clr = dict.a;
+			var k = dict.b;
+			var v = dict.c;
+			var _v1 = dict.d;
+			var lClr = _v1.a;
+			var lK = _v1.b;
+			var lV = _v1.c;
+			var lLeft = _v1.d;
+			var lRight = _v1.e;
+			var _v2 = dict.e;
+			var rClr = _v2.a;
+			var rK = _v2.b;
+			var rV = _v2.c;
+			var rLeft = _v2.d;
+			var _v3 = rLeft.a;
+			var rlK = rLeft.b;
+			var rlV = rLeft.c;
+			var rlL = rLeft.d;
+			var rlR = rLeft.e;
+			var rRight = _v2.e;
+			return A5(
+				$elm$core$Dict$RBNode_elm_builtin,
+				$elm$core$Dict$Red,
+				rlK,
+				rlV,
+				A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					$elm$core$Dict$Black,
+					k,
+					v,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, lK, lV, lLeft, lRight),
+					rlL),
+				A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, rK, rV, rlR, rRight));
+		} else {
+			var clr = dict.a;
+			var k = dict.b;
+			var v = dict.c;
+			var _v4 = dict.d;
+			var lClr = _v4.a;
+			var lK = _v4.b;
+			var lV = _v4.c;
+			var lLeft = _v4.d;
+			var lRight = _v4.e;
+			var _v5 = dict.e;
+			var rClr = _v5.a;
+			var rK = _v5.b;
+			var rV = _v5.c;
+			var rLeft = _v5.d;
+			var rRight = _v5.e;
+			if (clr.$ === 'Black') {
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					$elm$core$Dict$Black,
+					k,
+					v,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, lK, lV, lLeft, lRight),
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, rK, rV, rLeft, rRight));
+			} else {
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					$elm$core$Dict$Black,
+					k,
+					v,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, lK, lV, lLeft, lRight),
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, rK, rV, rLeft, rRight));
+			}
+		}
+	} else {
+		return dict;
+	}
+};
+var $elm$core$Dict$moveRedRight = function (dict) {
+	if (((dict.$ === 'RBNode_elm_builtin') && (dict.d.$ === 'RBNode_elm_builtin')) && (dict.e.$ === 'RBNode_elm_builtin')) {
+		if ((dict.d.d.$ === 'RBNode_elm_builtin') && (dict.d.d.a.$ === 'Red')) {
+			var clr = dict.a;
+			var k = dict.b;
+			var v = dict.c;
+			var _v1 = dict.d;
+			var lClr = _v1.a;
+			var lK = _v1.b;
+			var lV = _v1.c;
+			var _v2 = _v1.d;
+			var _v3 = _v2.a;
+			var llK = _v2.b;
+			var llV = _v2.c;
+			var llLeft = _v2.d;
+			var llRight = _v2.e;
+			var lRight = _v1.e;
+			var _v4 = dict.e;
+			var rClr = _v4.a;
+			var rK = _v4.b;
+			var rV = _v4.c;
+			var rLeft = _v4.d;
+			var rRight = _v4.e;
+			return A5(
+				$elm$core$Dict$RBNode_elm_builtin,
+				$elm$core$Dict$Red,
+				lK,
+				lV,
+				A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, llK, llV, llLeft, llRight),
+				A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					$elm$core$Dict$Black,
+					k,
+					v,
+					lRight,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, rK, rV, rLeft, rRight)));
+		} else {
+			var clr = dict.a;
+			var k = dict.b;
+			var v = dict.c;
+			var _v5 = dict.d;
+			var lClr = _v5.a;
+			var lK = _v5.b;
+			var lV = _v5.c;
+			var lLeft = _v5.d;
+			var lRight = _v5.e;
+			var _v6 = dict.e;
+			var rClr = _v6.a;
+			var rK = _v6.b;
+			var rV = _v6.c;
+			var rLeft = _v6.d;
+			var rRight = _v6.e;
+			if (clr.$ === 'Black') {
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					$elm$core$Dict$Black,
+					k,
+					v,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, lK, lV, lLeft, lRight),
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, rK, rV, rLeft, rRight));
+			} else {
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					$elm$core$Dict$Black,
+					k,
+					v,
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, lK, lV, lLeft, lRight),
+					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, rK, rV, rLeft, rRight));
+			}
+		}
+	} else {
+		return dict;
+	}
+};
+var $elm$core$Dict$removeHelpPrepEQGT = F7(
+	function (targetKey, dict, color, key, value, left, right) {
+		if ((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Red')) {
+			var _v1 = left.a;
+			var lK = left.b;
+			var lV = left.c;
+			var lLeft = left.d;
+			var lRight = left.e;
+			return A5(
+				$elm$core$Dict$RBNode_elm_builtin,
+				color,
+				lK,
+				lV,
+				lLeft,
+				A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, key, value, lRight, right));
+		} else {
+			_v2$2:
+			while (true) {
+				if ((right.$ === 'RBNode_elm_builtin') && (right.a.$ === 'Black')) {
+					if (right.d.$ === 'RBNode_elm_builtin') {
+						if (right.d.a.$ === 'Black') {
+							var _v3 = right.a;
+							var _v4 = right.d;
+							var _v5 = _v4.a;
+							return $elm$core$Dict$moveRedRight(dict);
+						} else {
+							break _v2$2;
+						}
+					} else {
+						var _v6 = right.a;
+						var _v7 = right.d;
+						return $elm$core$Dict$moveRedRight(dict);
+					}
+				} else {
+					break _v2$2;
+				}
+			}
+			return dict;
+		}
+	});
+var $elm$core$Dict$removeMin = function (dict) {
+	if ((dict.$ === 'RBNode_elm_builtin') && (dict.d.$ === 'RBNode_elm_builtin')) {
+		var color = dict.a;
+		var key = dict.b;
+		var value = dict.c;
+		var left = dict.d;
+		var lColor = left.a;
+		var lLeft = left.d;
+		var right = dict.e;
+		if (lColor.$ === 'Black') {
+			if ((lLeft.$ === 'RBNode_elm_builtin') && (lLeft.a.$ === 'Red')) {
+				var _v3 = lLeft.a;
+				return A5(
+					$elm$core$Dict$RBNode_elm_builtin,
+					color,
+					key,
+					value,
+					$elm$core$Dict$removeMin(left),
+					right);
+			} else {
+				var _v4 = $elm$core$Dict$moveRedLeft(dict);
+				if (_v4.$ === 'RBNode_elm_builtin') {
+					var nColor = _v4.a;
+					var nKey = _v4.b;
+					var nValue = _v4.c;
+					var nLeft = _v4.d;
+					var nRight = _v4.e;
+					return A5(
+						$elm$core$Dict$balance,
+						nColor,
+						nKey,
+						nValue,
+						$elm$core$Dict$removeMin(nLeft),
+						nRight);
+				} else {
+					return $elm$core$Dict$RBEmpty_elm_builtin;
+				}
+			}
+		} else {
+			return A5(
+				$elm$core$Dict$RBNode_elm_builtin,
+				color,
+				key,
+				value,
+				$elm$core$Dict$removeMin(left),
+				right);
+		}
+	} else {
+		return $elm$core$Dict$RBEmpty_elm_builtin;
+	}
+};
+var $elm$core$Dict$removeHelp = F2(
+	function (targetKey, dict) {
+		if (dict.$ === 'RBEmpty_elm_builtin') {
+			return $elm$core$Dict$RBEmpty_elm_builtin;
+		} else {
+			var color = dict.a;
+			var key = dict.b;
+			var value = dict.c;
+			var left = dict.d;
+			var right = dict.e;
+			if (_Utils_cmp(targetKey, key) < 0) {
+				if ((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Black')) {
+					var _v4 = left.a;
+					var lLeft = left.d;
+					if ((lLeft.$ === 'RBNode_elm_builtin') && (lLeft.a.$ === 'Red')) {
+						var _v6 = lLeft.a;
+						return A5(
+							$elm$core$Dict$RBNode_elm_builtin,
+							color,
+							key,
+							value,
+							A2($elm$core$Dict$removeHelp, targetKey, left),
+							right);
+					} else {
+						var _v7 = $elm$core$Dict$moveRedLeft(dict);
+						if (_v7.$ === 'RBNode_elm_builtin') {
+							var nColor = _v7.a;
+							var nKey = _v7.b;
+							var nValue = _v7.c;
+							var nLeft = _v7.d;
+							var nRight = _v7.e;
+							return A5(
+								$elm$core$Dict$balance,
+								nColor,
+								nKey,
+								nValue,
+								A2($elm$core$Dict$removeHelp, targetKey, nLeft),
+								nRight);
+						} else {
+							return $elm$core$Dict$RBEmpty_elm_builtin;
+						}
+					}
+				} else {
+					return A5(
+						$elm$core$Dict$RBNode_elm_builtin,
+						color,
+						key,
+						value,
+						A2($elm$core$Dict$removeHelp, targetKey, left),
+						right);
+				}
+			} else {
+				return A2(
+					$elm$core$Dict$removeHelpEQGT,
+					targetKey,
+					A7($elm$core$Dict$removeHelpPrepEQGT, targetKey, dict, color, key, value, left, right));
+			}
+		}
+	});
+var $elm$core$Dict$removeHelpEQGT = F2(
+	function (targetKey, dict) {
+		if (dict.$ === 'RBNode_elm_builtin') {
+			var color = dict.a;
+			var key = dict.b;
+			var value = dict.c;
+			var left = dict.d;
+			var right = dict.e;
+			if (_Utils_eq(targetKey, key)) {
+				var _v1 = $elm$core$Dict$getMin(right);
+				if (_v1.$ === 'RBNode_elm_builtin') {
+					var minKey = _v1.b;
+					var minValue = _v1.c;
+					return A5(
+						$elm$core$Dict$balance,
+						color,
+						minKey,
+						minValue,
+						left,
+						$elm$core$Dict$removeMin(right));
+				} else {
+					return $elm$core$Dict$RBEmpty_elm_builtin;
+				}
+			} else {
+				return A5(
+					$elm$core$Dict$balance,
+					color,
+					key,
+					value,
+					left,
+					A2($elm$core$Dict$removeHelp, targetKey, right));
+			}
+		} else {
+			return $elm$core$Dict$RBEmpty_elm_builtin;
+		}
+	});
+var $elm$core$Dict$remove = F2(
+	function (key, dict) {
+		var _v0 = A2($elm$core$Dict$removeHelp, key, dict);
+		if ((_v0.$ === 'RBNode_elm_builtin') && (_v0.a.$ === 'Red')) {
+			var _v1 = _v0.a;
+			var k = _v0.b;
+			var v = _v0.c;
+			var l = _v0.d;
+			var r = _v0.e;
+			return A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, k, v, l, r);
+		} else {
+			var x = _v0;
+			return x;
+		}
+	});
+var $elm$core$Dict$update = F3(
+	function (targetKey, alter, dictionary) {
+		var _v0 = alter(
+			A2($elm$core$Dict$get, targetKey, dictionary));
+		if (_v0.$ === 'Just') {
+			var value = _v0.a;
+			return A3($elm$core$Dict$insert, targetKey, value, dictionary);
+		} else {
+			return A2($elm$core$Dict$remove, targetKey, dictionary);
+		}
+	});
+var $elm$core$Basics$composeR = F3(
+	function (f, g, x) {
+		return g(
+			f(x));
+	});
+var $elm$http$Http$expectStringResponse = F2(
+	function (toMsg, toResult) {
+		return A3(
+			_Http_expect,
+			'',
+			$elm$core$Basics$identity,
+			A2($elm$core$Basics$composeR, toResult, toMsg));
+	});
+var $w0rm$elm_obj_file$Obj$Decode$expectObj = F3(
+	function (toMsg, units, decoder) {
+		return A2(
+			$elm$http$Http$expectStringResponse,
+			toMsg,
+			function (response) {
+				switch (response.$) {
+					case 'BadUrl_':
+						var url = response.a;
+						return $elm$core$Result$Err(
+							$elm$http$Http$BadUrl(url));
+					case 'Timeout_':
+						return $elm$core$Result$Err($elm$http$Http$Timeout);
+					case 'NetworkError_':
+						return $elm$core$Result$Err($elm$http$Http$NetworkError);
+					case 'BadStatus_':
+						var metadata = response.a;
+						return $elm$core$Result$Err(
+							$elm$http$Http$BadStatus(metadata.statusCode));
+					default:
+						var body = response.b;
+						var _v1 = A3($w0rm$elm_obj_file$Obj$Decode$decodeString, units, decoder, body);
+						if (_v1.$ === 'Ok') {
+							var value = _v1.a;
+							return $elm$core$Result$Ok(value);
+						} else {
+							var string = _v1.a;
+							return $elm$core$Result$Err(
+								$elm$http$Http$BadBody(string));
+						}
+				}
+			});
+	});
+var $elm$http$Http$emptyBody = _Http_emptyBody;
+var $elm$http$Http$Request = function (a) {
+	return {$: 'Request', a: a};
+};
+var $elm$http$Http$State = F2(
+	function (reqs, subs) {
+		return {reqs: reqs, subs: subs};
+	});
+var $elm$http$Http$init = $elm$core$Task$succeed(
+	A2($elm$http$Http$State, $elm$core$Dict$empty, _List_Nil));
+var $elm$core$Process$kill = _Scheduler_kill;
+var $elm$core$Process$spawn = _Scheduler_spawn;
+var $elm$http$Http$updateReqs = F3(
+	function (router, cmds, reqs) {
+		updateReqs:
+		while (true) {
+			if (!cmds.b) {
+				return $elm$core$Task$succeed(reqs);
+			} else {
+				var cmd = cmds.a;
+				var otherCmds = cmds.b;
+				if (cmd.$ === 'Cancel') {
+					var tracker = cmd.a;
+					var _v2 = A2($elm$core$Dict$get, tracker, reqs);
+					if (_v2.$ === 'Nothing') {
+						var $temp$router = router,
+							$temp$cmds = otherCmds,
+							$temp$reqs = reqs;
+						router = $temp$router;
+						cmds = $temp$cmds;
+						reqs = $temp$reqs;
+						continue updateReqs;
+					} else {
+						var pid = _v2.a;
+						return A2(
+							$elm$core$Task$andThen,
+							function (_v3) {
+								return A3(
+									$elm$http$Http$updateReqs,
+									router,
+									otherCmds,
+									A2($elm$core$Dict$remove, tracker, reqs));
+							},
+							$elm$core$Process$kill(pid));
+					}
+				} else {
+					var req = cmd.a;
+					return A2(
+						$elm$core$Task$andThen,
+						function (pid) {
+							var _v4 = req.tracker;
+							if (_v4.$ === 'Nothing') {
+								return A3($elm$http$Http$updateReqs, router, otherCmds, reqs);
+							} else {
+								var tracker = _v4.a;
+								return A3(
+									$elm$http$Http$updateReqs,
+									router,
+									otherCmds,
+									A3($elm$core$Dict$insert, tracker, pid, reqs));
+							}
+						},
+						$elm$core$Process$spawn(
+							A3(
+								_Http_toTask,
+								router,
+								$elm$core$Platform$sendToApp(router),
+								req)));
+				}
+			}
+		}
+	});
+var $elm$http$Http$onEffects = F4(
+	function (router, cmds, subs, state) {
+		return A2(
+			$elm$core$Task$andThen,
+			function (reqs) {
+				return $elm$core$Task$succeed(
+					A2($elm$http$Http$State, reqs, subs));
+			},
+			A3($elm$http$Http$updateReqs, router, cmds, state.reqs));
+	});
+var $elm$core$List$maybeCons = F3(
+	function (f, mx, xs) {
+		var _v0 = f(mx);
+		if (_v0.$ === 'Just') {
+			var x = _v0.a;
+			return A2($elm$core$List$cons, x, xs);
+		} else {
+			return xs;
+		}
+	});
+var $elm$core$List$filterMap = F2(
+	function (f, xs) {
+		return A3(
+			$elm$core$List$foldr,
+			$elm$core$List$maybeCons(f),
+			_List_Nil,
+			xs);
+	});
+var $elm$http$Http$maybeSend = F4(
+	function (router, desiredTracker, progress, _v0) {
+		var actualTracker = _v0.a;
+		var toMsg = _v0.b;
+		return _Utils_eq(desiredTracker, actualTracker) ? $elm$core$Maybe$Just(
+			A2(
+				$elm$core$Platform$sendToApp,
+				router,
+				toMsg(progress))) : $elm$core$Maybe$Nothing;
+	});
+var $elm$http$Http$onSelfMsg = F3(
+	function (router, _v0, state) {
+		var tracker = _v0.a;
+		var progress = _v0.b;
+		return A2(
+			$elm$core$Task$andThen,
+			function (_v1) {
+				return $elm$core$Task$succeed(state);
+			},
+			$elm$core$Task$sequence(
+				A2(
+					$elm$core$List$filterMap,
+					A3($elm$http$Http$maybeSend, router, tracker, progress),
+					state.subs)));
+	});
+var $elm$http$Http$Cancel = function (a) {
+	return {$: 'Cancel', a: a};
+};
+var $elm$http$Http$cmdMap = F2(
+	function (func, cmd) {
+		if (cmd.$ === 'Cancel') {
+			var tracker = cmd.a;
+			return $elm$http$Http$Cancel(tracker);
+		} else {
+			var r = cmd.a;
+			return $elm$http$Http$Request(
+				{
+					allowCookiesFromOtherDomains: r.allowCookiesFromOtherDomains,
+					body: r.body,
+					expect: A2(_Http_mapExpect, func, r.expect),
+					headers: r.headers,
+					method: r.method,
+					timeout: r.timeout,
+					tracker: r.tracker,
+					url: r.url
+				});
+		}
+	});
+var $elm$http$Http$MySub = F2(
+	function (a, b) {
+		return {$: 'MySub', a: a, b: b};
+	});
+var $elm$http$Http$subMap = F2(
+	function (func, _v0) {
+		var tracker = _v0.a;
+		var toMsg = _v0.b;
+		return A2(
+			$elm$http$Http$MySub,
+			tracker,
+			A2($elm$core$Basics$composeR, toMsg, func));
+	});
+_Platform_effectManagers['Http'] = _Platform_createManager($elm$http$Http$init, $elm$http$Http$onEffects, $elm$http$Http$onSelfMsg, $elm$http$Http$cmdMap, $elm$http$Http$subMap);
+var $elm$http$Http$command = _Platform_leaf('Http');
+var $elm$http$Http$subscription = _Platform_leaf('Http');
+var $elm$http$Http$request = function (r) {
+	return $elm$http$Http$command(
+		$elm$http$Http$Request(
+			{allowCookiesFromOtherDomains: false, body: r.body, expect: r.expect, headers: r.headers, method: r.method, timeout: r.timeout, tracker: r.tracker, url: r.url}));
+};
+var $elm$http$Http$get = function (r) {
+	return $elm$http$Http$request(
+		{body: $elm$http$Http$emptyBody, expect: r.expect, headers: _List_Nil, method: 'GET', timeout: $elm$core$Maybe$Nothing, tracker: $elm$core$Maybe$Nothing, url: r.url});
+};
 var $elm$browser$Browser$Dom$getViewportOf = _Browser_getViewportOf;
+var $ianmackenzie$elm_units$Quantity$Quantity = function (a) {
+	return {$: 'Quantity', a: a};
+};
+var $ianmackenzie$elm_units$Length$meters = function (numMeters) {
+	return $ianmackenzie$elm_units$Quantity$Quantity(numMeters);
+};
+var $ianmackenzie$elm_geometry$Geometry$Types$Frame3d = function (a) {
+	return {$: 'Frame3d', a: a};
+};
+var $ianmackenzie$elm_geometry$Point3d$origin = $ianmackenzie$elm_geometry$Geometry$Types$Point3d(
+	{x: 0, y: 0, z: 0});
+var $ianmackenzie$elm_geometry$Direction3d$positiveX = $ianmackenzie$elm_geometry$Direction3d$unsafe(
+	{x: 1, y: 0, z: 0});
+var $ianmackenzie$elm_geometry$Direction3d$x = $ianmackenzie$elm_geometry$Direction3d$positiveX;
+var $ianmackenzie$elm_geometry$Direction3d$positiveY = $ianmackenzie$elm_geometry$Direction3d$unsafe(
+	{x: 0, y: 1, z: 0});
+var $ianmackenzie$elm_geometry$Direction3d$y = $ianmackenzie$elm_geometry$Direction3d$positiveY;
+var $ianmackenzie$elm_geometry$Direction3d$positiveZ = $ianmackenzie$elm_geometry$Direction3d$unsafe(
+	{x: 0, y: 0, z: 1});
+var $ianmackenzie$elm_geometry$Direction3d$z = $ianmackenzie$elm_geometry$Direction3d$positiveZ;
+var $ianmackenzie$elm_geometry$Frame3d$atOrigin = $ianmackenzie$elm_geometry$Geometry$Types$Frame3d(
+	{originPoint: $ianmackenzie$elm_geometry$Point3d$origin, xDirection: $ianmackenzie$elm_geometry$Direction3d$x, yDirection: $ianmackenzie$elm_geometry$Direction3d$y, zDirection: $ianmackenzie$elm_geometry$Direction3d$z});
+var $w0rm$elm_obj_file$Obj$Decode$Decoder = function (a) {
+	return {$: 'Decoder', a: a};
+};
+var $elm$core$Bitwise$and = _Bitwise_and;
+var $elm$core$Bitwise$shiftRightZfBy = _Bitwise_shiftRightZfBy;
+var $elm$core$Array$bitMask = 4294967295 >>> (32 - $elm$core$Array$shiftStep);
+var $elm$core$Basics$ge = _Utils_ge;
+var $elm$core$Elm$JsArray$unsafeGet = _JsArray_unsafeGet;
+var $elm$core$Array$getHelp = F3(
+	function (shift, index, tree) {
+		getHelp:
+		while (true) {
+			var pos = $elm$core$Array$bitMask & (index >>> shift);
+			var _v0 = A2($elm$core$Elm$JsArray$unsafeGet, pos, tree);
+			if (_v0.$ === 'SubTree') {
+				var subTree = _v0.a;
+				var $temp$shift = shift - $elm$core$Array$shiftStep,
+					$temp$index = index,
+					$temp$tree = subTree;
+				shift = $temp$shift;
+				index = $temp$index;
+				tree = $temp$tree;
+				continue getHelp;
+			} else {
+				var values = _v0.a;
+				return A2($elm$core$Elm$JsArray$unsafeGet, $elm$core$Array$bitMask & index, values);
+			}
+		}
+	});
+var $elm$core$Bitwise$shiftLeftBy = _Bitwise_shiftLeftBy;
+var $elm$core$Array$tailIndex = function (len) {
+	return (len >>> 5) << 5;
+};
+var $elm$core$Array$get = F2(
+	function (index, _v0) {
+		var len = _v0.a;
+		var startShift = _v0.b;
+		var tree = _v0.c;
+		var tail = _v0.d;
+		return ((index < 0) || (_Utils_cmp(index, len) > -1)) ? $elm$core$Maybe$Nothing : ((_Utils_cmp(
+			index,
+			$elm$core$Array$tailIndex(len)) > -1) ? $elm$core$Maybe$Just(
+			A2($elm$core$Elm$JsArray$unsafeGet, $elm$core$Array$bitMask & index, tail)) : $elm$core$Maybe$Just(
+			A3($elm$core$Array$getHelp, startShift, index, tree)));
+	});
+var $w0rm$elm_obj_file$Obj$Decode$groupIndices = F3(
+	function (p1, more, result) {
+		groupIndices:
+		while (true) {
+			if (more.b) {
+				var p2 = more.a;
+				var rest = more.b;
+				if (rest.b) {
+					var p3 = rest.a;
+					var $temp$p1 = p1,
+						$temp$more = rest,
+						$temp$result = A2(
+						$elm$core$List$cons,
+						_Utils_Tuple3(p1, p2, p3),
+						result);
+					p1 = $temp$p1;
+					more = $temp$more;
+					result = $temp$result;
+					continue groupIndices;
+				} else {
+					return result;
+				}
+			} else {
+				return result;
+			}
+		}
+	});
+var $w0rm$elm_obj_file$Obj$Decode$lookup1 = F2(
+	function (idx1, list) {
+		lookup1:
+		while (true) {
+			if (list.b && list.b.b) {
+				var i1 = list.a;
+				var _v1 = list.b;
+				var result = _v1.a;
+				var rest = _v1.b;
+				if (!(idx1 - i1)) {
+					return result;
+				} else {
+					var $temp$idx1 = idx1,
+						$temp$list = rest;
+					idx1 = $temp$idx1;
+					list = $temp$list;
+					continue lookup1;
+				}
+			} else {
+				return -1;
+			}
+		}
+	});
+var $ianmackenzie$elm_geometry$Direction3d$placeIn = F2(
+	function (_v0, _v1) {
+		var frame = _v0.a;
+		var d = _v1.a;
+		var _v2 = frame.zDirection;
+		var k = _v2.a;
+		var _v3 = frame.yDirection;
+		var j = _v3.a;
+		var _v4 = frame.xDirection;
+		var i = _v4.a;
+		return $ianmackenzie$elm_geometry$Geometry$Types$Direction3d(
+			{x: ((i.x * d.x) + (j.x * d.y)) + (k.x * d.z), y: ((i.y * d.x) + (j.y * d.y)) + (k.y * d.z), z: ((i.z * d.x) + (j.z * d.y)) + (k.z * d.z)});
+	});
+var $ianmackenzie$elm_geometry$Point3d$placeIn = F2(
+	function (_v0, _v1) {
+		var frame = _v0.a;
+		var p = _v1.a;
+		var _v2 = frame.originPoint;
+		var p0 = _v2.a;
+		var _v3 = frame.zDirection;
+		var k = _v3.a;
+		var _v4 = frame.yDirection;
+		var j = _v4.a;
+		var _v5 = frame.xDirection;
+		var i = _v5.a;
+		return $ianmackenzie$elm_geometry$Geometry$Types$Point3d(
+			{x: ((p0.x + (p.x * i.x)) + (p.y * j.x)) + (p.z * k.x), y: ((p0.y + (p.x * i.y)) + (p.y * j.y)) + (p.z * k.y), z: ((p0.z + (p.x * i.z)) + (p.y * j.z)) + (p.z * k.z)});
+	});
+var $elm$core$Elm$JsArray$unsafeSet = _JsArray_unsafeSet;
+var $elm$core$Array$setHelp = F4(
+	function (shift, index, value, tree) {
+		var pos = $elm$core$Array$bitMask & (index >>> shift);
+		var _v0 = A2($elm$core$Elm$JsArray$unsafeGet, pos, tree);
+		if (_v0.$ === 'SubTree') {
+			var subTree = _v0.a;
+			var newSub = A4($elm$core$Array$setHelp, shift - $elm$core$Array$shiftStep, index, value, subTree);
+			return A3(
+				$elm$core$Elm$JsArray$unsafeSet,
+				pos,
+				$elm$core$Array$SubTree(newSub),
+				tree);
+		} else {
+			var values = _v0.a;
+			var newLeaf = A3($elm$core$Elm$JsArray$unsafeSet, $elm$core$Array$bitMask & index, value, values);
+			return A3(
+				$elm$core$Elm$JsArray$unsafeSet,
+				pos,
+				$elm$core$Array$Leaf(newLeaf),
+				tree);
+		}
+	});
+var $elm$core$Array$set = F3(
+	function (index, value, array) {
+		var len = array.a;
+		var startShift = array.b;
+		var tree = array.c;
+		var tail = array.d;
+		return ((index < 0) || (_Utils_cmp(index, len) > -1)) ? array : ((_Utils_cmp(
+			index,
+			$elm$core$Array$tailIndex(len)) > -1) ? A4(
+			$elm$core$Array$Array_elm_builtin,
+			len,
+			startShift,
+			tree,
+			A3($elm$core$Elm$JsArray$unsafeSet, $elm$core$Array$bitMask & index, value, tail)) : A4(
+			$elm$core$Array$Array_elm_builtin,
+			len,
+			startShift,
+			A4($elm$core$Array$setHelp, startShift, index, value, tree),
+			tail));
+	});
+var $ianmackenzie$elm_geometry$Geometry$Types$Vector3d = function (a) {
+	return {$: 'Vector3d', a: a};
+};
+var $ianmackenzie$elm_geometry$Direction3d$toVector = function (_v0) {
+	var directionComponents = _v0.a;
+	return $ianmackenzie$elm_geometry$Geometry$Types$Vector3d(directionComponents);
+};
+var $elm$core$Maybe$withDefault = F2(
+	function (_default, maybe) {
+		if (maybe.$ === 'Just') {
+			var value = maybe.a;
+			return value;
+		} else {
+			return _default;
+		}
+	});
+var $w0rm$elm_obj_file$Obj$Decode$addFaces = function (vertexData) {
+	return function (frame) {
+		return function (lineno) {
+			return function (elementVertices) {
+				return function (elements) {
+					return function (maxIndex) {
+						return function (indexMap) {
+							return function (vertices) {
+								return function (indices) {
+									return function (faceIndices) {
+										addFaces:
+										while (true) {
+											if (elementVertices.b) {
+												var p = elementVertices.a.p;
+												var n = elementVertices.a.n;
+												var remainingVertices = elementVertices.b;
+												if (_Utils_cmp(n, -1) > 0) {
+													var lookupArray = A2(
+														$elm$core$Maybe$withDefault,
+														_List_Nil,
+														A2($elm$core$Array$get, p, indexMap));
+													var idx = A2($w0rm$elm_obj_file$Obj$Decode$lookup1, n, lookupArray);
+													if (_Utils_cmp(idx, -1) > 0) {
+														var $temp$vertexData = vertexData,
+															$temp$frame = frame,
+															$temp$lineno = lineno,
+															$temp$elementVertices = remainingVertices,
+															$temp$elements = elements,
+															$temp$maxIndex = maxIndex,
+															$temp$indexMap = indexMap,
+															$temp$vertices = vertices,
+															$temp$indices = A2($elm$core$List$cons, idx, indices),
+															$temp$faceIndices = faceIndices;
+														vertexData = $temp$vertexData;
+														frame = $temp$frame;
+														lineno = $temp$lineno;
+														elementVertices = $temp$elementVertices;
+														elements = $temp$elements;
+														maxIndex = $temp$maxIndex;
+														indexMap = $temp$indexMap;
+														vertices = $temp$vertices;
+														indices = $temp$indices;
+														faceIndices = $temp$faceIndices;
+														continue addFaces;
+													} else {
+														var _v1 = A2($elm$core$Array$get, p, vertexData.positions);
+														if (_v1.$ === 'Just') {
+															var position = _v1.a;
+															var _v2 = A2($elm$core$Array$get, n, vertexData.normals);
+															if (_v2.$ === 'Just') {
+																var normal = _v2.a;
+																var $temp$vertexData = vertexData,
+																	$temp$frame = frame,
+																	$temp$lineno = lineno,
+																	$temp$elementVertices = remainingVertices,
+																	$temp$elements = elements,
+																	$temp$maxIndex = maxIndex + 1,
+																	$temp$indexMap = A3(
+																	$elm$core$Array$set,
+																	p,
+																	A2(
+																		$elm$core$List$cons,
+																		n,
+																		A2($elm$core$List$cons, maxIndex + 1, lookupArray)),
+																	indexMap),
+																	$temp$vertices = A2(
+																	$elm$core$List$cons,
+																	{
+																		normal: $ianmackenzie$elm_geometry$Direction3d$toVector(
+																			A2($ianmackenzie$elm_geometry$Direction3d$placeIn, frame, normal)),
+																		position: A2($ianmackenzie$elm_geometry$Point3d$placeIn, frame, position)
+																	},
+																	vertices),
+																	$temp$indices = A2($elm$core$List$cons, maxIndex + 1, indices),
+																	$temp$faceIndices = faceIndices;
+																vertexData = $temp$vertexData;
+																frame = $temp$frame;
+																lineno = $temp$lineno;
+																elementVertices = $temp$elementVertices;
+																elements = $temp$elements;
+																maxIndex = $temp$maxIndex;
+																indexMap = $temp$indexMap;
+																vertices = $temp$vertices;
+																indices = $temp$indices;
+																faceIndices = $temp$faceIndices;
+																continue addFaces;
+															} else {
+																return A2($w0rm$elm_obj_file$Obj$Decode$formatError, lineno, 'Index out of range');
+															}
+														} else {
+															return A2($w0rm$elm_obj_file$Obj$Decode$formatError, lineno, 'Index out of range');
+														}
+													}
+												} else {
+													return A2($w0rm$elm_obj_file$Obj$Decode$formatError, lineno, 'Vertex has no normal vector');
+												}
+											} else {
+												var newFaceIndices = function () {
+													if (indices.b) {
+														var p1 = indices.a;
+														var remainingIndices = indices.b;
+														return A3($w0rm$elm_obj_file$Obj$Decode$groupIndices, p1, remainingIndices, faceIndices);
+													} else {
+														return faceIndices;
+													}
+												}();
+												if (elements.b) {
+													var _v4 = elements.a;
+													var newLineno = _v4.a;
+													var newElementVertices = _v4.b;
+													var remainingElements = elements.b;
+													var $temp$vertexData = vertexData,
+														$temp$frame = frame,
+														$temp$lineno = newLineno,
+														$temp$elementVertices = newElementVertices,
+														$temp$elements = remainingElements,
+														$temp$maxIndex = maxIndex,
+														$temp$indexMap = indexMap,
+														$temp$vertices = vertices,
+														$temp$indices = _List_Nil,
+														$temp$faceIndices = newFaceIndices;
+													vertexData = $temp$vertexData;
+													frame = $temp$frame;
+													lineno = $temp$lineno;
+													elementVertices = $temp$elementVertices;
+													elements = $temp$elements;
+													maxIndex = $temp$maxIndex;
+													indexMap = $temp$indexMap;
+													vertices = $temp$vertices;
+													indices = $temp$indices;
+													faceIndices = $temp$faceIndices;
+													continue addFaces;
+												} else {
+													return $elm$core$Result$Ok(
+														_Utils_Tuple2(
+															{indexMap: indexMap, maxIndex: maxIndex, vertices: vertices},
+															newFaceIndices));
+												}
+											}
+										}
+									};
+								};
+							};
+						};
+					};
+				};
+			};
+		};
+	};
+};
+var $w0rm$elm_obj_file$Obj$Decode$indexState = function (indexMap) {
+	return {indexMap: indexMap, maxIndex: -1, vertices: _List_Nil};
+};
+var $ianmackenzie$elm_triangular_mesh$TriangularMesh$TriangularMesh = function (a) {
+	return {$: 'TriangularMesh', a: a};
+};
+var $elm$core$Basics$not = _Basics_not;
+var $elm$core$List$all = F2(
+	function (isOkay, list) {
+		return !A2(
+			$elm$core$List$any,
+			A2($elm$core$Basics$composeL, $elm$core$Basics$not, isOkay),
+			list);
+	});
+var $elm$core$List$filter = F2(
+	function (isGood, list) {
+		return A3(
+			$elm$core$List$foldr,
+			F2(
+				function (x, xs) {
+					return isGood(x) ? A2($elm$core$List$cons, x, xs) : xs;
+				}),
+			_List_Nil,
+			list);
+	});
+var $ianmackenzie$elm_triangular_mesh$TriangularMesh$indexed = F2(
+	function (vertices_, faceIndices_) {
+		var numVertices = $elm$core$Array$length(vertices_);
+		var validIndices = function (_v0) {
+			var i = _v0.a;
+			var j = _v0.b;
+			var k = _v0.c;
+			return ((i >= 0) && (_Utils_cmp(i, numVertices) < 0)) && (((j >= 0) && (_Utils_cmp(j, numVertices) < 0)) && ((k >= 0) && (_Utils_cmp(k, numVertices) < 0)));
+		};
+		return A2($elm$core$List$all, validIndices, faceIndices_) ? $ianmackenzie$elm_triangular_mesh$TriangularMesh$TriangularMesh(
+			{faceIndices: faceIndices_, vertices: vertices_}) : $ianmackenzie$elm_triangular_mesh$TriangularMesh$TriangularMesh(
+			{
+				faceIndices: A2($elm$core$List$filter, validIndices, faceIndices_),
+				vertices: vertices_
+			});
+	});
+var $w0rm$elm_obj_file$Obj$Decode$triangularMesh = F5(
+	function (add, filters, groups, currentIndexedState, faceIndices) {
+		triangularMesh:
+		while (true) {
+			var maxIndex = currentIndexedState.maxIndex;
+			var indexMap = currentIndexedState.indexMap;
+			var vertices = currentIndexedState.vertices;
+			if (groups.b) {
+				if (groups.a.b.b) {
+					var _v1 = groups.a;
+					var _v2 = _v1.b;
+					var _v3 = _v2.a;
+					var lineno = _v3.a;
+					var elementVertices = _v3.b;
+					var faceElements = _v2.b;
+					var remainingElementGroups = groups.b;
+					var _v4 = A8(add, lineno, elementVertices, faceElements, maxIndex, indexMap, vertices, _List_Nil, faceIndices);
+					if (_v4.$ === 'Ok') {
+						var _v5 = _v4.a;
+						var newIndexedState = _v5.a;
+						var newFaceIndices = _v5.b;
+						var $temp$add = add,
+							$temp$filters = filters,
+							$temp$groups = remainingElementGroups,
+							$temp$currentIndexedState = newIndexedState,
+							$temp$faceIndices = newFaceIndices;
+						add = $temp$add;
+						filters = $temp$filters;
+						groups = $temp$groups;
+						currentIndexedState = $temp$currentIndexedState;
+						faceIndices = $temp$faceIndices;
+						continue triangularMesh;
+					} else {
+						var error = _v4.a;
+						return $elm$core$Result$Err(error);
+					}
+				} else {
+					var _v6 = groups.a;
+					var remainingElementGroups = groups.b;
+					var $temp$add = add,
+						$temp$filters = filters,
+						$temp$groups = remainingElementGroups,
+						$temp$currentIndexedState = currentIndexedState,
+						$temp$faceIndices = faceIndices;
+					add = $temp$add;
+					filters = $temp$filters;
+					groups = $temp$groups;
+					currentIndexedState = $temp$currentIndexedState;
+					faceIndices = $temp$faceIndices;
+					continue triangularMesh;
+				}
+			} else {
+				if (faceIndices.b) {
+					return $elm$core$Result$Ok(
+						A2(
+							$ianmackenzie$elm_triangular_mesh$TriangularMesh$indexed,
+							$elm$core$Array$fromList(
+								$elm$core$List$reverse(vertices)),
+							faceIndices));
+				} else {
+					if (filters.b) {
+						return $elm$core$Result$Err(
+							'No faces found for ' + A2($elm$core$String$join, ', ', filters));
+					} else {
+						return $elm$core$Result$Err('No faces found');
+					}
+				}
+			}
+		}
+	});
+var $w0rm$elm_obj_file$Obj$Decode$facesIn = function (frame) {
+	return $w0rm$elm_obj_file$Obj$Decode$Decoder(
+		F3(
+			function (vertexData, filters, groups) {
+				return A5(
+					$w0rm$elm_obj_file$Obj$Decode$triangularMesh,
+					A2($w0rm$elm_obj_file$Obj$Decode$addFaces, vertexData, frame),
+					filters,
+					groups,
+					$w0rm$elm_obj_file$Obj$Decode$indexState(vertexData.indexMap),
+					_List_Nil);
+			}));
+};
+var $w0rm$elm_obj_file$Obj$Decode$faces = $w0rm$elm_obj_file$Obj$Decode$facesIn($ianmackenzie$elm_geometry$Frame3d$atOrigin);
+var $elm$core$Result$map = F2(
+	function (func, ra) {
+		if (ra.$ === 'Ok') {
+			var a = ra.a;
+			return $elm$core$Result$Ok(
+				func(a));
+		} else {
+			var e = ra.a;
+			return $elm$core$Result$Err(e);
+		}
+	});
+var $w0rm$elm_obj_file$Obj$Decode$map = F2(
+	function (fn, _v0) {
+		var decoder = _v0.a;
+		return $w0rm$elm_obj_file$Obj$Decode$Decoder(
+			F3(
+				function (vertexData, filters, elements) {
+					return A2(
+						$elm$core$Result$map,
+						fn,
+						A3(decoder, vertexData, filters, elements));
+				}));
+	});
+var $elm_explorations$linear_algebra$Math$Vector3$add = _MJS_v3add;
+var $elm$core$List$append = F2(
+	function (xs, ys) {
+		if (!ys.b) {
+			return xs;
+		} else {
+			return A3($elm$core$List$foldr, $elm$core$List$cons, ys, xs);
+		}
+	});
+var $elm$core$List$concat = function (lists) {
+	return A3($elm$core$List$foldr, $elm$core$List$append, _List_Nil, lists);
+};
+var $author$project$Common$Vertex = F2(
+	function (color, position) {
+		return {color: color, position: position};
+	});
+var $elm_explorations$linear_algebra$Math$Vector3$normalize = _MJS_v3normalize;
+var $elm$core$Basics$sqrt = _Basics_sqrt;
+var $elm_explorations$linear_algebra$Math$Vector3$vec3 = _MJS_v3;
+var $author$project$World$icosaMeshList = function (clr) {
+	var phi = (1.0 + $elm$core$Basics$sqrt(5.0)) * 0.5;
+	var b = 1.0 / phi;
+	var a = 1.0;
+	var v1 = A2(
+		$author$project$Common$Vertex,
+		A2(
+			$elm_explorations$linear_algebra$Math$Vector3$add,
+			clr,
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.0, 0.0, 0.0)),
+		$elm_explorations$linear_algebra$Math$Vector3$normalize(
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, b, -a)));
+	var v10 = A2(
+		$author$project$Common$Vertex,
+		A2(
+			$elm_explorations$linear_algebra$Math$Vector3$add,
+			clr,
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.18, 0.18, 0.18)),
+		$elm_explorations$linear_algebra$Math$Vector3$normalize(
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, -a, 0, -b)));
+	var v11 = A2(
+		$author$project$Common$Vertex,
+		A2(
+			$elm_explorations$linear_algebra$Math$Vector3$add,
+			clr,
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.20, 0.20, 0.20)),
+		$elm_explorations$linear_algebra$Math$Vector3$normalize(
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, b, -a, 0)));
+	var v12 = A2(
+		$author$project$Common$Vertex,
+		A2(
+			$elm_explorations$linear_algebra$Math$Vector3$add,
+			clr,
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.22, 0.22, 0.22)),
+		$elm_explorations$linear_algebra$Math$Vector3$normalize(
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, -b, -a, 0)));
+	var v2 = A2(
+		$author$project$Common$Vertex,
+		A2(
+			$elm_explorations$linear_algebra$Math$Vector3$add,
+			clr,
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.02, 0.02, 0.02)),
+		$elm_explorations$linear_algebra$Math$Vector3$normalize(
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, b, a, 0)));
+	var v3 = A2(
+		$author$project$Common$Vertex,
+		A2(
+			$elm_explorations$linear_algebra$Math$Vector3$add,
+			clr,
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.04, 0.04, 0.04)),
+		$elm_explorations$linear_algebra$Math$Vector3$normalize(
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, -b, a, 0)));
+	var v4 = A2(
+		$author$project$Common$Vertex,
+		A2(
+			$elm_explorations$linear_algebra$Math$Vector3$add,
+			clr,
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.06, 0.06, 0.06)),
+		$elm_explorations$linear_algebra$Math$Vector3$normalize(
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, b, a)));
+	var v5 = A2(
+		$author$project$Common$Vertex,
+		A2(
+			$elm_explorations$linear_algebra$Math$Vector3$add,
+			clr,
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.08, 0.08, 0.08)),
+		$elm_explorations$linear_algebra$Math$Vector3$normalize(
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, -b, a)));
+	var v6 = A2(
+		$author$project$Common$Vertex,
+		A2(
+			$elm_explorations$linear_algebra$Math$Vector3$add,
+			clr,
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.10, 0.10, 0.10)),
+		$elm_explorations$linear_algebra$Math$Vector3$normalize(
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, -a, 0, b)));
+	var v7 = A2(
+		$author$project$Common$Vertex,
+		A2(
+			$elm_explorations$linear_algebra$Math$Vector3$add,
+			clr,
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.12, 0.12, 0.12)),
+		$elm_explorations$linear_algebra$Math$Vector3$normalize(
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, -b, -a)));
+	var v8 = A2(
+		$author$project$Common$Vertex,
+		A2(
+			$elm_explorations$linear_algebra$Math$Vector3$add,
+			clr,
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.14, 0.14, 0.14)),
+		$elm_explorations$linear_algebra$Math$Vector3$normalize(
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, a, 0, -b)));
+	var v9 = A2(
+		$author$project$Common$Vertex,
+		A2(
+			$elm_explorations$linear_algebra$Math$Vector3$add,
+			clr,
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.16, 0.16, 0.16)),
+		$elm_explorations$linear_algebra$Math$Vector3$normalize(
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, a, 0, b)));
+	return _List_fromArray(
+		[
+			_Utils_Tuple3(v3, v2, v1),
+			_Utils_Tuple3(v2, v3, v4),
+			_Utils_Tuple3(v6, v5, v4),
+			_Utils_Tuple3(v5, v9, v4),
+			_Utils_Tuple3(v8, v7, v1),
+			_Utils_Tuple3(v7, v10, v1),
+			_Utils_Tuple3(v12, v11, v5),
+			_Utils_Tuple3(v11, v12, v7),
+			_Utils_Tuple3(v10, v6, v3),
+			_Utils_Tuple3(v6, v10, v12),
+			_Utils_Tuple3(v9, v8, v2),
+			_Utils_Tuple3(v8, v9, v11),
+			_Utils_Tuple3(v3, v6, v4),
+			_Utils_Tuple3(v9, v2, v4),
+			_Utils_Tuple3(v10, v3, v1),
+			_Utils_Tuple3(v2, v8, v1),
+			_Utils_Tuple3(v12, v10, v7),
+			_Utils_Tuple3(v8, v11, v7),
+			_Utils_Tuple3(v6, v12, v5),
+			_Utils_Tuple3(v11, v9, v5)
+		]);
+};
+var $author$project$Common$meshPositionMap = F2(
+	function (fun, mesh) {
+		if (!mesh.b) {
+			return _List_Nil;
+		} else {
+			var _v1 = mesh.a;
+			var v1 = _v1.a;
+			var v2 = _v1.b;
+			var v3 = _v1.c;
+			var xs = mesh.b;
+			return _Utils_ap(
+				_List_fromArray(
+					[
+						_Utils_Tuple3(
+						_Utils_update(
+							v1,
+							{
+								position: fun(v1.position)
+							}),
+						_Utils_update(
+							v2,
+							{
+								position: fun(v2.position)
+							}),
+						_Utils_update(
+							v3,
+							{
+								position: fun(v3.position)
+							}))
+					]),
+				A2($author$project$Common$meshPositionMap, fun, xs));
+		}
+	});
+var $elm_explorations$linear_algebra$Math$Vector3$scale = _MJS_v3scale;
+var $elm_explorations$linear_algebra$Math$Vector3$getX = _MJS_v3getX;
+var $elm_explorations$linear_algebra$Math$Vector3$getY = _MJS_v3getY;
+var $elm_explorations$linear_algebra$Math$Vector3$getZ = _MJS_v3getZ;
+var $author$project$World$subdivideProject = F2(
+	function (clr, mesh) {
+		var helper = function (m) {
+			if (!m.b) {
+				return _List_Nil;
+			} else {
+				var _v1 = m.a;
+				var v1 = _v1.a;
+				var v2 = _v1.b;
+				var v3 = _v1.c;
+				var xs = m.b;
+				var mp23Z = ($elm_explorations$linear_algebra$Math$Vector3$getZ(v2.position) + $elm_explorations$linear_algebra$Math$Vector3$getZ(v3.position)) / 2;
+				var mp23Y = ($elm_explorations$linear_algebra$Math$Vector3$getY(v2.position) + $elm_explorations$linear_algebra$Math$Vector3$getY(v3.position)) / 2;
+				var mp23X = ($elm_explorations$linear_algebra$Math$Vector3$getX(v2.position) + $elm_explorations$linear_algebra$Math$Vector3$getX(v3.position)) / 2;
+				var pos23 = A3($elm_explorations$linear_algebra$Math$Vector3$vec3, mp23X, mp23Y, mp23Z);
+				var mp13Z = ($elm_explorations$linear_algebra$Math$Vector3$getZ(v1.position) + $elm_explorations$linear_algebra$Math$Vector3$getZ(v3.position)) / 2;
+				var mp13Y = ($elm_explorations$linear_algebra$Math$Vector3$getY(v1.position) + $elm_explorations$linear_algebra$Math$Vector3$getY(v3.position)) / 2;
+				var mp13X = ($elm_explorations$linear_algebra$Math$Vector3$getX(v1.position) + $elm_explorations$linear_algebra$Math$Vector3$getX(v3.position)) / 2;
+				var pos13 = A3($elm_explorations$linear_algebra$Math$Vector3$vec3, mp13X, mp13Y, mp13Z);
+				var mp12Z = ($elm_explorations$linear_algebra$Math$Vector3$getZ(v1.position) + $elm_explorations$linear_algebra$Math$Vector3$getZ(v2.position)) / 2;
+				var mp12Y = ($elm_explorations$linear_algebra$Math$Vector3$getY(v1.position) + $elm_explorations$linear_algebra$Math$Vector3$getY(v2.position)) / 2;
+				var mp12X = ($elm_explorations$linear_algebra$Math$Vector3$getX(v1.position) + $elm_explorations$linear_algebra$Math$Vector3$getX(v2.position)) / 2;
+				var pos12 = A3($elm_explorations$linear_algebra$Math$Vector3$vec3, mp12X, mp12Y, mp12Z);
+				var clr23 = clr;
+				var v23 = A2(
+					$author$project$Common$Vertex,
+					clr23,
+					$elm_explorations$linear_algebra$Math$Vector3$normalize(pos23));
+				var clr13 = clr;
+				var v13 = A2(
+					$author$project$Common$Vertex,
+					clr13,
+					$elm_explorations$linear_algebra$Math$Vector3$normalize(pos13));
+				var clr12 = clr;
+				var v12 = A2(
+					$author$project$Common$Vertex,
+					clr12,
+					$elm_explorations$linear_algebra$Math$Vector3$normalize(pos12));
+				return A2(
+					$elm$core$List$cons,
+					_List_fromArray(
+						[
+							_Utils_Tuple3(v1, v12, v13),
+							_Utils_Tuple3(v12, v2, v23),
+							_Utils_Tuple3(v23, v3, v13),
+							_Utils_Tuple3(v13, v12, v23)
+						]),
+					helper(xs));
+			}
+		};
+		return $elm$core$List$concat(
+			helper(mesh));
+	});
+var $elm_explorations$webgl$WebGL$Mesh3 = F2(
+	function (a, b) {
+		return {$: 'Mesh3', a: a, b: b};
+	});
+var $elm_explorations$webgl$WebGL$triangles = $elm_explorations$webgl$WebGL$Mesh3(
+	{elemSize: 3, indexSize: 0, mode: 4});
+var $author$project$World$earthMesh = function () {
+	var earthColor = A2(
+		$elm_explorations$linear_algebra$Math$Vector3$scale,
+		1 / 255,
+		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 52, 101, 164));
+	var divideColor = A2(
+		$elm_explorations$linear_algebra$Math$Vector3$scale,
+		1 / 255,
+		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 115, 210, 22));
+	var axisColor = A2(
+		$elm_explorations$linear_algebra$Math$Vector3$scale,
+		1 / 255,
+		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 204, 0, 0));
+	return $elm_explorations$webgl$WebGL$triangles(
+		$elm$core$List$concat(
+			_List_fromArray(
+				[
+					A2(
+					$author$project$World$subdivideProject,
+					divideColor,
+					A2(
+						$author$project$World$subdivideProject,
+						earthColor,
+						A2(
+							$author$project$World$subdivideProject,
+							divideColor,
+							A2(
+								$author$project$World$subdivideProject,
+								earthColor,
+								$author$project$World$icosaMeshList(divideColor))))),
+					A2(
+					$author$project$Common$meshPositionMap,
+					$elm_explorations$linear_algebra$Math$Vector3$add(
+						A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 1.5, 0)),
+					A2(
+						$author$project$Common$meshPositionMap,
+						$elm_explorations$linear_algebra$Math$Vector3$scale(0.1),
+						$author$project$World$icosaMeshList(axisColor))),
+					A2(
+					$author$project$Common$meshPositionMap,
+					$elm_explorations$linear_algebra$Math$Vector3$add(
+						A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, -1.5, 0)),
+					A2(
+						$author$project$Common$meshPositionMap,
+						$elm_explorations$linear_algebra$Math$Vector3$scale(0.1),
+						$author$project$World$icosaMeshList(axisColor))),
+					A2(
+					$author$project$Common$meshPositionMap,
+					$elm_explorations$linear_algebra$Math$Vector3$add(
+						A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 1.25, 0)),
+					A2(
+						$author$project$Common$meshPositionMap,
+						$elm_explorations$linear_algebra$Math$Vector3$scale(0.1),
+						$author$project$World$icosaMeshList(axisColor))),
+					A2(
+					$author$project$Common$meshPositionMap,
+					$elm_explorations$linear_algebra$Math$Vector3$add(
+						A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, -1.25, 0)),
+					A2(
+						$author$project$Common$meshPositionMap,
+						$elm_explorations$linear_algebra$Math$Vector3$scale(0.1),
+						$author$project$World$icosaMeshList(axisColor)))
+				])));
+}();
+var $author$project$Main$triangularMeshToMeshVertex = function (triangularMesh) {
+	return $author$project$World$earthMesh;
+};
+var $author$project$Main$objMeshDecoder = A2($w0rm$elm_obj_file$Obj$Decode$map, $author$project$Main$triangularMeshToMeshVertex, $w0rm$elm_obj_file$Obj$Decode$faces);
 var $author$project$Main$init = function (model) {
-	var earth = {locationX: 100, locationY: 100, locationZ: 100, rotationTheta: 0};
+	var earthObjUrl = 'https://soitbegins.teekuningas.net/earth.obj.txt';
+	var earth = {locationX: 100, locationY: 100, locationZ: 100, mesh: $elm$core$Maybe$Nothing, rotationTheta: 0};
 	return _Utils_Tuple2(
 		{
 			camera: {azimoth: 0, elevation: 0},
@@ -6828,10 +9785,19 @@ var $author$project$Main$init = function (model) {
 			messages: _List_Nil,
 			updateParams: {elapsed: 0, elapsedPrevious: 0, msgEarth: earth, msgEarthPrevious: earth, msgElapsed: 0, msgElapsedPrevious: 0}
 		},
-		A2(
-			$elm$core$Task$attempt,
-			$author$project$Main$ViewportMsg,
-			$elm$browser$Browser$Dom$getViewportOf('webgl-canvas')));
+		$elm$core$Platform$Cmd$batch(
+			_List_fromArray(
+				[
+					A2(
+					$elm$core$Task$attempt,
+					$author$project$Main$ViewportMsg,
+					$elm$browser$Browser$Dom$getViewportOf('webgl-canvas')),
+					$elm$http$Http$get(
+					{
+						expect: A3($w0rm$elm_obj_file$Obj$Decode$expectObj, $author$project$Main$EarthMeshLoaded, $ianmackenzie$elm_units$Length$meters, $author$project$Main$objMeshDecoder),
+						url: earthObjUrl
+					})
+				])));
 };
 var $author$project$Main$ResizeMsg = {$: 'ResizeMsg'};
 var $author$project$Main$TimeElapsed = function (a) {
@@ -6849,11 +9815,8 @@ var $elm$browser$Browser$AnimationManager$State = F3(
 	});
 var $elm$browser$Browser$AnimationManager$init = $elm$core$Task$succeed(
 	A3($elm$browser$Browser$AnimationManager$State, _List_Nil, $elm$core$Maybe$Nothing, 0));
-var $elm$core$Process$kill = _Scheduler_kill;
 var $elm$browser$Browser$AnimationManager$now = _Browser_now(_Utils_Tuple0);
 var $elm$browser$Browser$AnimationManager$rAF = _Browser_rAF(_Utils_Tuple0);
-var $elm$core$Platform$sendToSelf = _Platform_sendToSelf;
-var $elm$core$Process$spawn = _Scheduler_spawn;
 var $elm$browser$Browser$AnimationManager$onEffects = F3(
 	function (router, subs, _v0) {
 		var request = _v0.request;
@@ -6980,8 +9943,6 @@ var $elm$browser$Browser$Events$State = F2(
 	function (subs, pids) {
 		return {pids: pids, subs: subs};
 	});
-var $elm$core$Dict$RBEmpty_elm_builtin = {$: 'RBEmpty_elm_builtin'};
-var $elm$core$Dict$empty = $elm$core$Dict$RBEmpty_elm_builtin;
 var $elm$browser$Browser$Events$init = $elm$core$Task$succeed(
 	A2($elm$browser$Browser$Events$State, _List_Nil, $elm$core$Dict$empty));
 var $elm$browser$Browser$Events$nodeToKey = function (node) {
@@ -7000,115 +9961,6 @@ var $elm$browser$Browser$Events$addKey = function (sub) {
 			name),
 		sub);
 };
-var $elm$core$Dict$Black = {$: 'Black'};
-var $elm$core$Dict$RBNode_elm_builtin = F5(
-	function (a, b, c, d, e) {
-		return {$: 'RBNode_elm_builtin', a: a, b: b, c: c, d: d, e: e};
-	});
-var $elm$core$Dict$Red = {$: 'Red'};
-var $elm$core$Dict$balance = F5(
-	function (color, key, value, left, right) {
-		if ((right.$ === 'RBNode_elm_builtin') && (right.a.$ === 'Red')) {
-			var _v1 = right.a;
-			var rK = right.b;
-			var rV = right.c;
-			var rLeft = right.d;
-			var rRight = right.e;
-			if ((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Red')) {
-				var _v3 = left.a;
-				var lK = left.b;
-				var lV = left.c;
-				var lLeft = left.d;
-				var lRight = left.e;
-				return A5(
-					$elm$core$Dict$RBNode_elm_builtin,
-					$elm$core$Dict$Red,
-					key,
-					value,
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, lK, lV, lLeft, lRight),
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, rK, rV, rLeft, rRight));
-			} else {
-				return A5(
-					$elm$core$Dict$RBNode_elm_builtin,
-					color,
-					rK,
-					rV,
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, key, value, left, rLeft),
-					rRight);
-			}
-		} else {
-			if ((((left.$ === 'RBNode_elm_builtin') && (left.a.$ === 'Red')) && (left.d.$ === 'RBNode_elm_builtin')) && (left.d.a.$ === 'Red')) {
-				var _v5 = left.a;
-				var lK = left.b;
-				var lV = left.c;
-				var _v6 = left.d;
-				var _v7 = _v6.a;
-				var llK = _v6.b;
-				var llV = _v6.c;
-				var llLeft = _v6.d;
-				var llRight = _v6.e;
-				var lRight = left.e;
-				return A5(
-					$elm$core$Dict$RBNode_elm_builtin,
-					$elm$core$Dict$Red,
-					lK,
-					lV,
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, llK, llV, llLeft, llRight),
-					A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, key, value, lRight, right));
-			} else {
-				return A5($elm$core$Dict$RBNode_elm_builtin, color, key, value, left, right);
-			}
-		}
-	});
-var $elm$core$Basics$compare = _Utils_compare;
-var $elm$core$Dict$insertHelp = F3(
-	function (key, value, dict) {
-		if (dict.$ === 'RBEmpty_elm_builtin') {
-			return A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Red, key, value, $elm$core$Dict$RBEmpty_elm_builtin, $elm$core$Dict$RBEmpty_elm_builtin);
-		} else {
-			var nColor = dict.a;
-			var nKey = dict.b;
-			var nValue = dict.c;
-			var nLeft = dict.d;
-			var nRight = dict.e;
-			var _v1 = A2($elm$core$Basics$compare, key, nKey);
-			switch (_v1.$) {
-				case 'LT':
-					return A5(
-						$elm$core$Dict$balance,
-						nColor,
-						nKey,
-						nValue,
-						A3($elm$core$Dict$insertHelp, key, value, nLeft),
-						nRight);
-				case 'EQ':
-					return A5($elm$core$Dict$RBNode_elm_builtin, nColor, nKey, value, nLeft, nRight);
-				default:
-					return A5(
-						$elm$core$Dict$balance,
-						nColor,
-						nKey,
-						nValue,
-						nLeft,
-						A3($elm$core$Dict$insertHelp, key, value, nRight));
-			}
-		}
-	});
-var $elm$core$Dict$insert = F3(
-	function (key, value, dict) {
-		var _v0 = A3($elm$core$Dict$insertHelp, key, value, dict);
-		if ((_v0.$ === 'RBNode_elm_builtin') && (_v0.a.$ === 'Red')) {
-			var _v1 = _v0.a;
-			var k = _v0.b;
-			var v = _v0.c;
-			var l = _v0.d;
-			var r = _v0.e;
-			return A5($elm$core$Dict$RBNode_elm_builtin, $elm$core$Dict$Black, k, v, l, r);
-		} else {
-			var x = _v0;
-			return x;
-		}
-	});
 var $elm$core$Dict$fromList = function (assocs) {
 	return A3(
 		$elm$core$List$foldl,
@@ -7309,24 +10161,6 @@ var $elm$browser$Browser$Events$onEffects = F3(
 				$elm$core$Task$sequence(
 					A2($elm$core$List$map, $elm$core$Process$kill, deadPids))));
 	});
-var $elm$core$List$maybeCons = F3(
-	function (f, mx, xs) {
-		var _v0 = f(mx);
-		if (_v0.$ === 'Just') {
-			var x = _v0.a;
-			return A2($elm$core$List$cons, x, xs);
-		} else {
-			return xs;
-		}
-	});
-var $elm$core$List$filterMap = F2(
-	function (f, xs) {
-		return A3(
-			$elm$core$List$foldr,
-			$elm$core$List$maybeCons(f),
-			_List_Nil,
-			xs);
-	});
 var $elm$browser$Browser$Events$onSelfMsg = F3(
 	function (router, _v0, state) {
 		var key = _v0.key;
@@ -7445,9 +10279,6 @@ var $author$project$Common$FlightMode = {$: 'FlightMode'};
 var $author$project$Main$UpdateTimeMsg = function (a) {
 	return {$: 'UpdateTimeMsg', a: a};
 };
-var $elm$core$Basics$negate = function (n) {
-	return -n;
-};
 var $author$project$Controller$controllerParams = {size: 0.2, trans: 0.3, x: 0.5, y: -0.2};
 var $elm$core$Basics$abs = function (n) {
 	return (n < 0) ? (-n) : n;
@@ -7481,7 +10312,6 @@ var $author$project$Controller$coordinatesWithinUpButton = F2(
 	function (model, offset) {
 		return A3($author$project$Controller$coordinatesWithinButton, model, offset, $author$project$Controller$controllerParams.trans + 0.5);
 	});
-var $elm$core$Basics$ge = _Utils_ge;
 var $elm$core$List$head = function (list) {
 	if (list.b) {
 		var x = list.a;
@@ -7495,7 +10325,6 @@ var $elm$core$Basics$min = F2(
 	function (x, y) {
 		return (_Utils_cmp(x, y) < 0) ? x : y;
 	});
-var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
 var $elm$time$Time$Name = function (a) {
 	return {$: 'Name', a: a};
@@ -7516,6 +10345,15 @@ var $elm$time$Time$posixToMillis = function (_v0) {
 };
 var $elm$core$Basics$round = _Basics_round;
 var $elm$core$Basics$sin = _Basics_sin;
+var $elm$core$Result$toMaybe = function (result) {
+	if (result.$ === 'Ok') {
+		var v = result.a;
+		return $elm$core$Maybe$Just(v);
+	} else {
+		return $elm$core$Maybe$Nothing;
+	}
+};
+var $elm$core$Debug$toString = _Debug_toString;
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
@@ -7779,7 +10617,7 @@ var $author$project$Main$update = F2(
 						$elm$core$Task$attempt,
 						$author$project$Main$ViewportMsg,
 						$elm$browser$Browser$Dom$getViewportOf('webgl-canvas')));
-			default:
+			case 'ViewportMsg':
 				var returnValue = msg.a;
 				if (returnValue.$ === 'Ok') {
 					var struct = returnValue.a;
@@ -7797,6 +10635,27 @@ var $author$project$Main$update = F2(
 					var errMsg = returnValue.a;
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
+			default:
+				var result = msg.a;
+				var oldEarth = model.earth;
+				var earth = _Utils_update(
+					oldEarth,
+					{
+						mesh: $elm$core$Result$toMaybe(result)
+					});
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							earth: earth,
+							messages: _Utils_ap(
+								model.messages,
+								_List_fromArray(
+									[
+										$elm$core$Debug$toString(result)
+									]))
+						}),
+					$elm$core$Platform$Cmd$none);
 		}
 	});
 var $author$project$Main$MouseDown = function (a) {
@@ -7831,62 +10690,6 @@ var $elm$html$Html$Attributes$stringProperty = F2(
 			$elm$json$Json$Encode$string(string));
 	});
 var $elm$html$Html$Attributes$class = $elm$html$Html$Attributes$stringProperty('className');
-var $author$project$Common$Vertex = F2(
-	function (color, position) {
-		return {color: color, position: position};
-	});
-var $elm_explorations$linear_algebra$Math$Vector3$add = _MJS_v3add;
-var $elm$core$List$append = F2(
-	function (xs, ys) {
-		if (!ys.b) {
-			return xs;
-		} else {
-			return A3($elm$core$List$foldr, $elm$core$List$cons, ys, xs);
-		}
-	});
-var $elm$core$List$concat = function (lists) {
-	return A3($elm$core$List$foldr, $elm$core$List$append, _List_Nil, lists);
-};
-var $author$project$Common$meshPositionMap = F2(
-	function (fun, mesh) {
-		if (!mesh.b) {
-			return _List_Nil;
-		} else {
-			var _v1 = mesh.a;
-			var v1 = _v1.a;
-			var v2 = _v1.b;
-			var v3 = _v1.c;
-			var xs = mesh.b;
-			return _Utils_ap(
-				_List_fromArray(
-					[
-						_Utils_Tuple3(
-						_Utils_update(
-							v1,
-							{
-								position: fun(v1.position)
-							}),
-						_Utils_update(
-							v2,
-							{
-								position: fun(v2.position)
-							}),
-						_Utils_update(
-							v3,
-							{
-								position: fun(v3.position)
-							}))
-					]),
-				A2($author$project$Common$meshPositionMap, fun, xs));
-		}
-	});
-var $elm_explorations$webgl$WebGL$Mesh3 = F2(
-	function (a, b) {
-		return {$: 'Mesh3', a: a, b: b};
-	});
-var $elm_explorations$webgl$WebGL$triangles = $elm_explorations$webgl$WebGL$Mesh3(
-	{elemSize: 3, indexSize: 0, mode: 4});
-var $elm_explorations$linear_algebra$Math$Vector3$vec3 = _MJS_v3;
 var $author$project$Controller$controllerMeshDown = function () {
 	var trans = $author$project$Controller$controllerParams.trans;
 	return $elm_explorations$webgl$WebGL$triangles(
@@ -7983,253 +10786,6 @@ var $author$project$Controller$controllerUnif = F2(
 		};
 	});
 var $elm$html$Html$div = _VirtualDom_node('div');
-var $elm_explorations$linear_algebra$Math$Vector3$normalize = _MJS_v3normalize;
-var $elm$core$Basics$sqrt = _Basics_sqrt;
-var $author$project$World$icosaMeshList = function (clr) {
-	var phi = (1.0 + $elm$core$Basics$sqrt(5.0)) * 0.5;
-	var b = 1.0 / phi;
-	var a = 1.0;
-	var v1 = A2(
-		$author$project$Common$Vertex,
-		A2(
-			$elm_explorations$linear_algebra$Math$Vector3$add,
-			clr,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.0, 0.0, 0.0)),
-		$elm_explorations$linear_algebra$Math$Vector3$normalize(
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, b, -a)));
-	var v10 = A2(
-		$author$project$Common$Vertex,
-		A2(
-			$elm_explorations$linear_algebra$Math$Vector3$add,
-			clr,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.18, 0.18, 0.18)),
-		$elm_explorations$linear_algebra$Math$Vector3$normalize(
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, -a, 0, -b)));
-	var v11 = A2(
-		$author$project$Common$Vertex,
-		A2(
-			$elm_explorations$linear_algebra$Math$Vector3$add,
-			clr,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.20, 0.20, 0.20)),
-		$elm_explorations$linear_algebra$Math$Vector3$normalize(
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, b, -a, 0)));
-	var v12 = A2(
-		$author$project$Common$Vertex,
-		A2(
-			$elm_explorations$linear_algebra$Math$Vector3$add,
-			clr,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.22, 0.22, 0.22)),
-		$elm_explorations$linear_algebra$Math$Vector3$normalize(
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, -b, -a, 0)));
-	var v2 = A2(
-		$author$project$Common$Vertex,
-		A2(
-			$elm_explorations$linear_algebra$Math$Vector3$add,
-			clr,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.02, 0.02, 0.02)),
-		$elm_explorations$linear_algebra$Math$Vector3$normalize(
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, b, a, 0)));
-	var v3 = A2(
-		$author$project$Common$Vertex,
-		A2(
-			$elm_explorations$linear_algebra$Math$Vector3$add,
-			clr,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.04, 0.04, 0.04)),
-		$elm_explorations$linear_algebra$Math$Vector3$normalize(
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, -b, a, 0)));
-	var v4 = A2(
-		$author$project$Common$Vertex,
-		A2(
-			$elm_explorations$linear_algebra$Math$Vector3$add,
-			clr,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.06, 0.06, 0.06)),
-		$elm_explorations$linear_algebra$Math$Vector3$normalize(
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, b, a)));
-	var v5 = A2(
-		$author$project$Common$Vertex,
-		A2(
-			$elm_explorations$linear_algebra$Math$Vector3$add,
-			clr,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.08, 0.08, 0.08)),
-		$elm_explorations$linear_algebra$Math$Vector3$normalize(
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, -b, a)));
-	var v6 = A2(
-		$author$project$Common$Vertex,
-		A2(
-			$elm_explorations$linear_algebra$Math$Vector3$add,
-			clr,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.10, 0.10, 0.10)),
-		$elm_explorations$linear_algebra$Math$Vector3$normalize(
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, -a, 0, b)));
-	var v7 = A2(
-		$author$project$Common$Vertex,
-		A2(
-			$elm_explorations$linear_algebra$Math$Vector3$add,
-			clr,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.12, 0.12, 0.12)),
-		$elm_explorations$linear_algebra$Math$Vector3$normalize(
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, -b, -a)));
-	var v8 = A2(
-		$author$project$Common$Vertex,
-		A2(
-			$elm_explorations$linear_algebra$Math$Vector3$add,
-			clr,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.14, 0.14, 0.14)),
-		$elm_explorations$linear_algebra$Math$Vector3$normalize(
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, a, 0, -b)));
-	var v9 = A2(
-		$author$project$Common$Vertex,
-		A2(
-			$elm_explorations$linear_algebra$Math$Vector3$add,
-			clr,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.16, 0.16, 0.16)),
-		$elm_explorations$linear_algebra$Math$Vector3$normalize(
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, a, 0, b)));
-	return _List_fromArray(
-		[
-			_Utils_Tuple3(v3, v2, v1),
-			_Utils_Tuple3(v2, v3, v4),
-			_Utils_Tuple3(v6, v5, v4),
-			_Utils_Tuple3(v5, v9, v4),
-			_Utils_Tuple3(v8, v7, v1),
-			_Utils_Tuple3(v7, v10, v1),
-			_Utils_Tuple3(v12, v11, v5),
-			_Utils_Tuple3(v11, v12, v7),
-			_Utils_Tuple3(v10, v6, v3),
-			_Utils_Tuple3(v6, v10, v12),
-			_Utils_Tuple3(v9, v8, v2),
-			_Utils_Tuple3(v8, v9, v11),
-			_Utils_Tuple3(v3, v6, v4),
-			_Utils_Tuple3(v9, v2, v4),
-			_Utils_Tuple3(v10, v3, v1),
-			_Utils_Tuple3(v2, v8, v1),
-			_Utils_Tuple3(v12, v10, v7),
-			_Utils_Tuple3(v8, v11, v7),
-			_Utils_Tuple3(v6, v12, v5),
-			_Utils_Tuple3(v11, v9, v5)
-		]);
-};
-var $elm_explorations$linear_algebra$Math$Vector3$scale = _MJS_v3scale;
-var $elm_explorations$linear_algebra$Math$Vector3$getX = _MJS_v3getX;
-var $elm_explorations$linear_algebra$Math$Vector3$getY = _MJS_v3getY;
-var $elm_explorations$linear_algebra$Math$Vector3$getZ = _MJS_v3getZ;
-var $author$project$World$subdivideProject = F2(
-	function (clr, mesh) {
-		var helper = function (m) {
-			if (!m.b) {
-				return _List_Nil;
-			} else {
-				var _v1 = m.a;
-				var v1 = _v1.a;
-				var v2 = _v1.b;
-				var v3 = _v1.c;
-				var xs = m.b;
-				var mp23Z = ($elm_explorations$linear_algebra$Math$Vector3$getZ(v2.position) + $elm_explorations$linear_algebra$Math$Vector3$getZ(v3.position)) / 2;
-				var mp23Y = ($elm_explorations$linear_algebra$Math$Vector3$getY(v2.position) + $elm_explorations$linear_algebra$Math$Vector3$getY(v3.position)) / 2;
-				var mp23X = ($elm_explorations$linear_algebra$Math$Vector3$getX(v2.position) + $elm_explorations$linear_algebra$Math$Vector3$getX(v3.position)) / 2;
-				var pos23 = A3($elm_explorations$linear_algebra$Math$Vector3$vec3, mp23X, mp23Y, mp23Z);
-				var mp13Z = ($elm_explorations$linear_algebra$Math$Vector3$getZ(v1.position) + $elm_explorations$linear_algebra$Math$Vector3$getZ(v3.position)) / 2;
-				var mp13Y = ($elm_explorations$linear_algebra$Math$Vector3$getY(v1.position) + $elm_explorations$linear_algebra$Math$Vector3$getY(v3.position)) / 2;
-				var mp13X = ($elm_explorations$linear_algebra$Math$Vector3$getX(v1.position) + $elm_explorations$linear_algebra$Math$Vector3$getX(v3.position)) / 2;
-				var pos13 = A3($elm_explorations$linear_algebra$Math$Vector3$vec3, mp13X, mp13Y, mp13Z);
-				var mp12Z = ($elm_explorations$linear_algebra$Math$Vector3$getZ(v1.position) + $elm_explorations$linear_algebra$Math$Vector3$getZ(v2.position)) / 2;
-				var mp12Y = ($elm_explorations$linear_algebra$Math$Vector3$getY(v1.position) + $elm_explorations$linear_algebra$Math$Vector3$getY(v2.position)) / 2;
-				var mp12X = ($elm_explorations$linear_algebra$Math$Vector3$getX(v1.position) + $elm_explorations$linear_algebra$Math$Vector3$getX(v2.position)) / 2;
-				var pos12 = A3($elm_explorations$linear_algebra$Math$Vector3$vec3, mp12X, mp12Y, mp12Z);
-				var clr23 = clr;
-				var v23 = A2(
-					$author$project$Common$Vertex,
-					clr23,
-					$elm_explorations$linear_algebra$Math$Vector3$normalize(pos23));
-				var clr13 = clr;
-				var v13 = A2(
-					$author$project$Common$Vertex,
-					clr13,
-					$elm_explorations$linear_algebra$Math$Vector3$normalize(pos13));
-				var clr12 = clr;
-				var v12 = A2(
-					$author$project$Common$Vertex,
-					clr12,
-					$elm_explorations$linear_algebra$Math$Vector3$normalize(pos12));
-				return A2(
-					$elm$core$List$cons,
-					_List_fromArray(
-						[
-							_Utils_Tuple3(v1, v12, v13),
-							_Utils_Tuple3(v12, v2, v23),
-							_Utils_Tuple3(v23, v3, v13),
-							_Utils_Tuple3(v13, v12, v23)
-						]),
-					helper(xs));
-			}
-		};
-		return $elm$core$List$concat(
-			helper(mesh));
-	});
-var $author$project$World$earthMesh = function () {
-	var earthColor = A2(
-		$elm_explorations$linear_algebra$Math$Vector3$scale,
-		1 / 255,
-		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 52, 101, 164));
-	var divideColor = A2(
-		$elm_explorations$linear_algebra$Math$Vector3$scale,
-		1 / 255,
-		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 115, 210, 22));
-	var axisColor = A2(
-		$elm_explorations$linear_algebra$Math$Vector3$scale,
-		1 / 255,
-		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 204, 0, 0));
-	return $elm_explorations$webgl$WebGL$triangles(
-		$elm$core$List$concat(
-			_List_fromArray(
-				[
-					A2(
-					$author$project$World$subdivideProject,
-					divideColor,
-					A2(
-						$author$project$World$subdivideProject,
-						earthColor,
-						A2(
-							$author$project$World$subdivideProject,
-							divideColor,
-							A2(
-								$author$project$World$subdivideProject,
-								earthColor,
-								$author$project$World$icosaMeshList(divideColor))))),
-					A2(
-					$author$project$Common$meshPositionMap,
-					$elm_explorations$linear_algebra$Math$Vector3$add(
-						A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 1.5, 0)),
-					A2(
-						$author$project$Common$meshPositionMap,
-						$elm_explorations$linear_algebra$Math$Vector3$scale(0.1),
-						$author$project$World$icosaMeshList(axisColor))),
-					A2(
-					$author$project$Common$meshPositionMap,
-					$elm_explorations$linear_algebra$Math$Vector3$add(
-						A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, -1.5, 0)),
-					A2(
-						$author$project$Common$meshPositionMap,
-						$elm_explorations$linear_algebra$Math$Vector3$scale(0.1),
-						$author$project$World$icosaMeshList(axisColor))),
-					A2(
-					$author$project$Common$meshPositionMap,
-					$elm_explorations$linear_algebra$Math$Vector3$add(
-						A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 1.25, 0)),
-					A2(
-						$author$project$Common$meshPositionMap,
-						$elm_explorations$linear_algebra$Math$Vector3$scale(0.1),
-						$author$project$World$icosaMeshList(axisColor))),
-					A2(
-					$author$project$Common$meshPositionMap,
-					$elm_explorations$linear_algebra$Math$Vector3$add(
-						A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, -1.25, 0)),
-					A2(
-						$author$project$Common$meshPositionMap,
-						$elm_explorations$linear_algebra$Math$Vector3$scale(0.1),
-						$author$project$World$icosaMeshList(axisColor)))
-				])));
-}();
 var $elm_explorations$linear_algebra$Math$Vector3$cross = _MJS_v3cross;
 var $elm_explorations$linear_algebra$Math$Vector3$j = A3(_MJS_v3, 0, 1, 0);
 var $elm_explorations$linear_algebra$Math$Matrix4$makeRotate = _MJS_m4x4makeRotate;
@@ -8369,29 +10925,6 @@ var $elm_explorations$webgl$WebGL$Settings$DepthTest$less = function (_v0) {
 };
 var $elm_explorations$webgl$WebGL$Settings$DepthTest$default = $elm_explorations$webgl$WebGL$Settings$DepthTest$less(
 	{far: 1, near: 0, write: true});
-var $elm_explorations$webgl$WebGL$Internal$disableSetting = F2(
-	function (cache, setting) {
-		switch (setting.$) {
-			case 'Blend':
-				return _WebGL_disableBlend(cache);
-			case 'DepthTest':
-				return _WebGL_disableDepthTest(cache);
-			case 'StencilTest':
-				return _WebGL_disableStencilTest(cache);
-			case 'Scissor':
-				return _WebGL_disableScissor(cache);
-			case 'ColorMask':
-				return _WebGL_disableColorMask(cache);
-			case 'CullFace':
-				return _WebGL_disableCullFace(cache);
-			case 'PolygonOffset':
-				return _WebGL_disablePolygonOffset(cache);
-			case 'SampleCoverage':
-				return _WebGL_disableSampleCoverage(cache);
-			default:
-				return _WebGL_disableSampleAlphaToCoverage(cache);
-		}
-	});
 var $elm_explorations$webgl$WebGL$Internal$enableOption = F2(
 	function (ctx, option) {
 		switch (option.$) {
@@ -8410,26 +10943,26 @@ var $elm_explorations$webgl$WebGL$Internal$enableOption = F2(
 		}
 	});
 var $elm_explorations$webgl$WebGL$Internal$enableSetting = F2(
-	function (gl, setting) {
+	function (cache, setting) {
 		switch (setting.$) {
 			case 'Blend':
-				return A2(_WebGL_enableBlend, gl, setting);
+				return A2(_WebGL_enableBlend, cache, setting);
 			case 'DepthTest':
-				return A2(_WebGL_enableDepthTest, gl, setting);
+				return A2(_WebGL_enableDepthTest, cache, setting);
 			case 'StencilTest':
-				return A2(_WebGL_enableStencilTest, gl, setting);
+				return A2(_WebGL_enableStencilTest, cache, setting);
 			case 'Scissor':
-				return A2(_WebGL_enableScissor, gl, setting);
+				return A2(_WebGL_enableScissor, cache, setting);
 			case 'ColorMask':
-				return A2(_WebGL_enableColorMask, gl, setting);
+				return A2(_WebGL_enableColorMask, cache, setting);
 			case 'CullFace':
-				return A2(_WebGL_enableCullFace, gl, setting);
+				return A2(_WebGL_enableCullFace, cache, setting);
 			case 'PolygonOffset':
-				return A2(_WebGL_enablePolygonOffset, gl, setting);
+				return A2(_WebGL_enablePolygonOffset, cache, setting);
 			case 'SampleCoverage':
-				return A2(_WebGL_enableSampleCoverage, gl, setting);
+				return A2(_WebGL_enableSampleCoverage, cache, setting);
 			default:
-				return A2(_WebGL_enableSampleAlphaToCoverage, gl, setting);
+				return _WebGL_enableSampleAlphaToCoverage(cache);
 		}
 	});
 var $elm_explorations$webgl$WebGL$entityWith = _WebGL_entity;
@@ -8885,21 +11418,13 @@ var $elm$html$Html$Attributes$width = function (n) {
 		'width',
 		$elm$core$String$fromInt(n));
 };
-var $elm$core$Maybe$withDefault = F2(
-	function (_default, maybe) {
-		if (maybe.$ === 'Just') {
-			var value = maybe.a;
-			return value;
-		} else {
-			return _default;
-		}
-	});
 var $author$project$Main$view = function (model) {
 	var upButtonDown = model.controller.upButtonDown;
+	var maybeMesh = model.earth.mesh;
 	var gameState = model.gameState;
 	var downButtonDown = model.controller.downButtonDown;
 	var connectionState = model.connectionState;
-	var _v0 = _Utils_Tuple2(gameState, connectionState);
+	var _v0 = _Utils_Tuple3(gameState, connectionState, maybeMesh);
 	if (_v0.a.$ === 'MainMenu') {
 		var _v1 = _v0.a;
 		return A2(
@@ -8929,23 +11454,10 @@ var $author$project$Main$view = function (model) {
 						]))
 				]));
 	} else {
-		if (_v0.b.$ === 'Disconnected') {
+		if ((_v0.b.$ === 'Connected') && (_v0.c.$ === 'Just')) {
 			var _v2 = _v0.a;
 			var _v3 = _v0.b;
-			return A2(
-				$elm$html$Html$div,
-				_List_Nil,
-				_List_fromArray(
-					[
-						$elm$html$Html$text(
-						A2(
-							$elm$core$Maybe$withDefault,
-							'Starting..',
-							$elm$core$List$head(model.messages)))
-					]));
-		} else {
-			var _v4 = _v0.a;
-			var _v5 = _v0.b;
+			var earthMesh = _v0.c.a;
 			return A2(
 				$elm$html$Html$div,
 				_List_Nil,
@@ -8997,7 +11509,7 @@ var $author$project$Main$view = function (model) {
 										$elm_explorations$webgl$WebGL$entity,
 										$author$project$Common$vertexShader,
 										$author$project$Common$fragmentShader,
-										$author$project$World$earthMesh,
+										earthMesh,
 										$author$project$World$earthUnif(model)),
 										A4(
 										$elm_explorations$webgl$WebGL$entity,
@@ -9025,6 +11537,19 @@ var $author$project$Main$view = function (model) {
 											downButtonDown ? 1.0 : 0.5))
 									]))
 							]))
+					]));
+		} else {
+			var _v4 = _v0.a;
+			return A2(
+				$elm$html$Html$div,
+				_List_Nil,
+				_List_fromArray(
+					[
+						$elm$html$Html$text(
+						A2(
+							$elm$core$Maybe$withDefault,
+							'Starting..',
+							$elm$core$List$head(model.messages)))
 					]));
 		}
 	}
