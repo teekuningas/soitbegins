@@ -1,6 +1,6 @@
 module World exposing (heroMesh, heroUnif, 
                        fireMesh, fireUnif,
-                       earthMesh, earthUnif,
+                       axisMesh, earthUnif,
                        sunMesh, sunUnif)
 
 import Common exposing (Model, viewportSize, meshPositionMap,
@@ -150,28 +150,44 @@ fireUnif model =
 
 -- Constructs a simple mesh for earth
 
-earthMesh : Mesh Vertex
-earthMesh = 
-  let earthColor = Vec3.scale (1/255) (vec3 52 101 164) -- blue
-      divideColor = Vec3.scale (1/255) (vec3 115 210 22) -- green
-      axisColor = Vec3.scale (1/255) (vec3 204 0 0) -- red
-  in 
-    [
-    -- (subdivideProject divideColor (subdivideProject earthColor (icosaMeshList divideColor))),
-    (subdivideProject divideColor <| 
-     subdivideProject earthColor <| 
-     subdivideProject divideColor <| 
-     subdivideProject earthColor <| 
-     icosaMeshList divideColor),
-    (meshPositionMap (Vec3.add (vec3 0 1.5 0))
-     (meshPositionMap (Vec3.scale 0.1) (icosaMeshList axisColor))),
-    (meshPositionMap (Vec3.add (vec3 0 -1.5 0))
-     (meshPositionMap (Vec3.scale 0.1) (icosaMeshList axisColor))),
-    (meshPositionMap (Vec3.add (vec3 0 1.25 0))
-     (meshPositionMap (Vec3.scale 0.1) (icosaMeshList axisColor))),
-    (meshPositionMap (Vec3.add (vec3 0 -1.25 0))
-     (meshPositionMap (Vec3.scale 0.1) (icosaMeshList axisColor)))
+-- earthMesh : Mesh Vertex
+-- earthMesh = 
+--   let earthColor = Vec3.scale (1/255) (vec3 52 101 164) -- blue
+--       divideColor = Vec3.scale (1/255) (vec3 115 210 22) -- green
+--       axisColor = Vec3.scale (1/255) (vec3 204 0 0) -- red
+--   in 
+--    [
+--    -- (subdivideProject divideColor (subdivideProject earthColor (icosaMeshList divideColor))),
+--    (subdivideProject divideColor <| 
+--     subdivideProject earthColor <| 
+--     subdivideProject divideColor <| 
+--     subdivideProject earthColor <| 
+--     icosaMeshList divideColor),
+--    (meshPositionMap (Vec3.add (vec3 0 1.5 0))
+--     (meshPositionMap (Vec3.scale 0.1) (icosaMeshList axisColor))),
+--    (meshPositionMap (Vec3.add (vec3 0 -1.5 0))
+--     (meshPositionMap (Vec3.scale 0.1) (icosaMeshList axisColor))),
+--    (meshPositionMap (Vec3.add (vec3 0 1.25 0))
+--     (meshPositionMap (Vec3.scale 0.1) (icosaMeshList axisColor))),
+--    (meshPositionMap (Vec3.add (vec3 0 -1.25 0))
+--     (meshPositionMap (Vec3.scale 0.1) (icosaMeshList axisColor)))
+--
+--    ]
+--    |> List.concat
+--    |> WebGL.triangles
 
+axisMesh : Mesh Vertex
+axisMesh = 
+ let axisColor = Vec3.scale (1/255) (vec3 204 0 0) -- red
+   in 
+    [ (meshPositionMap (Vec3.add (vec3 0 1.5 0))
+      (meshPositionMap (Vec3.scale 0.1) (icosaMeshList axisColor))),
+      (meshPositionMap (Vec3.add (vec3 0 -1.5 0))
+      (meshPositionMap (Vec3.scale 0.1) (icosaMeshList axisColor))),
+      (meshPositionMap (Vec3.add (vec3 0 1.25 0))
+      (meshPositionMap (Vec3.scale 0.1) (icosaMeshList axisColor))),
+      (meshPositionMap (Vec3.add (vec3 0 -1.25 0))
+      (meshPositionMap (Vec3.scale 0.1) (icosaMeshList axisColor)))
     ]
     |> List.concat
     |> WebGL.triangles

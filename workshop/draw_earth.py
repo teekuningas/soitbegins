@@ -192,15 +192,6 @@ vv = np.array(vv)
 vn = np.array(vn)
 ff = np.array(ff)
 
-# save the mesh
-write_mesh('output/earth.obj', 
-           vertices=vv, 
-           faces=ff, 
-           normals=vn, 
-           texcoords=None, 
-           name='earth',
-           overwrite=True)
-
 
 # read the GDEM data
 elevs = []
@@ -232,6 +223,14 @@ for elev in elevs:
 from pprint import pprint
 pprint(counter)
 
+# save the mesh
+write_mesh('output/earth.obj', 
+           vertices=vv, 
+           faces=ff, 
+           normals=vn, 
+           texcoords=None, 
+           name='earth',
+           overwrite=True)
 
 
 # create a program to draw the mesh

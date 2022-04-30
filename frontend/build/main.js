@@ -9457,238 +9457,85 @@ var $w0rm$elm_obj_file$Obj$Decode$map = F2(
 						A3(decoder, vertexData, filters, elements));
 				}));
 	});
-var $elm_explorations$linear_algebra$Math$Vector3$add = _MJS_v3add;
-var $elm$core$List$append = F2(
-	function (xs, ys) {
-		if (!ys.b) {
-			return xs;
-		} else {
-			return A3($elm$core$List$foldr, $elm$core$List$cons, ys, xs);
-		}
-	});
-var $elm$core$List$concat = function (lists) {
-	return A3($elm$core$List$foldr, $elm$core$List$append, _List_Nil, lists);
+var $ianmackenzie$elm_triangular_mesh$TriangularMesh$faceIndices = function (_v0) {
+	var mesh = _v0.a;
+	return mesh.faceIndices;
 };
-var $author$project$Common$Vertex = F2(
-	function (color, position) {
-		return {color: color, position: position};
-	});
-var $elm_explorations$linear_algebra$Math$Vector3$normalize = _MJS_v3normalize;
-var $elm$core$Basics$sqrt = _Basics_sqrt;
-var $elm_explorations$linear_algebra$Math$Vector3$vec3 = _MJS_v3;
-var $author$project$World$icosaMeshList = function (clr) {
-	var phi = (1.0 + $elm$core$Basics$sqrt(5.0)) * 0.5;
-	var b = 1.0 / phi;
-	var a = 1.0;
-	var v1 = A2(
-		$author$project$Common$Vertex,
-		A2(
-			$elm_explorations$linear_algebra$Math$Vector3$add,
-			clr,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.0, 0.0, 0.0)),
-		$elm_explorations$linear_algebra$Math$Vector3$normalize(
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, b, -a)));
-	var v10 = A2(
-		$author$project$Common$Vertex,
-		A2(
-			$elm_explorations$linear_algebra$Math$Vector3$add,
-			clr,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.18, 0.18, 0.18)),
-		$elm_explorations$linear_algebra$Math$Vector3$normalize(
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, -a, 0, -b)));
-	var v11 = A2(
-		$author$project$Common$Vertex,
-		A2(
-			$elm_explorations$linear_algebra$Math$Vector3$add,
-			clr,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.20, 0.20, 0.20)),
-		$elm_explorations$linear_algebra$Math$Vector3$normalize(
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, b, -a, 0)));
-	var v12 = A2(
-		$author$project$Common$Vertex,
-		A2(
-			$elm_explorations$linear_algebra$Math$Vector3$add,
-			clr,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.22, 0.22, 0.22)),
-		$elm_explorations$linear_algebra$Math$Vector3$normalize(
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, -b, -a, 0)));
-	var v2 = A2(
-		$author$project$Common$Vertex,
-		A2(
-			$elm_explorations$linear_algebra$Math$Vector3$add,
-			clr,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.02, 0.02, 0.02)),
-		$elm_explorations$linear_algebra$Math$Vector3$normalize(
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, b, a, 0)));
-	var v3 = A2(
-		$author$project$Common$Vertex,
-		A2(
-			$elm_explorations$linear_algebra$Math$Vector3$add,
-			clr,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.04, 0.04, 0.04)),
-		$elm_explorations$linear_algebra$Math$Vector3$normalize(
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, -b, a, 0)));
-	var v4 = A2(
-		$author$project$Common$Vertex,
-		A2(
-			$elm_explorations$linear_algebra$Math$Vector3$add,
-			clr,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.06, 0.06, 0.06)),
-		$elm_explorations$linear_algebra$Math$Vector3$normalize(
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, b, a)));
-	var v5 = A2(
-		$author$project$Common$Vertex,
-		A2(
-			$elm_explorations$linear_algebra$Math$Vector3$add,
-			clr,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.08, 0.08, 0.08)),
-		$elm_explorations$linear_algebra$Math$Vector3$normalize(
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, -b, a)));
-	var v6 = A2(
-		$author$project$Common$Vertex,
-		A2(
-			$elm_explorations$linear_algebra$Math$Vector3$add,
-			clr,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.10, 0.10, 0.10)),
-		$elm_explorations$linear_algebra$Math$Vector3$normalize(
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, -a, 0, b)));
-	var v7 = A2(
-		$author$project$Common$Vertex,
-		A2(
-			$elm_explorations$linear_algebra$Math$Vector3$add,
-			clr,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.12, 0.12, 0.12)),
-		$elm_explorations$linear_algebra$Math$Vector3$normalize(
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, -b, -a)));
-	var v8 = A2(
-		$author$project$Common$Vertex,
-		A2(
-			$elm_explorations$linear_algebra$Math$Vector3$add,
-			clr,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.14, 0.14, 0.14)),
-		$elm_explorations$linear_algebra$Math$Vector3$normalize(
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, a, 0, -b)));
-	var v9 = A2(
-		$author$project$Common$Vertex,
-		A2(
-			$elm_explorations$linear_algebra$Math$Vector3$add,
-			clr,
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.16, 0.16, 0.16)),
-		$elm_explorations$linear_algebra$Math$Vector3$normalize(
-			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, a, 0, b)));
-	return _List_fromArray(
-		[
-			_Utils_Tuple3(v3, v2, v1),
-			_Utils_Tuple3(v2, v3, v4),
-			_Utils_Tuple3(v6, v5, v4),
-			_Utils_Tuple3(v5, v9, v4),
-			_Utils_Tuple3(v8, v7, v1),
-			_Utils_Tuple3(v7, v10, v1),
-			_Utils_Tuple3(v12, v11, v5),
-			_Utils_Tuple3(v11, v12, v7),
-			_Utils_Tuple3(v10, v6, v3),
-			_Utils_Tuple3(v6, v10, v12),
-			_Utils_Tuple3(v9, v8, v2),
-			_Utils_Tuple3(v8, v9, v11),
-			_Utils_Tuple3(v3, v6, v4),
-			_Utils_Tuple3(v9, v2, v4),
-			_Utils_Tuple3(v10, v3, v1),
-			_Utils_Tuple3(v2, v8, v1),
-			_Utils_Tuple3(v12, v10, v7),
-			_Utils_Tuple3(v8, v11, v7),
-			_Utils_Tuple3(v6, v12, v5),
-			_Utils_Tuple3(v11, v9, v5)
-		]);
-};
-var $author$project$Common$meshPositionMap = F2(
-	function (fun, mesh) {
-		if (!mesh.b) {
-			return _List_Nil;
+var $elm$core$Maybe$map3 = F4(
+	function (func, ma, mb, mc) {
+		if (ma.$ === 'Nothing') {
+			return $elm$core$Maybe$Nothing;
 		} else {
-			var _v1 = mesh.a;
-			var v1 = _v1.a;
-			var v2 = _v1.b;
-			var v3 = _v1.c;
-			var xs = mesh.b;
-			return _Utils_ap(
-				_List_fromArray(
-					[
-						_Utils_Tuple3(
-						_Utils_update(
-							v1,
-							{
-								position: fun(v1.position)
-							}),
-						_Utils_update(
-							v2,
-							{
-								position: fun(v2.position)
-							}),
-						_Utils_update(
-							v3,
-							{
-								position: fun(v3.position)
-							}))
-					]),
-				A2($author$project$Common$meshPositionMap, fun, xs));
-		}
-	});
-var $elm_explorations$linear_algebra$Math$Vector3$scale = _MJS_v3scale;
-var $elm_explorations$linear_algebra$Math$Vector3$getX = _MJS_v3getX;
-var $elm_explorations$linear_algebra$Math$Vector3$getY = _MJS_v3getY;
-var $elm_explorations$linear_algebra$Math$Vector3$getZ = _MJS_v3getZ;
-var $author$project$World$subdivideProject = F2(
-	function (clr, mesh) {
-		var helper = function (m) {
-			if (!m.b) {
-				return _List_Nil;
+			var a = ma.a;
+			if (mb.$ === 'Nothing') {
+				return $elm$core$Maybe$Nothing;
 			} else {
-				var _v1 = m.a;
-				var v1 = _v1.a;
-				var v2 = _v1.b;
-				var v3 = _v1.c;
-				var xs = m.b;
-				var mp23Z = ($elm_explorations$linear_algebra$Math$Vector3$getZ(v2.position) + $elm_explorations$linear_algebra$Math$Vector3$getZ(v3.position)) / 2;
-				var mp23Y = ($elm_explorations$linear_algebra$Math$Vector3$getY(v2.position) + $elm_explorations$linear_algebra$Math$Vector3$getY(v3.position)) / 2;
-				var mp23X = ($elm_explorations$linear_algebra$Math$Vector3$getX(v2.position) + $elm_explorations$linear_algebra$Math$Vector3$getX(v3.position)) / 2;
-				var pos23 = A3($elm_explorations$linear_algebra$Math$Vector3$vec3, mp23X, mp23Y, mp23Z);
-				var mp13Z = ($elm_explorations$linear_algebra$Math$Vector3$getZ(v1.position) + $elm_explorations$linear_algebra$Math$Vector3$getZ(v3.position)) / 2;
-				var mp13Y = ($elm_explorations$linear_algebra$Math$Vector3$getY(v1.position) + $elm_explorations$linear_algebra$Math$Vector3$getY(v3.position)) / 2;
-				var mp13X = ($elm_explorations$linear_algebra$Math$Vector3$getX(v1.position) + $elm_explorations$linear_algebra$Math$Vector3$getX(v3.position)) / 2;
-				var pos13 = A3($elm_explorations$linear_algebra$Math$Vector3$vec3, mp13X, mp13Y, mp13Z);
-				var mp12Z = ($elm_explorations$linear_algebra$Math$Vector3$getZ(v1.position) + $elm_explorations$linear_algebra$Math$Vector3$getZ(v2.position)) / 2;
-				var mp12Y = ($elm_explorations$linear_algebra$Math$Vector3$getY(v1.position) + $elm_explorations$linear_algebra$Math$Vector3$getY(v2.position)) / 2;
-				var mp12X = ($elm_explorations$linear_algebra$Math$Vector3$getX(v1.position) + $elm_explorations$linear_algebra$Math$Vector3$getX(v2.position)) / 2;
-				var pos12 = A3($elm_explorations$linear_algebra$Math$Vector3$vec3, mp12X, mp12Y, mp12Z);
-				var clr23 = clr;
-				var v23 = A2(
-					$author$project$Common$Vertex,
-					clr23,
-					$elm_explorations$linear_algebra$Math$Vector3$normalize(pos23));
-				var clr13 = clr;
-				var v13 = A2(
-					$author$project$Common$Vertex,
-					clr13,
-					$elm_explorations$linear_algebra$Math$Vector3$normalize(pos13));
-				var clr12 = clr;
-				var v12 = A2(
-					$author$project$Common$Vertex,
-					clr12,
-					$elm_explorations$linear_algebra$Math$Vector3$normalize(pos12));
-				return A2(
-					$elm$core$List$cons,
-					_List_fromArray(
-						[
-							_Utils_Tuple3(v1, v12, v13),
-							_Utils_Tuple3(v12, v2, v23),
-							_Utils_Tuple3(v23, v3, v13),
-							_Utils_Tuple3(v13, v12, v23)
-						]),
-					helper(xs));
+				var b = mb.a;
+				if (mc.$ === 'Nothing') {
+					return $elm$core$Maybe$Nothing;
+				} else {
+					var c = mc.a;
+					return $elm$core$Maybe$Just(
+						A3(func, a, b, c));
+				}
 			}
+		}
+	});
+var $ianmackenzie$elm_triangular_mesh$TriangularMesh$vertices = function (_v0) {
+	var mesh = _v0.a;
+	return mesh.vertices;
+};
+var $ianmackenzie$elm_triangular_mesh$TriangularMesh$vertex = F2(
+	function (index, mesh) {
+		return A2(
+			$elm$core$Array$get,
+			index,
+			$ianmackenzie$elm_triangular_mesh$TriangularMesh$vertices(mesh));
+	});
+var $ianmackenzie$elm_triangular_mesh$TriangularMesh$faceVertices = function (mesh) {
+	var toFace = function (_v0) {
+		var i = _v0.a;
+		var j = _v0.b;
+		var k = _v0.c;
+		return A4(
+			$elm$core$Maybe$map3,
+			F3(
+				function (firstVertex, secondVertex, thirdVertex) {
+					return _Utils_Tuple3(firstVertex, secondVertex, thirdVertex);
+				}),
+			A2($ianmackenzie$elm_triangular_mesh$TriangularMesh$vertex, i, mesh),
+			A2($ianmackenzie$elm_triangular_mesh$TriangularMesh$vertex, j, mesh),
+			A2($ianmackenzie$elm_triangular_mesh$TriangularMesh$vertex, k, mesh));
+	};
+	return A2(
+		$elm$core$List$filterMap,
+		toFace,
+		$ianmackenzie$elm_triangular_mesh$TriangularMesh$faceIndices(mesh));
+};
+var $elm_explorations$linear_algebra$Math$Vector3$fromRecord = _MJS_v3fromRecord;
+var $elm_explorations$linear_algebra$Math$Vector3$length = _MJS_v3length;
+var $ianmackenzie$elm_geometry$Point3d$xCoordinate = function (_v0) {
+	var p = _v0.a;
+	return $ianmackenzie$elm_units$Quantity$Quantity(p.x);
+};
+var $ianmackenzie$elm_geometry$Point3d$yCoordinate = function (_v0) {
+	var p = _v0.a;
+	return $ianmackenzie$elm_units$Quantity$Quantity(p.y);
+};
+var $ianmackenzie$elm_geometry$Point3d$zCoordinate = function (_v0) {
+	var p = _v0.a;
+	return $ianmackenzie$elm_units$Quantity$Quantity(p.z);
+};
+var $ianmackenzie$elm_geometry$Point3d$toRecord = F2(
+	function (fromQuantity, point) {
+		return {
+			x: fromQuantity(
+				$ianmackenzie$elm_geometry$Point3d$xCoordinate(point)),
+			y: fromQuantity(
+				$ianmackenzie$elm_geometry$Point3d$yCoordinate(point)),
+			z: fromQuantity(
+				$ianmackenzie$elm_geometry$Point3d$zCoordinate(point))
 		};
-		return $elm$core$List$concat(
-			helper(mesh));
 	});
 var $elm_explorations$webgl$WebGL$Mesh3 = F2(
 	function (a, b) {
@@ -9696,74 +9543,33 @@ var $elm_explorations$webgl$WebGL$Mesh3 = F2(
 	});
 var $elm_explorations$webgl$WebGL$triangles = $elm_explorations$webgl$WebGL$Mesh3(
 	{elemSize: 3, indexSize: 0, mode: 4});
-var $author$project$World$earthMesh = function () {
-	var earthColor = A2(
-		$elm_explorations$linear_algebra$Math$Vector3$scale,
-		1 / 255,
-		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 52, 101, 164));
-	var divideColor = A2(
-		$elm_explorations$linear_algebra$Math$Vector3$scale,
-		1 / 255,
-		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 115, 210, 22));
-	var axisColor = A2(
-		$elm_explorations$linear_algebra$Math$Vector3$scale,
-		1 / 255,
-		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 204, 0, 0));
-	return $elm_explorations$webgl$WebGL$triangles(
-		$elm$core$List$concat(
-			_List_fromArray(
-				[
-					A2(
-					$author$project$World$subdivideProject,
-					divideColor,
-					A2(
-						$author$project$World$subdivideProject,
-						earthColor,
-						A2(
-							$author$project$World$subdivideProject,
-							divideColor,
-							A2(
-								$author$project$World$subdivideProject,
-								earthColor,
-								$author$project$World$icosaMeshList(divideColor))))),
-					A2(
-					$author$project$Common$meshPositionMap,
-					$elm_explorations$linear_algebra$Math$Vector3$add(
-						A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 1.5, 0)),
-					A2(
-						$author$project$Common$meshPositionMap,
-						$elm_explorations$linear_algebra$Math$Vector3$scale(0.1),
-						$author$project$World$icosaMeshList(axisColor))),
-					A2(
-					$author$project$Common$meshPositionMap,
-					$elm_explorations$linear_algebra$Math$Vector3$add(
-						A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, -1.5, 0)),
-					A2(
-						$author$project$Common$meshPositionMap,
-						$elm_explorations$linear_algebra$Math$Vector3$scale(0.1),
-						$author$project$World$icosaMeshList(axisColor))),
-					A2(
-					$author$project$Common$meshPositionMap,
-					$elm_explorations$linear_algebra$Math$Vector3$add(
-						A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 1.25, 0)),
-					A2(
-						$author$project$Common$meshPositionMap,
-						$elm_explorations$linear_algebra$Math$Vector3$scale(0.1),
-						$author$project$World$icosaMeshList(axisColor))),
-					A2(
-					$author$project$Common$meshPositionMap,
-					$elm_explorations$linear_algebra$Math$Vector3$add(
-						A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, -1.25, 0)),
-					A2(
-						$author$project$Common$meshPositionMap,
-						$elm_explorations$linear_algebra$Math$Vector3$scale(0.1),
-						$author$project$World$icosaMeshList(axisColor)))
-				])));
-}();
-var $author$project$Main$triangularMeshToMeshVertex = function (triangularMesh) {
-	return $author$project$World$earthMesh;
+var $elm_explorations$linear_algebra$Math$Vector3$vec3 = _MJS_v3;
+var $author$project$ObjLoader$triangularMeshToMeshVertex = function (triangularMesh) {
+	var vertices = $ianmackenzie$elm_triangular_mesh$TriangularMesh$faceVertices(triangularMesh);
+	var getColor = function (loc) {
+		return ($elm_explorations$linear_algebra$Math$Vector3$length(loc) <= 1.00) ? A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 0, 1) : (($elm_explorations$linear_algebra$Math$Vector3$length(loc) >= 1.03) ? A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 139 / 255, 69 / 255, 19 / 255) : A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 34 / 255, 139 / 255, 34 / 255));
+	};
+	var posToVertex = function (val) {
+		var pos = $elm_explorations$linear_algebra$Math$Vector3$fromRecord(
+			A2($ianmackenzie$elm_geometry$Point3d$toRecord, $ianmackenzie$elm_units$Length$inMeters, val.position));
+		return {
+			color: getColor(pos),
+			position: pos
+		};
+	};
+	var convTriangle = function (tri) {
+		var x = tri.a;
+		var y = tri.b;
+		var z = tri.c;
+		return _Utils_Tuple3(
+			posToVertex(x),
+			posToVertex(y),
+			posToVertex(z));
+	};
+	var earthMesh = A2($elm$core$List$map, convTriangle, vertices);
+	return $elm_explorations$webgl$WebGL$triangles(earthMesh);
 };
-var $author$project$Main$objMeshDecoder = A2($w0rm$elm_obj_file$Obj$Decode$map, $author$project$Main$triangularMeshToMeshVertex, $w0rm$elm_obj_file$Obj$Decode$faces);
+var $author$project$ObjLoader$objMeshDecoder = A2($w0rm$elm_obj_file$Obj$Decode$map, $author$project$ObjLoader$triangularMeshToMeshVertex, $w0rm$elm_obj_file$Obj$Decode$faces);
 var $author$project$Main$init = function (model) {
 	var earthObjUrl = 'https://soitbegins.teekuningas.net/earth.obj.txt';
 	var earth = {locationX: 100, locationY: 100, locationZ: 100, mesh: $elm$core$Maybe$Nothing, rotationTheta: 0};
@@ -9781,7 +9587,7 @@ var $author$project$Main$init = function (model) {
 			},
 			earth: earth,
 			gameState: $author$project$Common$MainMenu,
-			hero: {height: 1.01, latitude: 0.5, longitude: 0, power: 1, rotationTheta: 0},
+			hero: {height: 1.01, latitude: 0.0, longitude: 0.0, power: 1, rotationTheta: 0},
 			messages: _List_Nil,
 			updateParams: {elapsed: 0, elapsedPrevious: 0, msgEarth: earth, msgEarthPrevious: earth, msgElapsed: 0, msgElapsedPrevious: 0}
 		},
@@ -9794,7 +9600,7 @@ var $author$project$Main$init = function (model) {
 					$elm$browser$Browser$Dom$getViewportOf('webgl-canvas')),
 					$elm$http$Http$get(
 					{
-						expect: A3($w0rm$elm_obj_file$Obj$Decode$expectObj, $author$project$Main$EarthMeshLoaded, $ianmackenzie$elm_units$Length$meters, $author$project$Main$objMeshDecoder),
+						expect: A3($w0rm$elm_obj_file$Obj$Decode$expectObj, $author$project$Main$EarthMeshLoaded, $ianmackenzie$elm_units$Length$meters, $author$project$ObjLoader$objMeshDecoder),
 						url: earthObjUrl
 					})
 				])));
@@ -10353,7 +10159,6 @@ var $elm$core$Result$toMaybe = function (result) {
 		return $elm$core$Maybe$Nothing;
 	}
 };
-var $elm$core$Debug$toString = _Debug_toString;
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
@@ -10430,7 +10235,7 @@ var $author$project$Main$update = F2(
 								elapsed: $elm$time$Time$posixToMillis(dt),
 								elapsedPrevious: updateParams.elapsed
 							});
-						var newPowerChange = model.controller.upButtonDown ? 0.001 : (model.controller.downButtonDown ? (-0.001) : 0);
+						var newPowerChange = model.controller.upButtonDown ? 0.0001 : (model.controller.downButtonDown ? (-0.0001) : 0);
 						var newPower = A2(
 							$elm$core$Basics$max,
 							0,
@@ -10525,7 +10330,7 @@ var $author$project$Main$update = F2(
 							camera,
 							{
 								azimoth: newAzimoth,
-								elevation: (_Utils_cmp(newElevation, $elm$core$Basics$pi / 3) < 1) ? ((_Utils_cmp(newElevation, (-$elm$core$Basics$pi) / 3) > -1) ? newElevation : model.camera.elevation) : model.camera.elevation
+								elevation: (_Utils_cmp(newElevation, (4 * $elm$core$Basics$pi) / 10) < 1) ? ((_Utils_cmp(newElevation, ((-4) * $elm$core$Basics$pi) / 10) > -1) ? newElevation : model.camera.elevation) : model.camera.elevation
 							});
 						return _Utils_Tuple2(
 							_Utils_update(
@@ -10646,16 +10451,11 @@ var $author$project$Main$update = F2(
 				return _Utils_Tuple2(
 					_Utils_update(
 						model,
-						{
-							earth: earth,
-							messages: _Utils_ap(
-								model.messages,
-								_List_fromArray(
-									[
-										$elm$core$Debug$toString(result)
-									]))
-						}),
-					$elm$core$Platform$Cmd$none);
+						{earth: earth}),
+					A2(
+						$elm$core$Task$attempt,
+						$author$project$Main$ViewportMsg,
+						$elm$browser$Browser$Dom$getViewportOf('webgl-canvas')));
 		}
 	});
 var $author$project$Main$MouseDown = function (a) {
@@ -10680,6 +10480,225 @@ var $author$project$Main$TouchMove = function (a) {
 var $author$project$Main$TouchUp = function (a) {
 	return {$: 'TouchUp', a: a};
 };
+var $elm_explorations$linear_algebra$Math$Vector3$add = _MJS_v3add;
+var $elm$core$List$append = F2(
+	function (xs, ys) {
+		if (!ys.b) {
+			return xs;
+		} else {
+			return A3($elm$core$List$foldr, $elm$core$List$cons, ys, xs);
+		}
+	});
+var $elm$core$List$concat = function (lists) {
+	return A3($elm$core$List$foldr, $elm$core$List$append, _List_Nil, lists);
+};
+var $author$project$Common$Vertex = F2(
+	function (color, position) {
+		return {color: color, position: position};
+	});
+var $elm_explorations$linear_algebra$Math$Vector3$normalize = _MJS_v3normalize;
+var $elm$core$Basics$sqrt = _Basics_sqrt;
+var $author$project$World$icosaMeshList = function (clr) {
+	var phi = (1.0 + $elm$core$Basics$sqrt(5.0)) * 0.5;
+	var b = 1.0 / phi;
+	var a = 1.0;
+	var v1 = A2(
+		$author$project$Common$Vertex,
+		A2(
+			$elm_explorations$linear_algebra$Math$Vector3$add,
+			clr,
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.0, 0.0, 0.0)),
+		$elm_explorations$linear_algebra$Math$Vector3$normalize(
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, b, -a)));
+	var v10 = A2(
+		$author$project$Common$Vertex,
+		A2(
+			$elm_explorations$linear_algebra$Math$Vector3$add,
+			clr,
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.18, 0.18, 0.18)),
+		$elm_explorations$linear_algebra$Math$Vector3$normalize(
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, -a, 0, -b)));
+	var v11 = A2(
+		$author$project$Common$Vertex,
+		A2(
+			$elm_explorations$linear_algebra$Math$Vector3$add,
+			clr,
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.20, 0.20, 0.20)),
+		$elm_explorations$linear_algebra$Math$Vector3$normalize(
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, b, -a, 0)));
+	var v12 = A2(
+		$author$project$Common$Vertex,
+		A2(
+			$elm_explorations$linear_algebra$Math$Vector3$add,
+			clr,
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.22, 0.22, 0.22)),
+		$elm_explorations$linear_algebra$Math$Vector3$normalize(
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, -b, -a, 0)));
+	var v2 = A2(
+		$author$project$Common$Vertex,
+		A2(
+			$elm_explorations$linear_algebra$Math$Vector3$add,
+			clr,
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.02, 0.02, 0.02)),
+		$elm_explorations$linear_algebra$Math$Vector3$normalize(
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, b, a, 0)));
+	var v3 = A2(
+		$author$project$Common$Vertex,
+		A2(
+			$elm_explorations$linear_algebra$Math$Vector3$add,
+			clr,
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.04, 0.04, 0.04)),
+		$elm_explorations$linear_algebra$Math$Vector3$normalize(
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, -b, a, 0)));
+	var v4 = A2(
+		$author$project$Common$Vertex,
+		A2(
+			$elm_explorations$linear_algebra$Math$Vector3$add,
+			clr,
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.06, 0.06, 0.06)),
+		$elm_explorations$linear_algebra$Math$Vector3$normalize(
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, b, a)));
+	var v5 = A2(
+		$author$project$Common$Vertex,
+		A2(
+			$elm_explorations$linear_algebra$Math$Vector3$add,
+			clr,
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.08, 0.08, 0.08)),
+		$elm_explorations$linear_algebra$Math$Vector3$normalize(
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, -b, a)));
+	var v6 = A2(
+		$author$project$Common$Vertex,
+		A2(
+			$elm_explorations$linear_algebra$Math$Vector3$add,
+			clr,
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.10, 0.10, 0.10)),
+		$elm_explorations$linear_algebra$Math$Vector3$normalize(
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, -a, 0, b)));
+	var v7 = A2(
+		$author$project$Common$Vertex,
+		A2(
+			$elm_explorations$linear_algebra$Math$Vector3$add,
+			clr,
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.12, 0.12, 0.12)),
+		$elm_explorations$linear_algebra$Math$Vector3$normalize(
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, -b, -a)));
+	var v8 = A2(
+		$author$project$Common$Vertex,
+		A2(
+			$elm_explorations$linear_algebra$Math$Vector3$add,
+			clr,
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.14, 0.14, 0.14)),
+		$elm_explorations$linear_algebra$Math$Vector3$normalize(
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, a, 0, -b)));
+	var v9 = A2(
+		$author$project$Common$Vertex,
+		A2(
+			$elm_explorations$linear_algebra$Math$Vector3$add,
+			clr,
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0.16, 0.16, 0.16)),
+		$elm_explorations$linear_algebra$Math$Vector3$normalize(
+			A3($elm_explorations$linear_algebra$Math$Vector3$vec3, a, 0, b)));
+	return _List_fromArray(
+		[
+			_Utils_Tuple3(v3, v2, v1),
+			_Utils_Tuple3(v2, v3, v4),
+			_Utils_Tuple3(v6, v5, v4),
+			_Utils_Tuple3(v5, v9, v4),
+			_Utils_Tuple3(v8, v7, v1),
+			_Utils_Tuple3(v7, v10, v1),
+			_Utils_Tuple3(v12, v11, v5),
+			_Utils_Tuple3(v11, v12, v7),
+			_Utils_Tuple3(v10, v6, v3),
+			_Utils_Tuple3(v6, v10, v12),
+			_Utils_Tuple3(v9, v8, v2),
+			_Utils_Tuple3(v8, v9, v11),
+			_Utils_Tuple3(v3, v6, v4),
+			_Utils_Tuple3(v9, v2, v4),
+			_Utils_Tuple3(v10, v3, v1),
+			_Utils_Tuple3(v2, v8, v1),
+			_Utils_Tuple3(v12, v10, v7),
+			_Utils_Tuple3(v8, v11, v7),
+			_Utils_Tuple3(v6, v12, v5),
+			_Utils_Tuple3(v11, v9, v5)
+		]);
+};
+var $author$project$Common$meshPositionMap = F2(
+	function (fun, mesh) {
+		if (!mesh.b) {
+			return _List_Nil;
+		} else {
+			var _v1 = mesh.a;
+			var v1 = _v1.a;
+			var v2 = _v1.b;
+			var v3 = _v1.c;
+			var xs = mesh.b;
+			return _Utils_ap(
+				_List_fromArray(
+					[
+						_Utils_Tuple3(
+						_Utils_update(
+							v1,
+							{
+								position: fun(v1.position)
+							}),
+						_Utils_update(
+							v2,
+							{
+								position: fun(v2.position)
+							}),
+						_Utils_update(
+							v3,
+							{
+								position: fun(v3.position)
+							}))
+					]),
+				A2($author$project$Common$meshPositionMap, fun, xs));
+		}
+	});
+var $elm_explorations$linear_algebra$Math$Vector3$scale = _MJS_v3scale;
+var $author$project$World$axisMesh = function () {
+	var axisColor = A2(
+		$elm_explorations$linear_algebra$Math$Vector3$scale,
+		1 / 255,
+		A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 204, 0, 0));
+	return $elm_explorations$webgl$WebGL$triangles(
+		$elm$core$List$concat(
+			_List_fromArray(
+				[
+					A2(
+					$author$project$Common$meshPositionMap,
+					$elm_explorations$linear_algebra$Math$Vector3$add(
+						A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 1.5, 0)),
+					A2(
+						$author$project$Common$meshPositionMap,
+						$elm_explorations$linear_algebra$Math$Vector3$scale(0.1),
+						$author$project$World$icosaMeshList(axisColor))),
+					A2(
+					$author$project$Common$meshPositionMap,
+					$elm_explorations$linear_algebra$Math$Vector3$add(
+						A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, -1.5, 0)),
+					A2(
+						$author$project$Common$meshPositionMap,
+						$elm_explorations$linear_algebra$Math$Vector3$scale(0.1),
+						$author$project$World$icosaMeshList(axisColor))),
+					A2(
+					$author$project$Common$meshPositionMap,
+					$elm_explorations$linear_algebra$Math$Vector3$add(
+						A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, 1.25, 0)),
+					A2(
+						$author$project$Common$meshPositionMap,
+						$elm_explorations$linear_algebra$Math$Vector3$scale(0.1),
+						$author$project$World$icosaMeshList(axisColor))),
+					A2(
+					$author$project$Common$meshPositionMap,
+					$elm_explorations$linear_algebra$Math$Vector3$add(
+						A3($elm_explorations$linear_algebra$Math$Vector3$vec3, 0, -1.25, 0)),
+					A2(
+						$author$project$Common$meshPositionMap,
+						$elm_explorations$linear_algebra$Math$Vector3$scale(0.1),
+						$author$project$World$icosaMeshList(axisColor)))
+				])));
+}();
 var $elm$html$Html$button = _VirtualDom_node('button');
 var $elm$json$Json$Encode$string = _Json_wrap;
 var $elm$html$Html$Attributes$stringProperty = F2(
@@ -11134,6 +11153,62 @@ var $author$project$World$cubeMeshList = function () {
 				lbt)
 			]));
 }();
+var $elm_explorations$linear_algebra$Math$Vector3$getX = _MJS_v3getX;
+var $elm_explorations$linear_algebra$Math$Vector3$getY = _MJS_v3getY;
+var $elm_explorations$linear_algebra$Math$Vector3$getZ = _MJS_v3getZ;
+var $author$project$World$subdivideProject = F2(
+	function (clr, mesh) {
+		var helper = function (m) {
+			if (!m.b) {
+				return _List_Nil;
+			} else {
+				var _v1 = m.a;
+				var v1 = _v1.a;
+				var v2 = _v1.b;
+				var v3 = _v1.c;
+				var xs = m.b;
+				var mp23Z = ($elm_explorations$linear_algebra$Math$Vector3$getZ(v2.position) + $elm_explorations$linear_algebra$Math$Vector3$getZ(v3.position)) / 2;
+				var mp23Y = ($elm_explorations$linear_algebra$Math$Vector3$getY(v2.position) + $elm_explorations$linear_algebra$Math$Vector3$getY(v3.position)) / 2;
+				var mp23X = ($elm_explorations$linear_algebra$Math$Vector3$getX(v2.position) + $elm_explorations$linear_algebra$Math$Vector3$getX(v3.position)) / 2;
+				var pos23 = A3($elm_explorations$linear_algebra$Math$Vector3$vec3, mp23X, mp23Y, mp23Z);
+				var mp13Z = ($elm_explorations$linear_algebra$Math$Vector3$getZ(v1.position) + $elm_explorations$linear_algebra$Math$Vector3$getZ(v3.position)) / 2;
+				var mp13Y = ($elm_explorations$linear_algebra$Math$Vector3$getY(v1.position) + $elm_explorations$linear_algebra$Math$Vector3$getY(v3.position)) / 2;
+				var mp13X = ($elm_explorations$linear_algebra$Math$Vector3$getX(v1.position) + $elm_explorations$linear_algebra$Math$Vector3$getX(v3.position)) / 2;
+				var pos13 = A3($elm_explorations$linear_algebra$Math$Vector3$vec3, mp13X, mp13Y, mp13Z);
+				var mp12Z = ($elm_explorations$linear_algebra$Math$Vector3$getZ(v1.position) + $elm_explorations$linear_algebra$Math$Vector3$getZ(v2.position)) / 2;
+				var mp12Y = ($elm_explorations$linear_algebra$Math$Vector3$getY(v1.position) + $elm_explorations$linear_algebra$Math$Vector3$getY(v2.position)) / 2;
+				var mp12X = ($elm_explorations$linear_algebra$Math$Vector3$getX(v1.position) + $elm_explorations$linear_algebra$Math$Vector3$getX(v2.position)) / 2;
+				var pos12 = A3($elm_explorations$linear_algebra$Math$Vector3$vec3, mp12X, mp12Y, mp12Z);
+				var clr23 = clr;
+				var v23 = A2(
+					$author$project$Common$Vertex,
+					clr23,
+					$elm_explorations$linear_algebra$Math$Vector3$normalize(pos23));
+				var clr13 = clr;
+				var v13 = A2(
+					$author$project$Common$Vertex,
+					clr13,
+					$elm_explorations$linear_algebra$Math$Vector3$normalize(pos13));
+				var clr12 = clr;
+				var v12 = A2(
+					$author$project$Common$Vertex,
+					clr12,
+					$elm_explorations$linear_algebra$Math$Vector3$normalize(pos12));
+				return A2(
+					$elm$core$List$cons,
+					_List_fromArray(
+						[
+							_Utils_Tuple3(v1, v12, v13),
+							_Utils_Tuple3(v12, v2, v23),
+							_Utils_Tuple3(v23, v3, v13),
+							_Utils_Tuple3(v13, v12, v23)
+						]),
+					helper(xs));
+			}
+		};
+		return $elm$core$List$concat(
+			helper(mesh));
+	});
 var $author$project$World$heroMesh = function () {
 	var balloonColor = A2(
 		$elm_explorations$linear_algebra$Math$Vector3$scale,
@@ -11510,6 +11585,12 @@ var $author$project$Main$view = function (model) {
 										$author$project$Common$vertexShader,
 										$author$project$Common$fragmentShader,
 										earthMesh,
+										$author$project$World$earthUnif(model)),
+										A4(
+										$elm_explorations$webgl$WebGL$entity,
+										$author$project$Common$vertexShader,
+										$author$project$Common$fragmentShader,
+										$author$project$World$axisMesh,
 										$author$project$World$earthUnif(model)),
 										A4(
 										$elm_explorations$webgl$WebGL$entity,

@@ -2,8 +2,10 @@ module Main exposing (main)
 
 import World exposing (heroMesh, fireMesh,
                        heroUnif, fireUnif,
-                       earthMesh, earthUnif,
+                       axisMesh, earthUnif,
                        sunMesh, sunUnif)
+
+import ObjLoader exposing (objMeshDecoder)
 
 import Receiver exposing (messageReceiver, decodeJson, RecvValue)
 
@@ -29,20 +31,16 @@ import Platform.Cmd
 
 import Html exposing (Html, div, text, button, p)
 import Html.Attributes exposing (height, style, width, id, class)
-
-import Http
-import Length exposing (Meters)
-import Quantity exposing (Unitless)
-import Obj.Decode
-import Obj.Decode exposing (ObjCoordinates)
-import TriangularMesh exposing (TriangularMesh)
-import Point3d exposing (Point3d)
-import Vector3d exposing (Vector3d)
-
-
 import Html.Events exposing (onClick)
 import Html.Events.Extra.Mouse as Mouse
 import Html.Events.Extra.Touch as Touch
+
+import Http
+
+import Length exposing (Meters, meters)
+import Obj.Decode exposing (expectObj)
+
+
 
 import WebGL exposing (Mesh)
 
@@ -82,8 +80,8 @@ init model =
   in
 
   ( { hero = { height = 1.01
-             , latitude = 0.5
-             , longitude = 0
+             , latitude = 0.0
+             , longitude = 0.0
              , rotationTheta = 0
              , power = 1 } 
     , earth = earth
@@ -107,9 +105,9 @@ init model =
     }
   , Cmd.batch [ Task.attempt ViewportMsg (getViewportOf "webgl-canvas")
               , Http.get { url = earthObjUrl
-                         , expect = (Obj.Decode.expectObj 
+                         , expect = (expectObj 
                                      EarthMeshLoaded 
-                                     Length.meters 
+                                     meters 
                                      objMeshDecoder) }
               ] ) 
 
@@ -159,6 +157,11 @@ view model =
                      vertexShader
                      fragmentShader
                      earthMesh
+                     (earthUnif model))
+                   , (WebGL.entity
+                     vertexShader
+                     fragmentShader
+                     axisMesh
                      (earthUnif model))
                    , (WebGL.entity
                      vertexShader
@@ -360,8 +363,8 @@ update msg model =
                 model.camera
               newCamera = 
                 { camera | azimoth = newAzimoth,
-                           elevation = ( if newElevation <= (pi/3) 
-                                         then ( if newElevation >= (-pi/3) 
+                           elevation = ( if newElevation <= (4*pi/10) 
+                                         then ( if newElevation >= (-4*pi/10) 
                                                 then newElevation else model.camera.elevation)
                                          else model.camera.elevation ) }
               controller = 
@@ -502,15 +505,3 @@ fixOffset offset viewport = { x = round (toFloat (offset.x * (Tuple.first viewpo
                                          (toFloat viewport.height)) }
 
 
-triangularMeshToMeshVertex : 
-  (TriangularMesh
-    { position : Point3d Meters ObjCoordinates
-    , normal : Vector3d Unitless ObjCoordinates
-    }
-  ) -> Mesh Vertex
-triangularMeshToMeshVertex triangularMesh = earthMesh 
-
-
-objMeshDecoder : Obj.Decode.Decoder (Mesh Vertex)
-objMeshDecoder = 
-  Obj.Decode.map triangularMeshToMeshVertex Obj.Decode.faces
