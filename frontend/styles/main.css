@@ -1,4 +1,16 @@
+body {
+  background-color: #e6f9ff;
+}
 .main-menu-container { 
   padding: 1em;
-  background-color: #A7B2D8;
+}
+
+.main-menu-container p {
+  font-size: 3em;
+  text-align: center;
+}
+
+.main-menu-container button {
+  width: 100%;
+  height: 5em;
 }
