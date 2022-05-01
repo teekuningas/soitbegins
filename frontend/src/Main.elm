@@ -445,8 +445,8 @@ update msg model =
                   newCamera = 
                      { camera | azimoth = newAzimoth,
                                 elevation =
-                                  ( if newElevation <= (pi/3) 
-                                    then (if newElevation >= (-pi/3) 
+                                  ( if newElevation <= (4*pi/10) 
+                                    then (if newElevation >= (-4*pi/10) 
                                           then newElevation else model.camera.elevation)
                                     else model.camera.elevation ) }
                   controller =
