@@ -14,7 +14,7 @@ time_at_beginning = datetime.datetime.now().timestamp() * 1000
 # holds the game state
 state = {
     'elapsed': 0,
-    'earth': {'locationX': 100,
+    'earth': {'locationX': 5000,
               'locationY': 0,
               'locationZ': 0,
               'rotationTheta': 0}

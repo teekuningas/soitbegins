@@ -2,7 +2,8 @@ module Main exposing (main)
 
 import World exposing (heroMesh, fireMesh,
                        heroUnif, fireUnif,
-                       axisMesh, earthUnif,
+                       axisMesh, axisUnif,
+                       earthUnif,
                        sunMesh, sunUnif)
 
 import ObjLoader exposing (objMeshDecoder)
@@ -39,7 +40,6 @@ import Http
 
 import Length exposing (Meters, meters)
 import Obj.Decode exposing (expectObj)
-
 
 
 import WebGL exposing (Mesh)
@@ -79,8 +79,8 @@ init model =
       earthObjUrl = "https://soitbegins.teekuningas.net/earth.obj.txt"
   in
 
-  ( { hero = { height = 1.01
-             , latitude = 0.0
+  ( { hero = { height = 11
+             , latitude = -0.3
              , longitude = 0.0
              , rotationTheta = 0
              , power = 1 } 
@@ -134,7 +134,7 @@ view model =
                      width (Tuple.first viewportSize)
                    , height (Tuple.second viewportSize)
                    , style "display" "block"
-                   , style "height" "90vh"
+                   , style "height" "100vh"
                    , style "width" "100vw"
                    , id "webgl-canvas"
                    , Touch.onEnd (PointerEventMsg << TouchUp)
@@ -162,7 +162,7 @@ view model =
                      vertexShader
                      fragmentShader
                      axisMesh
-                     (earthUnif model))
+                     (axisUnif model))
                    , (WebGL.entity
                      vertexShader
                      fragmentShader
@@ -259,39 +259,49 @@ update msg model =
 
     TimeElapsed dt ->
       ( let 
-            -- Update hero params
 
-            timeInBetween = model.updateParams.elapsed - model.updateParams.elapsedPrevious
+            -- Time related params
 
-            newPowerChange = (if model.controller.upButtonDown then 0.0001
-                              else (if model.controller.downButtonDown then -0.0001 else 0))
-
-            newPower = max 0 (min 2 (model.hero.power + (timeInBetween*newPowerChange)))
-
-            newHeightChange = (newPower - 1) * timeInBetween / 20000
-            newHeight = max 1 (min 10 (model.hero.height + (timeInBetween*newHeightChange)))
-
-            hero = model.hero
-            newHero = { hero | rotationTheta = sin (model.updateParams.elapsed / 1000) / 10, 
-                               power = newPower,
-                               height = newHeight } 
-
-            -- Store time related params
+            elapsed = toFloat (Time.posixToMillis dt)
+            elapsedPrevious = model.updateParams.elapsed
 
             updateParams = model.updateParams
-            newUpdateParams = { updateParams | elapsed = toFloat (Time.posixToMillis dt),
-                                               elapsedPrevious = updateParams.elapsed }
+            newUpdateParams = { updateParams | elapsed = elapsed,
+                                               elapsedPrevious = elapsedPrevious }
+
+            timeInBetween = elapsed - elapsedPrevious
 
             -- Interpolate between two received earth messages
 
             earthPrevious = updateParams.msgEarthPrevious
             earthNext = updateParams.msgEarth
 
-            weight = ((updateParams.elapsed - updateParams.msgElapsed) / 
+            weight = ((updateParams.elapsed - updateParams.msgElapsedPrevious) / 
                       (updateParams.msgElapsed - updateParams.msgElapsedPrevious))
 
             weightedAve p1 p2 w = 
               p1 + w * (p2 - p1)
+
+            newPowerChange = (if model.controller.upButtonDown then 0.0001
+                              else (if model.controller.downButtonDown then -0.0001 else 0))
+
+            newPower = max 0 (min 2 (model.hero.power + (timeInBetween*newPowerChange)))
+
+            newHeightChange = (newPower - 1) / 200
+            newHeight = max 10.5 (min 100 (model.hero.height + (timeInBetween*newHeightChange)))
+
+            -- temporarily move hero around the world
+            newLongitude = model.hero.longitude - timeInBetween * 0.00005
+
+            -- wiggle a bit
+            newRotationTheta = sin (model.updateParams.elapsed / 1000) / 20
+
+            hero = model.hero
+            newHero = { hero | rotationTheta = newRotationTheta, 
+                               longitude = newLongitude,
+                               power = newPower,
+                               height = newHeight } 
+
 
             earth = model.earth
             newEarth = { earth | rotationTheta = weightedAve earthPrevious.rotationTheta earthNext.rotationTheta weight,

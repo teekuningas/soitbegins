@@ -1,6 +1,7 @@
 module World exposing (heroMesh, heroUnif, 
                        fireMesh, fireUnif,
-                       axisMesh, earthUnif,
+                       axisMesh, axisUnif,
+                       earthUnif,
                        sunMesh, sunUnif)
 
 import Common exposing (Model, viewportSize, meshPositionMap,
@@ -52,7 +53,7 @@ sunUnif : Model -> Uniforms
 sunUnif model =
   let unif = generalUnif model
       -- Sun lies at the origin but is scaled
-      scale = (Mat4.scale (vec3 2 2 2) Mat4.identity)
+      scale = (Mat4.scale (vec3 200 200 200) Mat4.identity)
   in { unif | scale = scale}
 
 
@@ -61,6 +62,9 @@ sunUnif model =
 earthUnif : Model -> Uniforms
 earthUnif model = 
   let unif = generalUnif model
+
+      -- The earth mesh comes in wrong position so fix here..
+      preScale = (Mat4.makeRotate (pi/2) (vec3 1 0 0))
 
       scale = (Mat4.scale (vec3 10 10 10) Mat4.identity)
 
@@ -78,9 +82,16 @@ earthUnif model =
 
       
   in
-  { unif | rotation = rotation,
-           translation = translation }
+  { unif | preScale = preScale,
+           rotation = rotation,
+           translation = translation,
+           scale = scale }
 
+
+axisUnif : Model -> Uniforms
+axisUnif model =
+  let unif = earthUnif model
+  in { unif | preScale = Mat4.identity }
 
 -- Uniforms for the hero
 
@@ -89,7 +100,7 @@ heroUnif model =
   let unif = generalUnif model
 
       -- Hero size
-      scale = (Mat4.scale (vec3 0.001 0.001 0.001) Mat4.identity)
+      scale = (Mat4.scale (vec3 0.1 0.1 0.1) Mat4.identity)
 
       -- Hero wiggling
       rotation = Mat4.mul (Mat4.makeRotate (3 * model.hero.rotationTheta) (vec3 0 1 0))
@@ -180,14 +191,26 @@ axisMesh : Mesh Vertex
 axisMesh = 
  let axisColor = Vec3.scale (1/255) (vec3 204 0 0) -- red
    in 
-    [ (meshPositionMap (Vec3.add (vec3 0 1.5 0))
-      (meshPositionMap (Vec3.scale 0.1) (icosaMeshList axisColor))),
-      (meshPositionMap (Vec3.add (vec3 0 -1.5 0))
-      (meshPositionMap (Vec3.scale 0.1) (icosaMeshList axisColor))),
+    [
       (meshPositionMap (Vec3.add (vec3 0 1.25 0))
-      (meshPositionMap (Vec3.scale 0.1) (icosaMeshList axisColor))),
+      (meshPositionMap (Vec3.scale 0.05) (icosaMeshList axisColor))),
+      (meshPositionMap (Vec3.add (vec3 0 1.50 0))
+      (meshPositionMap (Vec3.scale 0.05) (icosaMeshList axisColor))),
+      (meshPositionMap (Vec3.add (vec3 0 1.75 0))
+      (meshPositionMap (Vec3.scale 0.05) (icosaMeshList axisColor))),
+      (meshPositionMap (Vec3.add (vec3 0 2.00 0))
+      (meshPositionMap (Vec3.scale 0.05) (icosaMeshList axisColor))),
+
       (meshPositionMap (Vec3.add (vec3 0 -1.25 0))
-      (meshPositionMap (Vec3.scale 0.1) (icosaMeshList axisColor)))
+      (meshPositionMap (Vec3.scale 0.05) (icosaMeshList axisColor))),
+      (meshPositionMap (Vec3.add (vec3 0 -1.50 0))
+      (meshPositionMap (Vec3.scale 0.05) (icosaMeshList axisColor))),
+      (meshPositionMap (Vec3.add (vec3 0 -1.75 0))
+      (meshPositionMap (Vec3.scale 0.05) (icosaMeshList axisColor))),
+      (meshPositionMap (Vec3.add (vec3 0 -2.00 0))
+      (meshPositionMap (Vec3.scale 0.05) (icosaMeshList axisColor)))
+
+
     ]
     |> List.concat
     |> WebGL.triangles
@@ -460,7 +483,7 @@ makeHeroCamera model =
       -- Find out the camera location.
       -- Sits behind the hero.
       -- Also apply the user controlled parameters azimoth and elevation.
-      locStart = vec3 0 0 0.05
+      locStart = vec3 0 0 3.0
       locAz = Mat4.transform (Mat4.makeRotate azimoth (vec3 0 1 0)) locStart
       locElv = Mat4.transform (Mat4.makeRotate elevation 
                                (Vec3.cross locAz (vec3 0 1 0))) locAz

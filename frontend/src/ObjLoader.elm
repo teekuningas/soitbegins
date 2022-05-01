@@ -27,10 +27,16 @@ triangularMeshToMeshVertex triangularMesh =
   let vertices = TriangularMesh.faceVertices triangularMesh
 
       getColor loc = 
-        if (Vec3.length loc) <= 1.00 then (vec3 0 0 1)
-        else (if (Vec3.length loc) >= 1.03 
-              then (vec3 (139/255) (69/255) (19/255))
-              else (vec3 (34/255) (139/255) (34/255)))
+        let length = Vec3.length loc
+            lowlimit = 1.00
+            highlimit = 1.03
+            factor = (length - lowlimit) / (highlimit - lowlimit)
+        in
+        if length <= lowlimit then (vec3 0 0 1)
+        else (if length >= highlimit then (vec3 0.54 0.27 0.075)
+              else (vec3 (factor*0.54 + (1-factor)*0.5) 
+                         (factor*0.27 + (1-factor)*1.0) 
+                         (factor*0.075 + (1-factor)*0.0)))
 
       posToVertex val = 
         let pos = Vec3.fromRecord (toRecord inMeters val.position)
@@ -39,9 +45,9 @@ triangularMeshToMeshVertex triangularMesh =
         , position = pos
         }
 
-      convTriangle tri = case tri of (x, y, z) -> ( posToVertex x
-                                                  , posToVertex y
-                                                  , posToVertex z )
+      convTriangle tri = case tri of (v1, v2, v3) -> ( posToVertex v1
+                                                     , posToVertex v2
+                                                     , posToVertex v3 )
 
       earthMesh = (List.map convTriangle vertices)
   in

@@ -171,6 +171,7 @@ positions, indices = subdivide_project(positions, indices)
 positions, indices = subdivide_project(positions, indices)
 positions, indices = subdivide_project(positions, indices)
 positions, indices = subdivide_project(positions, indices)
+positions, indices = subdivide_project(positions, indices)
 
 # compute normals
 normals, normal_indices = compute_normals(positions, indices)
@@ -214,7 +215,7 @@ with rasterio.open(path) as rds:
         elevs.append(elev)
 
         # and scale the pos
-        vv[vert_idx] = vert * ( 1 + elev / 50000)
+        vv[vert_idx] = vert * np.max([1, ( 1 + elev / 50000)])
 
 counter = {}
 for elev in elevs:
@@ -240,7 +241,7 @@ V = np.zeros(len(vv), [("a_position", np.float32, 3),
 V["a_position"] = vv
 
 def get_color(pos):
-    if np.linalg.norm(pos) <= 0.97:
+    if np.linalg.norm(pos) <= 1.00:
         return [0, 0, 1, 1]
     elif np.linalg.norm(pos) >= 1.03:
         return [139/255, 69/255, 19/255, 1]
