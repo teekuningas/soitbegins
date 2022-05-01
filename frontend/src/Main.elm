@@ -129,58 +129,54 @@ view model =
           [ p [] [ text "So it begins (the grand hot air balloon adventure)" ]
           , button [ onClick StartGameMsg ] [ text "Start here" ] ]
     (FlightMode, Connected, Just earthMesh) ->
-      div [] 
-        [ div [] [ WebGL.toHtml [ 
-                     width (Tuple.first viewportSize)
-                   , height (Tuple.second viewportSize)
-                   , style "display" "block"
-                   , style "height" "100vh"
-                   , style "width" "100vw"
-                   , id "webgl-canvas"
-                   , Touch.onEnd (PointerEventMsg << TouchUp)
-                   , Touch.onStart (PointerEventMsg << TouchDown)
-                   , Touch.onMove (PointerEventMsg << TouchMove)
-                   , Mouse.onUp (PointerEventMsg << MouseUp)
-                   , Mouse.onDown (PointerEventMsg << MouseDown)
-                   , Mouse.onMove (PointerEventMsg << MouseMove) ]
-                   [ (WebGL.entity
-                     vertexShader
-                     fragmentShader
-                     heroMesh
-                     (heroUnif model))
-                   , (WebGL.entity
-                     vertexShader
-                     fragmentShader
-                     fireMesh
-                     (fireUnif model))
-                   , (WebGL.entity
-                     vertexShader
-                     fragmentShader
-                     earthMesh
-                     (earthUnif model))
-                   , (WebGL.entity
-                     vertexShader
-                     fragmentShader
-                     axisMesh
-                     (axisUnif model))
-                   , (WebGL.entity
-                     vertexShader
-                     fragmentShader
-                     sunMesh
-                     (sunUnif model))
-                   , (WebGL.entity
-                     vertexShader
-                     fragmentShader
-                     controllerMeshUp
-                     (controllerUnif model (if upButtonDown then 1.0 else 0.5)))
-                   , (WebGL.entity
-                     vertexShader
-                     fragmentShader
-                     controllerMeshDown
-                     (controllerUnif model (if downButtonDown then 1.0 else 0.5)))
-                   ]
-                 ]
-        ]
+      div [] [ WebGL.toHtml [ width (Tuple.first viewportSize)
+                            , height (Tuple.second viewportSize)
+                            , style "display" "block"
+                            , style "height" "100vh"
+                            , style "width" "100vw"
+                            , id "webgl-canvas"
+                            , Touch.onEnd (PointerEventMsg << TouchUp)
+                            , Touch.onStart (PointerEventMsg << TouchDown)
+                            , Touch.onMove (PointerEventMsg << TouchMove)
+                            , Mouse.onUp (PointerEventMsg << MouseUp)
+                            , Mouse.onDown (PointerEventMsg << MouseDown)
+                            , Mouse.onMove (PointerEventMsg << MouseMove) ]
+                            [ (WebGL.entity
+                              vertexShader
+                              fragmentShader
+                              heroMesh
+                              (heroUnif model))
+                            , (WebGL.entity
+                              vertexShader
+                              fragmentShader
+                              fireMesh
+                              (fireUnif model))
+                            , (WebGL.entity
+                              vertexShader
+                              fragmentShader
+                              earthMesh
+                              (earthUnif model))
+                            , (WebGL.entity
+                              vertexShader
+                              fragmentShader
+                              axisMesh
+                              (axisUnif model))
+                            , (WebGL.entity
+                              vertexShader
+                              fragmentShader
+                              sunMesh
+                              (sunUnif model))
+                            , (WebGL.entity
+                              vertexShader
+                              fragmentShader
+                              controllerMeshUp
+                              (controllerUnif model (if upButtonDown then 1.0 else 0.5)))
+                            , (WebGL.entity
+                              vertexShader
+                              fragmentShader
+                              controllerMeshDown
+                              (controllerUnif model (if downButtonDown then 1.0 else 0.5)))
+                            ] ]
     (FlightMode, _, _) -> 
       div [] [text (Maybe.withDefault "Starting.." (List.head model.messages)) ]
 
