@@ -1,22 +1,9 @@
-<!DOCTYPE HTML>
-<html>
-
-<head>
-  <meta charset="UTF-8">
-  <title>So it begins!</title>
-  <script type="text/javascript" src="main.js"></script>
-  <link rel="stylesheet" href="main.css">
-</head>
-
-<body>
-    <div id="myapp"></div>
-</body>
-
-<script type="text/javascript">
+import { Elm } from './src/Main.elm'
+import './styles/main.css'
 
 // Start the Elm application.
 var app = Elm.Main.init({
-  node: document.getElementById('myapp')
+  node: document.getElementById('root')
 });
 
 // To decouple player logic from world logic,
@@ -45,6 +32,3 @@ function myCallback() {
   });
 }
 
-</script>
-
-</html>
