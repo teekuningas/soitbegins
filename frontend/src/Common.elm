@@ -1,6 +1,8 @@
-module Common exposing (Model, GameState(..), ConnectionState(..), viewportSize, meshPositionMap, 
+module Common exposing (Model, GameState(..), ConnectionState(..), 
                         MeshList, Vertex, Uniforms, 
-                        DragState(..), vertexShader, fragmentShader)
+                        DragState(..), 
+                        viewportSize, meshPositionMap, 
+                        vertexShader, fragmentShader)
 
 import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector3 as Vec3 exposing (Vec3)
@@ -19,12 +21,12 @@ viewportSize = (800, 800)
 type DragState = Drag | NoDrag
 
 
-type GameState = MainMenu | FlightMode
+type GameState = MainMenu | FlightMode | InitializationFailed
 type ConnectionState = Connected | Disconnected
 
 
 type alias Hero = 
-  { height : Float 
+  { altitude : Float 
   , latitude : Float
   , longitude : Float
   , rotationTheta : Float 
@@ -63,6 +65,7 @@ type alias UpdateParameters =
   , msgEarthPrevious : Earth
   , elapsed : Float
   , elapsedPrevious : Float
+  , serverUpdateInterval : Int
   }
 
 

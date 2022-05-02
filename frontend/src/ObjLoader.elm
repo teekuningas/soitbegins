@@ -1,6 +1,4 @@
-module ObjLoader exposing (objMeshDecoder)
-
-import Array
+module ObjLoader exposing (earthMeshDecoder)
 
 import Length exposing (Meters, inMeters)
 import Quantity exposing (Unitless)
@@ -17,13 +15,16 @@ import WebGL exposing (Mesh)
 import Common exposing (Vertex)
 
 
-triangularMeshToMeshVertex :
+-- Some functions to create meshes from obj format.
+
+
+triangularEarthToMeshVertex :
   (TriangularMesh
     { position : Point3d Meters ObjCoordinates
     , normal : Vector3d Unitless ObjCoordinates
     }
   ) -> Mesh Vertex
-triangularMeshToMeshVertex triangularMesh = 
+triangularEarthToMeshVertex triangularMesh = 
   let vertices = TriangularMesh.faceVertices triangularMesh
 
       getColor loc = 
@@ -54,6 +55,6 @@ triangularMeshToMeshVertex triangularMesh =
     WebGL.triangles earthMesh
 
 
-objMeshDecoder : Obj.Decode.Decoder (Mesh Vertex)
-objMeshDecoder =
-  Obj.Decode.map triangularMeshToMeshVertex Obj.Decode.faces
+earthMeshDecoder : Obj.Decode.Decoder (Mesh Vertex)
+earthMeshDecoder =
+  Obj.Decode.map triangularEarthToMeshVertex Obj.Decode.faces

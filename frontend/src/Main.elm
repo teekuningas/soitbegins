@@ -3,12 +3,8 @@ module Main exposing (main)
 import World exposing (heroMesh, fireMesh,
                        heroUnif, fireUnif,
                        axisMesh, axisUnif,
-                       earthUnif,
+                       earthUnif, 
                        sunMesh, sunUnif)
-
-import ObjLoader exposing (objMeshDecoder)
-
-import Receiver exposing (messageReceiver, decodeJson, RecvValue)
 
 import Controller exposing (controllerMeshUp, controllerMeshDown, controllerUnif, 
                             coordinatesWithinUpButton, coordinatesWithinDownButton)
@@ -17,7 +13,10 @@ import Common exposing (Model, GameState(..), ConnectionState(..), DragState(..)
                         viewportSize, vertexShader, fragmentShader,
                         Vertex)
 
-import Math.Vector3 as Vec3 exposing (vec3)
+import ObjLoader
+import Receiver
+import Flags
+
 
 import Task
 import Time
@@ -38,9 +37,12 @@ import Html.Events.Extra.Touch as Touch
 
 import Http
 
+import Json.Decode
+
 import Length exposing (Meters, meters)
 import Obj.Decode exposing (expectObj)
 
+import Math.Vector3 as Vec3 exposing (vec3)
 
 import WebGL exposing (Mesh)
 
@@ -60,8 +62,8 @@ type Msg = TimeElapsed Time.Posix
   | ResizeMsg
   | PointerEventMsg PointerEvent
   | ViewportMsg (Result Browser.Dom.Error Browser.Dom.Viewport)
-  | RecvMsg RecvValue
-  | RecvMsgError String
+  | RecvServerMsg Receiver.RecvServerValue
+  | RecvServerMsgError String
   | UpdateTimeMsg Time.Posix
   | StartGameMsg
   | EarthMeshLoaded (Result Http.Error (Mesh Vertex))
@@ -69,17 +71,43 @@ type Msg = TimeElapsed Time.Posix
 
 -- The model initialization
 
-init : () -> (Model, Cmd Msg)
-init model = 
-  let earth = { locationX = 100
+init : Json.Decode.Value -> (Model, Cmd Msg)
+init flagsMsg = 
+  let 
+      -- Try loading flags from javascript
+
+      flags = Json.Decode.decodeValue Flags.flagsDecoder flagsMsg
+      
+      -- If not ok, add a message
+
+      messages = case flags of Ok value -> []
+                               Err msg -> [Debug.toString msg]
+
+      -- If not ok, fail fast.
+ 
+      gameState = case flags of Ok value -> MainMenu
+                                Err _ -> InitializationFailed
+
+      -- If ok, set serverUpdateInterval 
+
+      serverUpdateInterval = case flags of Ok value -> value.serverUpdateInterval
+                                           Err _ -> 1000
+
+      -- If ok, set earth model url
+
+      modelEarth = case flags of Ok value -> value.modelEarth
+                                 Err _ -> ""
+
+      -- Set some defaults for loading time
+
+      earth = { locationX = 100
               , locationY = 100
               , locationZ = 100
               , rotationTheta = 0 
               , mesh = Nothing }
-      earthObjUrl = "https://soitbegins.teekuningas.net/earth.obj.txt"
   in
 
-  ( { hero = { height = 11
+  ( { hero = { altitude = 11
              , latitude = -0.3
              , longitude = 0.0
              , rotationTheta = 0
@@ -92,23 +120,24 @@ init model =
                      , msgEarth = earth
                      , msgEarthPrevious = earth
                      , elapsed = 0
-                     , elapsedPrevious = 0 }
+                     , elapsedPrevious = 0 
+                     , serverUpdateInterval = serverUpdateInterval}
     , canvasDimensions = { width = 0, height = 0 }
     , controller = { dragState = NoDrag
                    , pointerOffset = { x = 0, y = 0 }
                    , previousOffset = { x = 0, y = 0 }
                    , upButtonDown = False
                    , downButtonDown = False } 
-    , messages = []
-    , gameState = MainMenu
+    , messages = messages
+    , gameState = gameState
     , connectionState = Disconnected
     }
   , Cmd.batch [ Task.attempt ViewportMsg (getViewportOf "webgl-canvas")
-              , Http.get { url = earthObjUrl
+              , Http.get { url = modelEarth
                          , expect = (expectObj 
                                      EarthMeshLoaded 
                                      meters 
-                                     objMeshDecoder) }
+                                     ObjLoader.earthMeshDecoder) }
               ] ) 
 
 
@@ -124,6 +153,8 @@ view model =
     maybeMesh = model.earth.mesh
   in
   case (gameState, connectionState, maybeMesh) of 
+    (InitializationFailed, _, _) -> 
+      div [] [ text (Debug.toString (List.head model.messages))]
     (MainMenu, _, _) -> 
       div [ class "main-menu-container" ] 
           [ p [] [ text "So it begins (the grand hot air balloon adventure)" ]
@@ -180,6 +211,7 @@ view model =
     (FlightMode, _, _) -> 
       div [] [text (Maybe.withDefault "Starting.." (List.head model.messages)) ]
 
+
 -- Subscriptions
 
 subscriptions : Model -> Sub Msg
@@ -187,7 +219,7 @@ subscriptions _ =
   Platform.Sub.batch 
     [ (onAnimationFrame (\x -> TimeElapsed x))
     , (onResize (\width height -> ResizeMsg))
-    , (messageReceiver recvJson) ]
+    , (Receiver.messageReceiver recvServerJson) ]
 
 
 -- Updates
@@ -195,18 +227,23 @@ subscriptions _ =
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of 
+
+    -- When start game button is clicked, move to flight mode
+
     StartGameMsg ->
       ( { model | gameState = FlightMode }, 
           Task.attempt ViewportMsg (getViewportOf "webgl-canvas") )
 
-    RecvMsgError message ->
+    -- If error comes from server, set connection state to disconnected
+
+    RecvServerMsgError message ->
       ( { model | messages = [message] ++ model.messages,
                   connectionState = Disconnected }, Cmd.none )
 
     -- Receive World parameters through a port.
-    -- Store parameters, but do not touch the real thing yet.
+    -- Store parameters, but do not update yet.
 
-    RecvMsg message ->
+    RecvServerMsg message ->
       let oldEarth = model.updateParams.msgEarth
           newEarth = { oldEarth | locationX = message.earth.locationX,
                                   locationY = message.earth.locationY,
@@ -231,6 +268,7 @@ update msg model =
           msgElapsed = toFloat (Time.posixToMillis dt)
 
           -- If screen refresh, discard the old values
+
           msgElapsedPrevious = if screenRefresh then msgElapsed 
                                else model.updateParams.msgElapsed
           msgEarthPrevious = if screenRefresh then model.updateParams.msgEarth 
@@ -256,7 +294,7 @@ update msg model =
     TimeElapsed dt ->
       ( let 
 
-            -- Time related params
+            -- Update local time parameters
 
             elapsed = toFloat (Time.posixToMillis dt)
             elapsedPrevious = model.updateParams.elapsed
@@ -267,7 +305,9 @@ update msg model =
 
             timeInBetween = elapsed - elapsedPrevious
 
-            -- Interpolate between two received earth messages
+            -- Interpolate between two received earth messages.
+            -- This may need some rethinking as this now only
+            -- works for linear paths..
 
             earthPrevious = updateParams.msgEarthPrevious
             earthNext = updateParams.msgEarth
@@ -278,33 +318,43 @@ update msg model =
             weightedAve p1 p2 w = 
               p1 + w * (p2 - p1)
 
+            earth = model.earth
+            newEarth = 
+              { earth | rotationTheta = weightedAve earthPrevious.rotationTheta earthNext.rotationTheta weight,
+                        locationX = weightedAve earthPrevious.locationX earthNext.locationX weight,
+                        locationY = weightedAve earthPrevious.locationY earthNext.locationY weight,
+                        locationZ = weightedAve earthPrevious.locationZ earthNext.locationZ weight
+              }
+
+            -- Adjust power if controls up or down
+
             newPowerChange = (if model.controller.upButtonDown then 0.0001
                               else (if model.controller.downButtonDown then -0.0001 else 0))
 
             newPower = max 0 (min 2 (model.hero.power + (timeInBetween*newPowerChange)))
 
-            newHeightChange = (newPower - 1) / 200
-            newHeight = max 10.5 (min 100 (model.hero.height + (timeInBetween*newHeightChange)))
+            -- Adjust altitude according to power
 
-            -- temporarily move hero around the world
+            newAltitudeChange = (newPower - 1) / 200
+            newAltitude = max 10.5 (min 100 (model.hero.altitude + 
+                                             (timeInBetween*newAltitudeChange)))
+
+            -- Temporarily move hero around the world
+
             newLongitude = model.hero.longitude - timeInBetween * 0.00005
 
-            -- wiggle a bit
+            -- Wiggle the balloon a bit
+
             newRotationTheta = sin (model.updateParams.elapsed / 1000) / 20
+
+            -- Update hero params
 
             hero = model.hero
             newHero = { hero | rotationTheta = newRotationTheta, 
                                longitude = newLongitude,
                                power = newPower,
-                               height = newHeight } 
+                               altitude = newAltitude } 
 
-
-            earth = model.earth
-            newEarth = { earth | rotationTheta = weightedAve earthPrevious.rotationTheta earthNext.rotationTheta weight,
-                                 locationX = weightedAve earthPrevious.locationX earthNext.locationX weight,
-                                 locationY = weightedAve earthPrevious.locationY earthNext.locationY weight,
-                                 locationZ = weightedAve earthPrevious.locationZ earthNext.locationZ weight
-                       }
 
         in
           -- Aand update the final model.
@@ -455,10 +505,12 @@ update msg model =
                              controller = newController
                    }, Cmd.none )
 
-    -- Viewport related handlers
+    -- Viewport related handlers.
 
     ResizeMsg -> 
       (model, Task.attempt ViewportMsg (getViewportOf "webgl-canvas") ) 
+
+    -- This Msg is often induced by code also, as it refreshes the screen..
 
     ViewportMsg returnValue -> 
       case returnValue of
@@ -467,7 +519,6 @@ update msg model =
                                           height = round struct.viewport.height } }, 
            Cmd.none)
         Err errMsg -> (model, Cmd.none)
-
 
     -- Load meshes
 
@@ -483,8 +534,7 @@ update msg model =
 
 -- Here it begins.
 
-
-main : Program () Model Msg
+main : Program Json.Decode.Value Model Msg
 main =
   Browser.element { init = init
                   , view = view
@@ -492,22 +542,22 @@ main =
                   , update = update }
 
 
--- Some helpers
+-- Some helpers. This handles server message decoding.
 
-
-recvJson : String -> Msg
-recvJson value =
-  case decodeJson value of
+recvServerJson : String -> Msg
+recvServerJson value =
+  case Receiver.decodeJson value of
     Ok result ->
-      RecvMsg result
+      RecvServerMsg result
     Err errorMessage ->
-      RecvMsgError ("Error while communicating with the server")
+      RecvServerMsgError ("Error while communicating with the server")
 
+-- As we use full screen in the game and the browser window sizes differ,
+-- scale to common space.
 
 fixOffset : { x : Int , y: Int } -> { width: Int, height: Int } -> { x : Int, y : Int }
 fixOffset offset viewport = { x = round (toFloat (offset.x * (Tuple.first viewportSize)) / 
                                          (toFloat viewport.width)),
                               y = round (toFloat (offset.y * (Tuple.second viewportSize)) / 
                                          (toFloat viewport.height)) }
-
 

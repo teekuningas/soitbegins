@@ -66,6 +66,10 @@ earthUnif model =
       -- The earth mesh comes in wrong position so fix here..
       preScale = (Mat4.makeRotate (pi/2) (vec3 1 0 0))
 
+      -- Scale the earth.
+      -- I first tried to keep earth as size 1 and decrease
+      -- size of the balloon. However, that leads to inaccuracies
+      -- in rendering the balloon.
       scale = (Mat4.scale (vec3 10 10 10) Mat4.identity)
 
       -- Tilt and rotate along the correct axis
@@ -88,10 +92,16 @@ earthUnif model =
            scale = scale }
 
 
+-- Uniforms for the earth rotation axis.
+-- Remove the prescaling of earth uniform
+-- as that was only a fix for the
+-- wrong rotation of earth in the obj file.
+
 axisUnif : Model -> Uniforms
 axisUnif model =
   let unif = earthUnif model
   in { unif | preScale = Mat4.identity }
+
 
 -- Uniforms for the hero
 
@@ -107,7 +117,7 @@ heroUnif model =
                           (Mat4.makeRotate (2 * model.hero.rotationTheta) (vec3 1 0 0))
 
       -- Hero moved directly up from hero origin
-      translation = (Mat4.translate (Vec3.scale model.hero.height Vec3.j) Mat4.identity)
+      translation = (Mat4.translate (Vec3.scale model.hero.altitude Vec3.j) Mat4.identity)
 
       -- Hero rotated along different axis in the origin, effectively
       -- translating hero to correct position in a correct orientation
@@ -144,6 +154,7 @@ heroUnif model =
 fireUnif : Model -> Uniforms
 fireUnif model = 
   let unif = heroUnif model
+
       -- The power source fire is approximately where the hero origin is
       -- but we move and scale it in the hero space to the exact
       -- correct location.
@@ -159,33 +170,8 @@ fireUnif model =
              preTranslation = preTranslation }
                 
 
--- Constructs a simple mesh for earth
-
--- earthMesh : Mesh Vertex
--- earthMesh = 
---   let earthColor = Vec3.scale (1/255) (vec3 52 101 164) -- blue
---       divideColor = Vec3.scale (1/255) (vec3 115 210 22) -- green
---       axisColor = Vec3.scale (1/255) (vec3 204 0 0) -- red
---   in 
---    [
---    -- (subdivideProject divideColor (subdivideProject earthColor (icosaMeshList divideColor))),
---    (subdivideProject divideColor <| 
---     subdivideProject earthColor <| 
---     subdivideProject divideColor <| 
---     subdivideProject earthColor <| 
---     icosaMeshList divideColor),
---    (meshPositionMap (Vec3.add (vec3 0 1.5 0))
---     (meshPositionMap (Vec3.scale 0.1) (icosaMeshList axisColor))),
---    (meshPositionMap (Vec3.add (vec3 0 -1.5 0))
---     (meshPositionMap (Vec3.scale 0.1) (icosaMeshList axisColor))),
---    (meshPositionMap (Vec3.add (vec3 0 1.25 0))
---     (meshPositionMap (Vec3.scale 0.1) (icosaMeshList axisColor))),
---    (meshPositionMap (Vec3.add (vec3 0 -1.25 0))
---     (meshPositionMap (Vec3.scale 0.1) (icosaMeshList axisColor)))
---
---    ]
---    |> List.concat
---    |> WebGL.triangles
+-- Constructs a funny earth axis by using some red spheres.
+-- For debugging purposes.
 
 axisMesh : Mesh Vertex
 axisMesh = 
@@ -209,14 +195,12 @@ axisMesh =
       (meshPositionMap (Vec3.scale 0.05) (icosaMeshList axisColor))),
       (meshPositionMap (Vec3.add (vec3 0 -2.00 0))
       (meshPositionMap (Vec3.scale 0.05) (icosaMeshList axisColor)))
-
-
     ]
     |> List.concat
     |> WebGL.triangles
 
 
--- Constructs a simple mesh for sun
+-- Constructs a simple mesh for the sun
 
 sunMesh : Mesh Vertex
 sunMesh = 
@@ -231,7 +215,6 @@ sunMesh =
 
 heroMesh : Mesh Vertex
 heroMesh = 
---let balloonColor = Vec3.scale (1/255) (vec3 115 210 22) -- green
   let balloonColor = Vec3.scale (1/255) (vec3 237 212 0) -- yellow
   in 
     [ cubeMeshList
@@ -382,31 +365,6 @@ subdivideProject clr mesh =
                 mp23Z = ((Vec3.getZ v2.position) +
                          (Vec3.getZ v3.position)) / 2
 
-                -- clr12R = ((Vec3.getX v1.color) +
-                --           (Vec3.getX v2.color)) / 2
-                -- clr12G = ((Vec3.getY v1.color) +
-                --           (Vec3.getY v2.color)) / 2
-                -- clr12B = ((Vec3.getZ v1.color) +
-                --           (Vec3.getZ v2.color)) / 2
-
-                -- clr13R = ((Vec3.getX v1.color) +
-                --           (Vec3.getX v3.color)) / 2
-                -- clr13G = ((Vec3.getY v1.color) +
-                --           (Vec3.getY v3.color)) / 2
-                -- clr13B = ((Vec3.getZ v1.color) +
-                --           (Vec3.getZ v3.color)) / 2
-
-                -- clr23R = ((Vec3.getX v2.color) +
-                --           (Vec3.getX v3.color)) / 2
-                -- clr23G = ((Vec3.getY v2.color) +
-                --           (Vec3.getY v3.color)) / 2
-                -- clr23B = ((Vec3.getZ v2.color) +
-                --           (Vec3.getZ v3.color)) / 2
-
-                -- clr12 = vec3 clr12R clr12G clr12B
-                -- clr13 = vec3 clr13R clr13G clr13B
-                -- clr23 = vec3 clr23R clr23G clr23B
-
                 clr12 = clr
                 clr13 = clr
                 clr23 = clr
@@ -453,6 +411,7 @@ makeHeroCamera model =
 
       -- Generate a general rotation matrix that can transform
       -- the hero, the camera and even the up vector.
+
       earthAxis = (Mat4.transform 
                    (Mat4.makeRotate ((23.5/180)*pi) (vec3 0 0 1))
                    Vec3.j)
@@ -474,7 +433,7 @@ makeHeroCamera model =
          Mat4.mul 
          Mat4.identity 
          [
-          (Mat4.translate (vec3 0 model.hero.height 0) Mat4.identity),
+          (Mat4.translate (vec3 0 model.hero.altitude 0) Mat4.identity),
           rotateAround,
           (Mat4.translate earthLoc Mat4.identity)
          ])
@@ -492,13 +451,14 @@ makeHeroCamera model =
          Mat4.mul 
          Mat4.identity 
          [
-          (Mat4.translate (vec3 0 model.hero.height 0) Mat4.identity),
+          (Mat4.translate (vec3 0 model.hero.altitude 0) Mat4.identity),
           rotateAround,
           (Mat4.translate earthLoc Mat4.identity)
          ])
       cameraLocation = Mat4.transform cameraTransformation locElv
 
       -- And finally the up direction.
+
       up = Mat4.transform rotateAround Vec3.j
   in
     Mat4.makeLookAt cameraLocation
