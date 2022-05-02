@@ -78,11 +78,6 @@ init flagsMsg =
 
       flags = Json.Decode.decodeValue Flags.flagsDecoder flagsMsg
       
-      -- If not ok, add a message
-
-      messages = case flags of Ok value -> []
-                               Err msg -> [Debug.toString msg]
-
       -- If not ok, fail fast.
  
       gameState = case flags of Ok value -> MainMenu
@@ -128,7 +123,7 @@ init flagsMsg =
                    , previousOffset = { x = 0, y = 0 }
                    , upButtonDown = False
                    , downButtonDown = False } 
-    , messages = messages
+    , messages = []
     , gameState = gameState
     , connectionState = Disconnected
     }
@@ -154,7 +149,7 @@ view model =
   in
   case (gameState, connectionState, maybeMesh) of 
     (InitializationFailed, _, _) -> 
-      div [] [ text (Debug.toString (List.head model.messages))]
+      div [] [ text "Initialization failed"]
     (MainMenu, _, _) -> 
       div [ class "main-menu-container" ] 
           [ p [] [ text "So it begins (the grand hot air balloon adventure)" ]
