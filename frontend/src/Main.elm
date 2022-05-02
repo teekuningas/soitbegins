@@ -29,7 +29,7 @@ import Browser.Events exposing (onAnimationFrame, onResize)
 import Platform.Sub
 import Platform.Cmd
 
-import Html exposing (Html, div, text, button, p)
+import Html exposing (Html, div, text, button, p, span)
 import Html.Attributes exposing (height, style, width, id, class)
 import Html.Events exposing (onClick)
 import Html.Events.Extra.Mouse as Mouse
@@ -114,7 +114,7 @@ init flagsMsg =
                      , msgElapsedPrevious = 0
                      , msgEarth = earth
                      , msgEarthPrevious = earth
-                     , elapsed = 0
+                     , elapsed = 10
                      , elapsedPrevious = 0 
                      , serverUpdateInterval = serverUpdateInterval}
     , canvasDimensions = { width = 0, height = 0 }
@@ -155,7 +155,15 @@ view model =
           [ p [] [ text "So it begins (the grand hot air balloon adventure)" ]
           , button [ onClick StartGameMsg ] [ text "Start here" ] ]
     (FlightMode, Connected, Just earthMesh) ->
-      div [] [ WebGL.toHtml [ width (Tuple.first viewportSize)
+      div [id "canvas-container"] [ div 
+               [ id "fps-overlay" ] 
+               [ span [] 
+                 [ text ("FPS: " ++ 
+                         (String.fromInt <| round (1000 / (model.updateParams.elapsed - 
+                                                           model.updateParams.elapsedPrevious))))
+                 ]
+               ] 
+             , WebGL.toHtml [ width (Tuple.first viewportSize)
                             , height (Tuple.second viewportSize)
                             , style "display" "block"
                             , style "height" "100vh"
