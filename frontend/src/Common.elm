@@ -215,9 +215,8 @@ meshPositionMap fun mesh =
             []
 
         ( v1, v2, v3 ) :: xs ->
-            [ ( { v1 | position = fun v1.position }
-              , { v2 | position = fun v2.position }
-              , { v3 | position = fun v3.position }
-              )
-            ]
-                ++ meshPositionMap fun xs
+            ( { v1 | position = fun v1.position }
+            , { v2 | position = fun v2.position }
+            , { v3 | position = fun v3.position }
+            )
+                :: meshPositionMap fun xs
