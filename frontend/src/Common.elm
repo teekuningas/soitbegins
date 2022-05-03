@@ -1,8 +1,18 @@
-module Common exposing (Model, GameState(..), ConnectionState(..), 
-                        MeshList, Vertex, Uniforms, 
+module Common exposing (Model, 
+                        GameState(..), 
+                        ConnectionState(..), 
                         DragState(..), 
-                        viewportSize, meshPositionMap, 
-                        vertexShader, fragmentShader)
+                        GameData, 
+                        ConnectionData,
+                        Data,
+                        RenderData,
+                        MeshList, 
+                        Vertex, 
+                        Uniforms, 
+                        viewportSize, 
+                        meshPositionMap, 
+                        vertexShader, 
+                        fragmentShader)
 
 import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector3 as Vec3 exposing (Vec3)
@@ -10,44 +20,66 @@ import Math.Vector3 as Vec3 exposing (Vec3)
 import WebGL exposing (Shader, Mesh)
 
 
--- Some global variables
-
 viewportSize : (Int, Int)
 viewportSize = (800, 800)
 
 
--- Some type definitions
+type alias Model =
+  { gameState : GameState,
+  , connectionState : ConnectionState,
+  , data : Data
+  }
 
-type DragState = Drag | NoDrag
+type alias Data = 
+  { earthMesh : Maybe (Mesh Vertex)
+  }
 
 
-type GameState = MainMenu | FlightMode | InitializationFailed
-type ConnectionState = Connected | Disconnected
+type GameState = MainMenu | FlightMode GameData | InitializationFailed
 
+type alias GameData = 
+  { earth : Maybe Earth
+  , camera : Camera
+  , controller : Controller
+  , hero : Hero
+  , renderData : Maybe RenderData
+  , canvasDimensions : Maybe CanvasDimensions
+  }
+
+type alias CanvasDimensions =
+  { width : Int
+  , height : Int
+  }
 
 type alias Hero = 
   { altitude : Float 
+  , canvasDimensions : { width: Int, height: Int }
   , latitude : Float
   , longitude : Float
   , rotationTheta : Float 
   , power : Float
   }
 
-
 type alias Earth = 
   { locationX : Float
   , locationY : Float
   , locationZ : Float
   , rotationTheta : Float
-  , mesh : Maybe (Mesh Vertex)
   }
-
 
 type alias Camera = 
   { azimoth : Float
   , elevation : Float
   }
 
+type alias RenderData = 
+  {
+  , elapsed : Float
+  , elapsedPrevious : Maybe Float
+  }
+
+
+type DragState = Drag | NoDrag
 
 type alias Controller = 
   { dragState : DragState 
@@ -58,28 +90,17 @@ type alias Controller =
   }
 
 
-type alias UpdateParameters = 
-  { msgElapsed : Float
-  , msgElapsedPrevious : Float
-  , msgEarth : Earth
-  , msgEarthPrevious : Earth
-  , elapsed : Float
-  , elapsedPrevious : Float
-  , serverUpdateInterval : Int
+type ConnectionState = Connected ConnectionData | Disconnected
+
+type alias ConnectionData = 
+  { earth : Maybe { msgEarth : Earth
+                  , previousMsgEarth : Earth }
+  , elapsed : Maybe { msgElapsed : Float
+                    , previousMsgElapsed : Maybe Float }
   }
 
 
-type alias Model =
-  { hero : Hero
-  , earth : Earth
-  , camera : Camera
-  , canvasDimensions : { width: Int, height: Int }
-  , controller : Controller
-  , updateParams : UpdateParameters
-  , messages : List String
-  , gameState : GameState
-  , connectionState : ConnectionState
-  }
+-- WebGL-related types
 
 
 type alias Uniforms =

@@ -4,7 +4,7 @@ module World exposing (heroMesh, heroUnif,
                        earthUnif,
                        sunMesh, sunUnif)
 
-import Common exposing (Model, viewportSize, meshPositionMap,
+import Common exposing (GameData, viewportSize, meshPositionMap,
                         MeshList, Vertex, Uniforms)
 
 import Math.Matrix4 as Mat4 exposing (Mat4)
@@ -17,10 +17,10 @@ import WebGL exposing (Mesh)
 -- which incldes the the correct perspective
 -- and camera transformations
 
-generalUnif : Model -> Uniforms
-generalUnif model =
-  let aspect = ((toFloat model.canvasDimensions.width) / 
-                (toFloat model.canvasDimensions.height))
+generalUnif : GameData -> Uniforms
+generalUnif gameData =
+  let aspect = ((toFloat gameData.canvasDimensions.width) / 
+                (toFloat gameData.canvasDimensions.height))
   in
   { preScale =
       Mat4.identity 
@@ -43,15 +43,15 @@ generalUnif model =
   , perspective = 
       Mat4.makePerspective 45 aspect 0.001 100000
   , camera = 
-      makeHeroCamera model
+      makeHeroCamera gameData
   , shade = 0.75 } 
 
 
 -- Uniforms for the sun
 
-sunUnif : Model -> Uniforms
-sunUnif model =
-  let unif = generalUnif model
+sunUnif : GameData -> Uniforms
+sunUnif gameData =
+  let unif = generalUnif gameData
       -- Sun lies at the origin but is scaled
       scale = (Mat4.scale (vec3 200 200 200) Mat4.identity)
   in { unif | scale = scale}
@@ -59,9 +59,9 @@ sunUnif model =
 
 -- Uniforms for the earth
 
-earthUnif : Model -> Uniforms
-earthUnif model = 
-  let unif = generalUnif model
+earthUnif : GameData -> Uniforms
+earthUnif gameData = 
+  let unif = generalUnif gameData
 
       -- The earth mesh comes in wrong position so fix here..
       preScale = (Mat4.makeRotate (pi/2) (vec3 1 0 0))
@@ -70,18 +70,20 @@ earthUnif model =
       -- I first tried to keep earth as size 1 and decrease
       -- size of the balloon. However, that leads to inaccuracies
       -- in rendering the balloon.
+
       scale = (Mat4.scale (vec3 10 10 10) Mat4.identity)
 
       -- Tilt and rotate along the correct axis
+
       rotation = (Mat4.mul 
                   (Mat4.makeRotate ((23.5/180)*pi) (vec3 0 0 1))
-                  (Mat4.makeRotate model.earth.rotationTheta (vec3 0 1 0)))
+                  (Mat4.makeRotate gameData.earth.rotationTheta (vec3 0 1 0)))
 
 
       -- Move to the correct location
-      translation = Mat4.translate (vec3 model.earth.locationX
-                                         model.earth.locationY
-                                         model.earth.locationZ) Mat4.identity
+      translation = Mat4.translate (vec3 gameData.earth.locationX
+                                         gameData.earth.locationY
+                                         gameData.earth.locationZ) Mat4.identity
 
 
       
@@ -97,38 +99,42 @@ earthUnif model =
 -- as that was only a fix for the
 -- wrong rotation of earth in the obj file.
 
-axisUnif : Model -> Uniforms
-axisUnif model =
-  let unif = earthUnif model
+axisUnif : GameData -> Uniforms
+axisUnif gameData =
+  let unif = earthUnif gameData
   in { unif | preScale = Mat4.identity }
 
 
 -- Uniforms for the hero
 
-heroUnif : Model -> Uniforms
-heroUnif model =
-  let unif = generalUnif model
+heroUnif : GameData -> Uniforms
+heroUnif gameData =
+  let unif = generalUnif gameData
 
       -- Hero size
+
       scale = (Mat4.scale (vec3 0.1 0.1 0.1) Mat4.identity)
 
       -- Hero wiggling
-      rotation = Mat4.mul (Mat4.makeRotate (3 * model.hero.rotationTheta) (vec3 0 1 0))
-                          (Mat4.makeRotate (2 * model.hero.rotationTheta) (vec3 1 0 0))
+
+      rotation = Mat4.mul (Mat4.makeRotate (3 * gameData.hero.rotationTheta) (vec3 0 1 0))
+                          (Mat4.makeRotate (2 * gameData.hero.rotationTheta) (vec3 1 0 0))
 
       -- Hero moved directly up from hero origin
-      translation = (Mat4.translate (Vec3.scale model.hero.altitude Vec3.j) Mat4.identity)
+
+      translation = (Mat4.translate (Vec3.scale gameData.hero.altitude Vec3.j) Mat4.identity)
 
       -- Hero rotated along different axis in the origin, effectively
       -- translating hero to correct position in a correct orientation
+
       earthAxis = (Mat4.transform 
                    (Mat4.makeRotate ((23.5/180)*pi) (vec3 0 0 1))
                    Vec3.j)
       latitudeAxis = Vec3.cross earthAxis (vec3 1 0 0)
       alignRotation = (Mat4.makeRotate ((23.5/180)*pi) (vec3 0 0 1))
-      latitudeRotation = (Mat4.makeRotate (pi/2 - model.hero.latitude) latitudeAxis)
-      longitudeRotation = (Mat4.makeRotate (model.hero.longitude) earthAxis)
-      earthRotationRotation = (Mat4.makeRotate model.earth.rotationTheta earthAxis)
+      latitudeRotation = (Mat4.makeRotate (pi/2 - gameData.hero.latitude) latitudeAxis)
+      longitudeRotation = (Mat4.makeRotate (gameData.hero.longitude) earthAxis)
+      earthRotationRotation = (Mat4.makeRotate gameData.earth.rotationTheta earthAxis)
       postRotation = (List.foldl
                       Mat4.mul 
                       Mat4.identity [alignRotation,
@@ -137,9 +143,9 @@ heroUnif model =
                                      earthRotationRotation])
 
       -- And finally moved to the earth
-      postTranslation = Mat4.translate (vec3 model.earth.locationX
-                                             model.earth.locationY
-                                             model.earth.locationZ) Mat4.identity
+      postTranslation = Mat4.translate (vec3 gameData.earth.locationX
+                                             gameData.earth.locationY
+                                             gameData.earth.locationZ) Mat4.identity
 
   in
   { unif | scale = scale,
@@ -151,16 +157,16 @@ heroUnif model =
 
 -- Uniforms for the fire within hero.
 
-fireUnif : Model -> Uniforms
-fireUnif model = 
-  let unif = heroUnif model
+fireUnif : GameData -> Uniforms
+fireUnif gameData = 
+  let unif = heroUnif gameData
 
       -- The power source fire is approximately where the hero origin is
       -- but we move and scale it in the hero space to the exact
       -- correct location.
-      preScale = (Mat4.scale (vec3 (model.hero.power / 2) 
-                                   (model.hero.power / 2) 
-                                   (model.hero.power / 2)) 
+      preScale = (Mat4.scale (vec3 (gameData.hero.power / 2) 
+                                   (gameData.hero.power / 2) 
+                                   (gameData.hero.power / 2)) 
                              Mat4.identity)
       preTranslation = 
         Mat4.translate (vec3 0 1.6 0) Mat4.identity
@@ -389,25 +395,25 @@ subdivideProject clr mesh =
 -- Creates a simple camera that looks everything from
 -- a distance
 
-makeOverviewCamera : Model -> Mat4
-makeOverviewCamera model =
+makeOverviewCamera : GameData -> Mat4
+makeOverviewCamera gameData =
     (Mat4.makeLookAt (vec3 5 0 5)
-                     (vec3 model.earth.locationX
-                           model.earth.locationY
-                           model.earth.locationZ)
+                     (vec3 gameData.earth.locationX
+                           gameData.earth.locationY
+                           gameData.earth.locationZ)
                      (vec3 0 1 0))
 
 
 -- Creates a hero camera, following hero.
 
-makeHeroCamera : Model -> Mat4
-makeHeroCamera model =
-  let azimoth = model.camera.azimoth
-      elevation = model.camera.elevation
+makeHeroCamera : GameData -> Mat4
+makeHeroCamera gameData =
+  let azimoth = gameData.camera.azimoth
+      elevation = gameData.camera.elevation
 
-      earthLoc = (vec3 model.earth.locationX
-                       model.earth.locationY
-                       model.earth.locationZ)
+      earthLoc = (vec3 gameData.earth.locationX
+                       gameData.earth.locationY
+                       gameData.earth.locationZ)
 
       -- Generate a general rotation matrix that can transform
       -- the hero, the camera and even the up vector.
@@ -417,9 +423,9 @@ makeHeroCamera model =
                    Vec3.j)
       latitudeAxis = Vec3.cross earthAxis (vec3 1 0 0)
       alignRotation = (Mat4.makeRotate ((23.5/180)*pi) (vec3 0 0 1))
-      latitudeRotation = (Mat4.makeRotate (pi/2 - model.hero.latitude) latitudeAxis)
-      longitudeRotation = (Mat4.makeRotate (model.hero.longitude) earthAxis)
-      earthRotationRotation = (Mat4.makeRotate model.earth.rotationTheta earthAxis)
+      latitudeRotation = (Mat4.makeRotate (pi/2 - gameData.hero.latitude) latitudeAxis)
+      longitudeRotation = (Mat4.makeRotate (gameData.hero.longitude) earthAxis)
+      earthRotationRotation = (Mat4.makeRotate gameData.earth.rotationTheta earthAxis)
       rotateAround = (List.foldl
                       Mat4.mul 
                       Mat4.identity [alignRotation,
@@ -433,7 +439,7 @@ makeHeroCamera model =
          Mat4.mul 
          Mat4.identity 
          [
-          (Mat4.translate (vec3 0 model.hero.altitude 0) Mat4.identity),
+          (Mat4.translate (vec3 0 gameData.hero.altitude 0) Mat4.identity),
           rotateAround,
           (Mat4.translate earthLoc Mat4.identity)
          ])
@@ -451,7 +457,7 @@ makeHeroCamera model =
          Mat4.mul 
          Mat4.identity 
          [
-          (Mat4.translate (vec3 0 model.hero.altitude 0) Mat4.identity),
+          (Mat4.translate (vec3 0 gameData.hero.altitude 0) Mat4.identity),
           rotateAround,
           (Mat4.translate earthLoc Mat4.identity)
          ])

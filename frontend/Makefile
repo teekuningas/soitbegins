@@ -4,3 +4,9 @@ build:
 
 watch:
 	rm -fr .parcel-cache && PARCEL_ELM_NO_DEBUG=1 npm start
+
+prettier:
+	./node_modules/.bin/elm-format src/*
+
+install:
+	npm install

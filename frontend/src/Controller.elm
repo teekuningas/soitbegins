@@ -1,7 +1,7 @@
 module Controller exposing (controllerMeshUp, controllerMeshDown, controllerUnif, 
                             coordinatesWithinUpButton, coordinatesWithinDownButton)
 
-import Common exposing (Model, viewportSize, meshPositionMap,
+import Common exposing (GameData, viewportSize, meshPositionMap,
                         MeshList, Vertex, Uniforms)
 
 import Math.Matrix4 as Mat4 exposing (Mat4)
@@ -21,11 +21,11 @@ controllerParams = { x = 0.5
 
 -- Controller uniforms
 
-controllerUnif : Model -> Float -> Uniforms
-controllerUnif model shade =
-  let xscale = ((toFloat model.canvasDimensions.width) /
+controllerUnif : GameData -> Float -> Uniforms
+controllerUnif gameData shade =
+  let xscale = ((toFloat gameData.canvasDimensions.width) /
                 (toFloat (Tuple.first viewportSize)))
-      yscale = ((toFloat model.canvasDimensions.height) /
+      yscale = ((toFloat gameData.canvasDimensions.height) /
                 (toFloat (Tuple.second viewportSize)))
       x = controllerParams.x
       y = controllerParams.y
@@ -87,18 +87,18 @@ controllerMeshUp =
 -- Helpers for deciding if touch / cursor location
 -- is within a control
 
-coordinatesWithinUpButton : Model -> (Float, Float) -> Bool
-coordinatesWithinUpButton model offset = 
-  coordinatesWithinButton model offset (controllerParams.trans + 0.5)
+coordinatesWithinUpButton : GameData -> (Float, Float) -> Bool
+coordinatesWithinUpButton gameData offset = 
+  coordinatesWithinButton gameData offset (controllerParams.trans + 0.5)
 
-coordinatesWithinDownButton : Model -> (Float, Float) -> Bool
-coordinatesWithinDownButton model offset = 
-  coordinatesWithinButton model offset (-controllerParams.trans - 0.5)
+coordinatesWithinDownButton : GameData -> (Float, Float) -> Bool
+coordinatesWithinDownButton gameData offset = 
+  coordinatesWithinButton gameData offset (-controllerParams.trans - 0.5)
 
 
-coordinatesWithinButton : Model -> (Float, Float) -> Float -> Bool
-coordinatesWithinButton model pointerOffset trans =
-  let yscale = ((toFloat model.canvasDimensions.height) /
+coordinatesWithinButton : GameData -> (Float, Float) -> Float -> Bool
+coordinatesWithinButton gameData pointerOffset trans =
+  let yscale = ((toFloat gameData.canvasDimensions.height) /
                 (toFloat (Tuple.second viewportSize)))
       xscale = ((toFloat model.canvasDimensions.width) /
                 (toFloat (Tuple.first viewportSize)))

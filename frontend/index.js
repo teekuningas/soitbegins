@@ -7,7 +7,6 @@ const serverApi = process.env.SERVER_API;
 const modelEarth = process.env.MODEL_EARTH;
 
 var flags = {
-  "serverUpdateInterval": serverUpdateInterval,
   "modelEarth": modelEarth
 }
 
