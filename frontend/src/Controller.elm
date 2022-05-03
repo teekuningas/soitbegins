@@ -2,13 +2,17 @@ module Controller exposing
     ( controllerMeshDown
     , controllerMeshUp
     , controllerUnif
-    , coordinatesWithinDownButton
-    , coordinatesWithinUpButton
+    , handleDown
+    , handleUp
+    , handleMove
     )
 
 import Common
     exposing
-        ( GameData
+        ( CanvasDimensions
+        , Controller
+        , Camera
+        , DragState(..)
         , MeshList
         , Uniforms
         , Vertex
@@ -37,10 +41,8 @@ controllerParams =
 -- Controller uniforms
 
 
-controllerUnif : GameData -> Float -> Uniforms
-controllerUnif gameData shade =
-  case gameData.canvasDimensions of
-    Just canvasDimensions ->
+controllerUnif : CanvasDimensions -> Float -> Uniforms
+controllerUnif canvasDimensions shade =
       let
           xscale =
               toFloat canvasDimensions.width
@@ -80,24 +82,6 @@ controllerUnif gameData shade =
           Mat4.makeLookAt (vec3 0 0 1) (vec3 0 0 0) (vec3 0 1 0)
       , shade = shade
       }
-    Nothing ->
-      { preScale = Mat4.identity
-      , preRotation = Mat4.identity
-      , preTranslation = Mat4.identity
-      , scale = Mat4.identity
-      , rotation = Mat4.identity
-      , translation = Mat4.identity
-      , postScale = Mat4.identity
-      , postRotation = Mat4.identity
-      , postTranslation = Mat4.identity
-      , perspective = 
-          Mat4.makeOrtho -1 1 -1 1 0 10
-      , camera =
-          Mat4.makeLookAt (vec3 0 0 1) (vec3 0 0 0) (vec3 0 1 0)
-      , shade = shade
-      }
-
-  
   
 
 -- Controller meshes
@@ -144,19 +128,19 @@ controllerMeshUp =
 -- is within a control
 
 
-coordinatesWithinUpButton : GameData -> ( Float, Float ) -> Bool
-coordinatesWithinUpButton gameData offset =
-    coordinatesWithinButton gameData offset (controllerParams.trans + 0.5)
+coordinatesWithinUpButton : Maybe CanvasDimensions -> ( Float, Float ) -> Bool
+coordinatesWithinUpButton canvasDimensions offset =
+    coordinatesWithinButton canvasDimensions offset (controllerParams.trans + 0.5)
 
 
-coordinatesWithinDownButton : GameData -> ( Float, Float ) -> Bool
-coordinatesWithinDownButton gameData offset =
-    coordinatesWithinButton gameData offset (-controllerParams.trans - 0.5)
+coordinatesWithinDownButton : Maybe CanvasDimensions -> ( Float, Float ) -> Bool
+coordinatesWithinDownButton canvasDimensions offset =
+    coordinatesWithinButton canvasDimensions offset (-controllerParams.trans - 0.5)
 
 
-coordinatesWithinButton : GameData -> ( Float, Float ) -> Float -> Bool
-coordinatesWithinButton gameData pointerOffset trans =
-  case gameData.canvasDimensions of
+coordinatesWithinButton : Maybe CanvasDimensions -> ( Float, Float ) -> Float -> Bool
+coordinatesWithinButton maybeCanvas pointerOffset trans =
+  case maybeCanvas of
     Just canvasDimensions ->
       let
           yscale =
@@ -196,3 +180,64 @@ coordinatesWithinButton gameData pointerOffset trans =
 
     Nothing -> False
   
+
+handleUp : Controller -> Controller
+handleUp controller =
+  { controller | upButtonDown = False
+               , downButtonDown = False
+               , dragState = NoDrag }
+
+handleDown : Controller -> (Float, Float) -> (Maybe CanvasDimensions) -> Controller
+handleDown controller offsetPos canvasDimensions = 
+  let
+      coordsInUp =
+        coordinatesWithinUpButton canvasDimensions offsetPos
+      coordsInDown =
+        coordinatesWithinDownButton canvasDimensions offsetPos
+      upButtonDown =
+        if coordsInUp then True else False
+      downButtonDown =
+        if coordsInDown then True else False
+
+      newController =
+        { controller | previousOffset = { x = round (Tuple.first offsetPos),
+                                          y = round (Tuple.second offsetPos)},
+                       pointerOffset = { x = round (Tuple.first offsetPos),
+                                         y = round (Tuple.second offsetPos)},
+                       upButtonDown = upButtonDown,
+                       downButtonDown = downButtonDown,
+                       dragState = Drag }
+  in
+    newController
+
+
+handleMove : Controller -> Camera -> (Float, Float) -> (Controller, Camera)
+handleMove controller camera offsetPos =
+  let
+      newAzimoth =
+        (if controller.dragState == Drag
+         then camera.azimoth - (toFloat (round (Tuple.first offsetPos) -
+                                         controller.previousOffset.x)) * pi / 180
+         else camera.azimoth)
+
+      newElevation =
+        (if controller.dragState == Drag
+         then camera.elevation + (toFloat (round (Tuple.second offsetPos) -
+                                           controller.previousOffset.y)) * pi / 180
+         else camera.elevation)
+
+      newCamera =
+         { camera | azimoth = newAzimoth,
+                    elevation =
+                      ( if newElevation <= (4*pi/10)
+                        then (if newElevation >= (-4*pi/10)
+                              then newElevation else camera.elevation)
+                        else camera.elevation ) }
+
+      newController =
+        { controller | previousOffset = { x = round (Tuple.first offsetPos),
+                                          y = round (Tuple.second offsetPos) } }
+
+
+  in 
+    (newController, newCamera)

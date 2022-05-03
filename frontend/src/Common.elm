@@ -8,6 +8,7 @@ module Common exposing
     , MeshList
     , Model
     , RenderData
+    , Controller
     , Uniforms
     , Vertex
     , Camera
@@ -89,7 +90,7 @@ type alias Camera =
 
 type alias RenderData =
     { elapsed : Float
-    , elapsedPrevious : Maybe Float
+    , previousElapsed : Maybe Float
     }
 
 

@@ -11,10 +11,6 @@ import Vector3d exposing (Vector3d)
 import WebGL exposing (Mesh)
 
 
-
--- Some functions to create meshes from obj format.
-
-
 triangularEarthToMeshVertex :
     TriangularMesh
         { position : Point3d Meters ObjCoordinates

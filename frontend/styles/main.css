@@ -24,3 +24,7 @@ body {
   background-color: rgba(0,0,0,0.2);
   font-size: 20px;
 }
+
+#canvas-container .main-menu-container {
+  position: absolute;
+}

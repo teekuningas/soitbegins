@@ -12,9 +12,10 @@ import World exposing (heroMesh,
 
 import Controller exposing (controllerMeshUp, 
                             controllerMeshDown, 
-                            controllerUnif, 
-                            coordinatesWithinUpButton, 
-                            coordinatesWithinDownButton)
+                            controllerUnif,
+                            handleDown,
+                            handleUp,
+                            handleMove)
 
 import Common exposing (Model, 
                         GameState(..), 
@@ -29,6 +30,10 @@ import Common exposing (Model,
                         vertexShader, 
                         fragmentShader
                         )
+
+import Page exposing (embedInCanvas)
+
+import Update exposing (updateGameData)
 
 import ObjLoader
 import Receiver
@@ -63,7 +68,6 @@ import Math.Vector3 as Vec3 exposing (vec3)
 import WebGL exposing (Mesh)
 
 
-
 type PointerEvent = 
     MouseUp Mouse.Event
   | MouseDown Mouse.Event
@@ -86,19 +90,15 @@ type Msg = TimeElapsed Time.Posix
 
 -- The model initialization
 
+
 init : Json.Decode.Value -> (Model, Cmd Msg)
 init flagsMsg = 
   let 
-      -- Try loading flags from javascript
 
       flags = Json.Decode.decodeValue Flags.flagsDecoder flagsMsg
       
-      -- If not ok, fail fast.
- 
       gameState = case flags of Ok value -> MainMenu
                                 Err _ -> InitializationFailed
-
-      -- If ok, set earth model url
 
       modelEarth = case flags of Ok value -> value.modelEarth
                                  Err _ -> ""
@@ -133,102 +133,99 @@ view model =
        , model.connectionState
        , model.data.earthMesh) of 
 
-     
-
     (InitializationFailed, _, _) -> 
       div [] [ text "Initialization failed"]
 
     (MainMenu, _, _) -> 
-      div [ class "main-menu-container" ] 
+      embedInCanvas 
+        [ ( div 
+          [ class "main-menu-container" ] 
           [ p [] [ text "So it begins (the grand hot air balloon adventure)" ]
           , button [ onClick StartGameMsg ] [ text "Start here" ] ]
+          ) ] [] []
 
     (FlightMode gameData, Connected connectionData, Just earthMesh) ->
       case (gameData.earth, gameData.renderData, gameData.canvasDimensions) of
-        (Just earth, Just renderData, Nothing) ->
-           WebGL.toHtml [ width (Tuple.first viewportSize)
-                        , height (Tuple.second viewportSize)
-                        , style "display" "block"
-                        , style "height" "100vh"
-                        , style "width" "100vw"
-                        , id "webgl-canvas" ]
-                        [ ]
 
         (Just earth, Just renderData, Just canvasDimensions) ->
-          let fps = (case renderData.elapsedPrevious of
-                       Just elapsedPrevious ->
+          let fps = (case renderData.previousElapsed of
+                       Just previousElapsed ->
                          (String.fromInt <| round (1000 / (renderData.elapsed - 
-                                                           elapsedPrevious)))
+                                                           previousElapsed)))
                        Nothing -> 
                          "-" )
               camera = gameData.camera
               hero = gameData.hero
           in
 
-          div 
-          [ id "canvas-container" ] 
+          embedInCanvas
           [ div 
-            [ id "fps-overlay" ] 
-            [ span 
-              [] 
-              [ text ("FPS: " ++ fps)
-              ]
-            ] 
-           , WebGL.toHtml [ width (Tuple.first viewportSize)
-                          , height (Tuple.second viewportSize)
-                          , style "display" "block"
-                          , style "height" "100vh"
-                          , style "width" "100vw"
-                          , id "webgl-canvas"
-                          , Touch.onEnd (PointerEventMsg << TouchUp)
-                          , Touch.onStart (PointerEventMsg << TouchDown)
-                          , Touch.onMove (PointerEventMsg << TouchMove)
-                          , Mouse.onUp (PointerEventMsg << MouseUp)
-                          , Mouse.onDown (PointerEventMsg << MouseDown)
-                          , Mouse.onMove (PointerEventMsg << MouseMove) ]
-                          [ (WebGL.entity
-                            vertexShader
-                            fragmentShader
-                            heroMesh
-                            (heroUnif canvasDimensions earth hero camera))
-                          , (WebGL.entity
-                            vertexShader
-                            fragmentShader
-                            fireMesh
-                            (fireUnif canvasDimensions earth hero camera))
-                          , (WebGL.entity
-                            vertexShader
-                            fragmentShader
-                            earthMesh
-                            (earthUnif canvasDimensions earth hero camera))
-                          , (WebGL.entity
-                            vertexShader
-                            fragmentShader
-                            axisMesh
-                            (axisUnif canvasDimensions earth hero camera))
-                          , (WebGL.entity
-                            vertexShader
-                            fragmentShader
-                            sunMesh
-                            (sunUnif canvasDimensions earth hero camera))
-                          , (WebGL.entity
-                            vertexShader
-                            fragmentShader
-                            controllerMeshUp
-                            (controllerUnif gameData (if gameData.controller.upButtonDown then 1.0 else 0.5)))
-                          , (WebGL.entity
-                            vertexShader
-                            fragmentShader controllerMeshDown
-                            (controllerUnif gameData (if gameData.controller.downButtonDown then 1.0 else 0.5)))
-                          ] ]
+              [ id "fps-overlay" ] 
+              [ span 
+                [] 
+                [ text ("FPS: " ++ fps)
+                ]
+              ] 
+          ]
+          [
+            Touch.onEnd (PointerEventMsg << TouchUp)
+          , Touch.onStart (PointerEventMsg << TouchDown)
+          , Touch.onMove (PointerEventMsg << TouchMove)
+          , Mouse.onUp (PointerEventMsg << MouseUp)
+          , Mouse.onDown (PointerEventMsg << MouseDown)
+          , Mouse.onMove (PointerEventMsg << MouseMove) 
+          ]
+          [ (WebGL.entity
+             vertexShader
+             fragmentShader
+             heroMesh
+             (heroUnif canvasDimensions earth hero camera))
+           , (WebGL.entity
+             vertexShader
+             fragmentShader
+             fireMesh
+             (fireUnif canvasDimensions earth hero camera))
+           , (WebGL.entity
+             vertexShader
+             fragmentShader
+             earthMesh
+             (earthUnif canvasDimensions earth hero camera))
+           , (WebGL.entity
+             vertexShader
+             fragmentShader
+             axisMesh
+             (axisUnif canvasDimensions earth hero camera))
+           , (WebGL.entity
+             vertexShader
+             fragmentShader
+             sunMesh
+             (sunUnif canvasDimensions earth hero camera))
+           , (WebGL.entity
+             vertexShader
+             fragmentShader
+             controllerMeshUp
+             (controllerUnif canvasDimensions (if gameData.controller.upButtonDown then 1.0 else 0.5)))
+           , (WebGL.entity
+             vertexShader
+             fragmentShader controllerMeshDown
+             (controllerUnif canvasDimensions (if gameData.controller.downButtonDown then 1.0 else 0.5)))
+           ] 
+
         (_, _, _) ->
-          div [] [
-               text (Debug.toString (gameData.canvasDimensions))
-              ]
+
+          embedInCanvas
+          [ div 
+              [ class "loading-screen" ] 
+              [ span [] [ text "Loading.." ] ]
+          ] [] []
 
     (FlightMode _, _, _) -> 
-      div [] [ text "Starting.." ]
 
+      embedInCanvas
+      [ div 
+          [ class "loading-screen" ] 
+          [ span [] [ text "Loading.." ] ]
+      ] [] []
 
 -- Subscriptions
 
@@ -249,40 +246,29 @@ update msg model =
   case msg of 
 
     StartGameMsg ->
-      case model.connectionState of 
-
-        Disconnected -> 
-          ( model, Cmd.none )
-
-        Connected connectionData ->
-          let gameData = 
-                { earth = Nothing
-                , camera = 
-                   { azimoth = 0
-                   , elevation = 0 }
-                , controller = 
-                  { dragState = NoDrag
-                  , pointerOffset = { x = 0, y = 0 }
-                  , previousOffset = { x = 0, y = 0 }
-                  , upButtonDown = False
-                  , downButtonDown = False } 
-                , hero = 
-                   { altitude = 11
-                   , latitude = -0.3
-                   , longitude = 0.0
-                   , rotationTheta = 0
-                   , power = 1 } 
-                , canvasDimensions = Nothing
-                , renderData = Nothing
-                }
-          in
-            case connectionData.earth of
-              Just earthData ->
-                ( { model | gameState = FlightMode ( { gameData | earth = Just earthData.msgEarth } ) }
-                  , Task.attempt ViewportMsg (getViewportOf "webgl-canvas") )
-              Nothing -> 
-                ( { model | gameState = FlightMode gameData }
-                , Task.attempt ViewportMsg (getViewportOf "webgl-canvas") )
+       let gameData = 
+             { earth = Nothing
+             , camera = 
+                { azimoth = 0
+                , elevation = 0 }
+             , controller = 
+               { dragState = NoDrag
+               , pointerOffset = { x = 0, y = 0 }
+               , previousOffset = { x = 0, y = 0 }
+               , upButtonDown = False
+               , downButtonDown = False } 
+             , hero = 
+                { altitude = 11
+                , latitude = -0.3
+                , longitude = 0.0
+                , rotationTheta = 0
+                , power = 1 } 
+             , canvasDimensions = Nothing
+             , renderData = Nothing
+             }
+       in
+         ( { model | gameState = FlightMode gameData } 
+         , Task.attempt ViewportMsg (getViewportOf "webgl-canvas") )
  
     RecvServerMsgError message ->
 
@@ -309,7 +295,7 @@ update msg model =
               Just earthData ->
                 let newEarth = 
                       { msgEarth = msgEarth 
-                      ,  previousMsgEarth = earthData.msgEarth }
+                      , previousMsgEarth = earthData.msgEarth }
                     newConnectionData = 
                       { connectionData | earth = Just newEarth }
                 in
@@ -386,27 +372,28 @@ update msg model =
             case gameData.renderData of
               Nothing -> 
                 let newRenderData = { elapsed = elapsed
-                                    , elapsedPrevious = Nothing }
+                                    , previousElapsed = Nothing }
                     newGameData = { gameData | renderData = Just newRenderData }
                 in
                   ( { model | gameState = FlightMode newGameData }
                   , Cmd.none )
               Just renderData ->
-                case renderData.elapsedPrevious of
+                case renderData.previousElapsed of
+
                   Nothing -> 
                     let 
                       newRenderData = { elapsed = elapsed
-                                      , elapsedPrevious = Just renderData.elapsed }
+                                      , previousElapsed = Just renderData.elapsed }
                       newGameData = { gameData | renderData = Just newRenderData }
                     in 
                      ( { model | gameState = FlightMode newGameData }
                      , Cmd.none )
-                  Just elapsedPrevious ->
+
+                  Just previousElapsed ->
                     let
                       newRenderData = { elapsed = elapsed
-                                      , elapsedPrevious = Just renderData.elapsed }
+                                      , previousElapsed = Just renderData.elapsed }
 
-                      timeInBetween = elapsed - elapsedPrevious
                     in
                       case model.connectionState of 
                         Disconnected ->
@@ -414,6 +401,7 @@ update msg model =
                           in
                             ( { model | gameState = FlightMode newGameData }
                             , Cmd.none )
+
                         Connected connectionData ->
                           case (connectionData.earth, connectionData.elapsed) of
                             (Just earthData, Just elapsedData) ->
@@ -424,42 +412,17 @@ update msg model =
                                     msgEarth = earthData.msgEarth
                                     previousMsgEarth = earthData.previousMsgEarth
 
-                                    weight = ((elapsed - previousMsgElapsed) / 
-                                              (msgElapsed - previousMsgElapsed))
+                                    updatedGameData = 
+                                      (updateGameData
+                                       elapsed
+                                       previousElapsed
+                                       msgElapsed
+                                       previousMsgElapsed
+                                       msgEarth
+                                       previousMsgEarth
+                                       gameData)
+                                    newGameData = { updatedGameData | renderData = Just newRenderData }
 
-                                    weightedAve p1 p2 w = 
-                                      p1 + w * (p2 - p1)
-
-                                    newEarth = 
-                                      { rotationTheta = weightedAve previousMsgEarth.rotationTheta msgEarth.rotationTheta weight
-                                      , locationX = weightedAve previousMsgEarth.locationX msgEarth.locationX weight
-                                      , locationY = weightedAve previousMsgEarth.locationY msgEarth.locationY weight
-                                      , locationZ = weightedAve previousMsgEarth.locationZ msgEarth.locationZ weight
-                                      }
-
-                                    newPowerChange = (if gameData.controller.upButtonDown then 0.0001
-                                                      else (if gameData.controller.downButtonDown then -0.0001 else 0))
-
-                                    newPower = max 0 (min 2 (gameData.hero.power + 
-                                                             (timeInBetween * newPowerChange)))
-
-                                    newAltitudeChange = (newPower - 1) / 200
-                                    newAltitude = max 10.5 (min 100 (gameData.hero.altitude + 
-                                                                     (timeInBetween*newAltitudeChange)))
-
-                                    newLongitude = gameData.hero.longitude - timeInBetween * 0.00005
-
-                                    newRotationTheta = sin (elapsed / 1000) / 20
-
-                                    hero = gameData.hero
-                                    newHero = { hero | rotationTheta = newRotationTheta, 
-                                                       longitude = newLongitude,
-                                                       power = newPower,
-                                                       altitude = newAltitude } 
-                                    newGameData = { gameData | hero = newHero
-                                                             , renderData = Just newRenderData
-                                                             , earth = Just newEarth
-                                                  }
 
                                   in
                                     ( { model | gameState = FlightMode newGameData } 
@@ -472,6 +435,7 @@ update msg model =
                                   in
                                     ( { model | gameState = FlightMode newGameData }
                                     , Cmd.none )
+
                             (_, _) ->
                               let newGameData = { gameData | renderData = Just newRenderData }
                               in
@@ -494,39 +458,19 @@ update msg model =
           case event of 
 
             MouseUp struct ->
-              let controller = 
-                    gameData.controller
-
-                  newController = 
-                    { controller | upButtonDown = False,
-                                   downButtonDown = False,
-                                   dragState = NoDrag }
-
+              let controller = gameData.controller
+                  newController = handleUp controller 
                   newGameData = { gameData | controller = newController }
               in 
                 ( { model | gameState = FlightMode newGameData }, Cmd.none)
     
             MouseDown struct ->
-              let offsetPos = 
-                    struct.offsetPos
-                  coordsInUp = 
-                    coordinatesWithinUpButton gameData offsetPos
-                  coordsInDown = 
-                    coordinatesWithinDownButton gameData offsetPos
-                  upButtonDown = 
-                    if coordsInUp then True else False
-                  downButtonDown = 
-                    if coordsInDown then True else False
-                  controller = 
-                    gameData.controller
-                  newController = 
-                    { controller | previousOffset = { x = round (Tuple.first offsetPos),
-                                                      y = round (Tuple.second offsetPos)},
-                                   pointerOffset = { x = round (Tuple.first offsetPos),
-                                                     y = round (Tuple.second offsetPos)},
-                                   upButtonDown = upButtonDown,
-                                   downButtonDown = downButtonDown,
-                                   dragState = Drag }
+              let offsetPos = struct.offsetPos
+
+                  canvasDimensions = gameData.canvasDimensions
+
+                  newController = handleDown gameData.controller offsetPos canvasDimensions
+
                   newGameData = { gameData | controller = newController }
               in
                 ( { model | gameState = FlightMode newGameData }, Cmd.none )
@@ -534,30 +478,14 @@ update msg model =
             MouseMove struct ->
               let offsetPos = struct.offsetPos
 
-                  newAzimoth = 
-                    (if gameData.controller.dragState == Drag 
-                     then gameData.camera.azimoth - (toFloat (round (Tuple.first offsetPos) - 
-                                                              gameData.controller.previousOffset.x)) * pi / 180
-                     else gameData.camera.azimoth)
-
-                  newElevation = 
-                    (if gameData.controller.dragState == Drag 
-                     then gameData.camera.elevation + (toFloat (round (Tuple.second offsetPos) - 
-                                                                gameData.controller.previousOffset.y)) * pi / 180
-                     else gameData.camera.elevation)
-                  camera = 
-                    gameData.camera
-                  newCamera = 
-                    { camera | azimoth = newAzimoth,
-                               elevation = ( if newElevation <= (4*pi/10) 
-                                             then ( if newElevation >= (-4*pi/10) 
-                                                    then newElevation else gameData.camera.elevation)
-                                             else gameData.camera.elevation ) }
-                  controller = 
+                  controller =
                     gameData.controller
-                  newController = 
-                    { controller | previousOffset = { x = round (Tuple.first offsetPos),
-                                                      y = round (Tuple.second offsetPos) } }
+
+                  camera =
+                    gameData.camera
+                        
+                  (newController, newCamera) = handleMove controller camera offsetPos
+
                   newGameData = {gameData | controller = newController 
                                           , camera = newCamera }
 
@@ -582,29 +510,13 @@ update msg model =
                 Nothing -> (model, Cmd.none)
 
                 Just x -> 
-                  let offsetPos = 
-                        x.clientPos
-                      coordsInUp = 
-                        coordinatesWithinUpButton gameData offsetPos
-                      coordsInDown = 
-                        coordinatesWithinDownButton gameData offsetPos
-                      upButtonDown = 
-                        if coordsInUp then True else False
-                      downButtonDown = 
-                        if coordsInDown then True else False
-                      controller = 
-                        gameData.controller
-                      newController = 
-                        { controller | previousOffset = { x = round (Tuple.first offsetPos),
-                                                          y = round (Tuple.second offsetPos)},
-                                       pointerOffset = { x = round (Tuple.first offsetPos),
-                                                         y = round (Tuple.second offsetPos)},
-                                       upButtonDown = upButtonDown,
-                                       downButtonDown = downButtonDown,
-                                       dragState = Drag }
+                  let offsetPos = x.clientPos
+                      canvasDimensions = gameData.canvasDimensions
+                      newController = handleDown gameData.controller offsetPos canvasDimensions
+
                       newGameData = { gameData | controller = newController }
                   in
-                    ( { model | gameState = FlightMode gameData }, Cmd.none )
+                    ( { model | gameState = FlightMode newGameData }, Cmd.none )
     
             TouchMove struct ->
               case (List.head struct.touches) of 
@@ -612,38 +524,18 @@ update msg model =
                 Nothing -> (model, Cmd.none)
 
                 Just x ->
-                  let offsetPos = 
+                  let 
+                      offsetPos = 
                         x.clientPos
-
-                      newAzimoth = 
-                        (if gameData.controller.dragState == Drag 
-                         then gameData.camera.azimoth - (toFloat (round (Tuple.first offsetPos) - 
-                                                                   gameData.controller.previousOffset.x)) * pi / 180
-                         else gameData.camera.azimoth)
-
-                      newElevation = 
-                        (if gameData.controller.dragState == Drag 
-                         then gameData.camera.elevation + (toFloat (round (Tuple.second offsetPos) - 
-                                                                    gameData.controller.previousOffset.y)) * pi / 180
-                         else gameData.camera.elevation)
-
-                      camera = 
-                        gameData.camera
-
-                      newCamera = 
-                         { camera | azimoth = newAzimoth,
-                                    elevation =
-                                      ( if newElevation <= (4*pi/10) 
-                                        then (if newElevation >= (-4*pi/10) 
-                                              then newElevation else gameData.camera.elevation)
-                                        else gameData.camera.elevation ) }
 
                       controller =
                         gameData.controller
 
-                      newController = 
-                        { controller | previousOffset = { x = round (Tuple.first offsetPos),
-                                                          y = round (Tuple.second offsetPos) } }
+                      camera =
+                        gameData.camera
+                        
+                      (newController, newCamera) = handleMove controller camera offsetPos
+
                       newGameData = 
                         { gameData | controller = newController
                                    , camera = newCamera }
@@ -678,7 +570,6 @@ update msg model =
 
         Err errMsg -> (model, Cmd.none)
 
-    -- Load meshes
 
     EarthMeshLoaded result -> 
       let data = model.data
@@ -691,6 +582,7 @@ update msg model =
 
 -- Here it begins.
 
+
 main : Program Json.Decode.Value Model Msg
 main =
   Browser.element { init = init
@@ -699,7 +591,8 @@ main =
                   , update = update }
 
 
--- Some helpers. This handles server message decoding.
+-- Some helpers.
+
 
 recvServerJson : String -> Msg
 recvServerJson value =
@@ -708,6 +601,7 @@ recvServerJson value =
       RecvServerMsg result
     Err errorMessage ->
       RecvServerMsgError ("Error while communicating with the server")
+
 
 -- As we use full screen in the game and the browser window sizes differ,
 -- scale to common space.

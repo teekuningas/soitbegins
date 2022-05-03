@@ -28,12 +28,6 @@ import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import WebGL exposing (Mesh)
 
 
-
--- A simple basis for uniforms,
--- which incldes the the correct perspective
--- and camera transformations
-
-
 generalUnif : CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
 generalUnif canvasDimensions earth hero camera =
     let
@@ -67,10 +61,6 @@ generalUnif canvasDimensions earth hero camera =
     }
 
 
-
--- Uniforms for the sun
-
-
 sunUnif : CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
 sunUnif canvasDimensions earth hero camera =
     let
@@ -82,10 +72,6 @@ sunUnif canvasDimensions earth hero camera =
             Mat4.scale (vec3 200 200 200) Mat4.identity
     in
     { unif | scale = scale }
-
-
-
--- Uniforms for the earth
 
 
 earthUnif : CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
@@ -128,13 +114,6 @@ earthUnif canvasDimensions earth hero camera =
     }
 
 
-
--- Uniforms for the earth rotation axis.
--- Remove the prescaling of earth uniform
--- as that was only a fix for the
--- wrong rotation of earth in the obj file.
-
-
 axisUnif : CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
 axisUnif canvasDimensions earth hero camera =
     let
@@ -142,10 +121,6 @@ axisUnif canvasDimensions earth hero camera =
             earthUnif canvasDimensions earth hero camera
     in
     { unif | preScale = Mat4.identity }
-
-
-
--- Uniforms for the hero
 
 
 heroUnif : CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
@@ -217,10 +192,6 @@ heroUnif canvasDimensions earth hero camera =
     }
 
 
-
--- Uniforms for the fire within hero.
-
-
 fireUnif : CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
 fireUnif canvasDimensions earth hero camera =
     let
@@ -245,11 +216,6 @@ fireUnif canvasDimensions earth hero camera =
         | preScale = preScale
         , preTranslation = preTranslation
     }
-
-
-
--- Constructs a funny earth axis by using some red spheres.
--- For debugging purposes.
 
 
 axisMesh : Mesh Vertex
@@ -281,10 +247,6 @@ axisMesh =
         |> WebGL.triangles
 
 
-
--- Constructs a simple mesh for the sun
-
-
 sunMesh : Mesh Vertex
 sunMesh =
     let
@@ -297,10 +259,6 @@ sunMesh =
         |> subdivideProject sunColor
         |> subdivideProject sunColor
         |> WebGL.triangles
-
-
-
--- Constructs a simple mesh for hero
 
 
 heroMesh : Mesh Vertex
@@ -323,12 +281,6 @@ heroMesh =
         |> WebGL.triangles
 
 
-
--- Constructs a simple fire mesh,
--- is separate from hero as the scale
--- is adjustable
-
-
 fireMesh : Mesh Vertex
 fireMesh =
     let
@@ -341,11 +293,6 @@ fireMesh =
     ]
         |> List.concat
         |> WebGL.triangles
-
-
-
--- Helper to create a icosahedron vertex list, which serve as a good
--- approximation for spheres
 
 
 icosaMeshList : Vec3 -> MeshList
@@ -419,10 +366,6 @@ icosaMeshList clr =
     ]
 
 
-
--- Helper to create a cube vertex list
-
-
 cubeMeshList : MeshList
 cubeMeshList =
     let
@@ -460,10 +403,6 @@ cubeMeshList =
         |> List.concat
 
 
-
--- Cube helper
-
-
 face : Vec3 -> Vec3 -> Vec3 -> Vec3 -> Vec3 -> MeshList
 face color a b c d =
     let
@@ -473,11 +412,6 @@ face color a b c d =
     [ ( vertex a, vertex b, vertex c )
     , ( vertex c, vertex d, vertex a )
     ]
-
-
-
--- Helper to subdivide icosahedrons to
--- make better spheres
 
 
 subdivideProject : Vec3 -> MeshList -> MeshList
@@ -581,11 +515,6 @@ subdivideProject clr mesh =
     List.concat (helper mesh)
 
 
-
--- Creates a simple camera that looks everything from
--- a distance
-
-
 makeOverviewCamera : CanvasDimensions -> Earth -> Hero -> Mat4
 makeOverviewCamera canvasDimensions earth hero =
     Mat4.makeLookAt (vec3 5 0 5)
@@ -594,10 +523,6 @@ makeOverviewCamera canvasDimensions earth hero =
             earth.locationZ
         )
         (vec3 0 1 0)
-
-
-
--- Creates a hero camera, following hero.
 
 
 makeHeroCamera : CanvasDimensions -> Earth -> Hero -> Camera -> Mat4
@@ -616,6 +541,7 @@ makeHeroCamera canvasDimensions earth hero camera =
   
           -- Generate a general rotation matrix that can transform
           -- the hero, the camera and even the up vector.
+
           earthAxis =
               Mat4.transform
                   (Mat4.makeRotate ((23.5 / 180) * pi) (vec3 0 0 1))
@@ -647,6 +573,7 @@ makeHeroCamera canvasDimensions earth hero camera =
                   ]
   
           -- Find out the target location
+
           targetTransformation =
               List.foldl
                   Mat4.mul
@@ -662,6 +589,7 @@ makeHeroCamera canvasDimensions earth hero camera =
           -- Find out the camera location.
           -- Sits behind the hero.
           -- Also apply the user controlled parameters azimoth and elevation.
+
           locStart =
               vec3 0 0 3.0
   
@@ -688,6 +616,7 @@ makeHeroCamera canvasDimensions earth hero camera =
               Mat4.transform cameraTransformation locElv
   
           -- And finally the up direction.
+
           up =
               Mat4.transform rotateAround Vec3.j
       in

@@ -7,11 +7,6 @@ port module Receiver exposing
 import Json.Decode
 
 
-
--- Some types and functions for handling
--- port communication
-
-
 type alias RecvServerValue =
     { earth : RecvServerValueEarth }
 
