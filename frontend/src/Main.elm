@@ -162,19 +162,16 @@ view model =
             case ( gameData.earth, gameData.renderData, gameData.canvasDimensions ) of
                 ( Just earth, Just renderData, Just canvasDimensions ) ->
                     let
+                        fpsFun previous =
+                            String.fromInt <| round (1000 / renderData.elapsed - previous)
+
                         fps =
-                            case renderData.previousElapsed of
-                                Just previousElapsed ->
-                                    String.fromInt <|
-                                        round
-                                            (1000
-                                                / (renderData.elapsed
-                                                    - previousElapsed
-                                                  )
-                                            )
+                            case Maybe.map fpsFun renderData.previousElapsed of
+                                Just val ->
+                                    val
 
                                 Nothing ->
-                                    "-"
+                                    ""
 
                         camera =
                             gameData.camera
