@@ -136,6 +136,24 @@ init flagsMsg =
 -- The view function
 
 
+fpsOverlay : RenderData -> Html msg
+fpsOverlay renderData =
+    let
+        fpsFun previous =
+            round (1000 / (renderData.elapsed - previous))
+        fps = Maybe.map fpsFun renderData.previousElapsed
+            |> Maybe.map String.fromInt
+            |> Maybe.withDefault ""
+    in
+        div
+            [ id "fps-overlay" ]
+            [ span
+                []
+                [ text ("FPS: " ++ fps)
+                ]
+            ]
+
+
 view : Model -> Html Msg
 view model =
     case
@@ -162,17 +180,6 @@ view model =
             case ( gameData.earth, gameData.renderData, gameData.canvasDimensions ) of
                 ( Just earth, Just renderData, Just canvasDimensions ) ->
                     let
-                        fpsFun previous =
-                            String.fromInt <| round (1000 / renderData.elapsed - previous)
-
-                        fps =
-                            case Maybe.map fpsFun renderData.previousElapsed of
-                                Just val ->
-                                    val
-
-                                Nothing ->
-                                    ""
-
                         camera =
                             gameData.camera
 
@@ -180,13 +187,7 @@ view model =
                             gameData.hero
                     in
                     embedInCanvas
-                        [ div
-                            [ id "fps-overlay" ]
-                            [ span
-                                []
-                                [ text ("FPS: " ++ fps)
-                                ]
-                            ]
+                        [ fpsOverlay renderData
                         ]
                         [ Touch.onEnd (PointerEventMsg << TouchUp)
                         , Touch.onStart (PointerEventMsg << TouchDown)
