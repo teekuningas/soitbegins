@@ -1,20 +1,20 @@
 module Common exposing
-    ( ConnectionData
+    ( Camera
+    , CanvasDimensions
+    , ConnectionData
     , ConnectionState(..)
+    , Controller
     , Data
     , DragState(..)
+    , Earth
     , GameData
     , GameState(..)
+    , Hero
     , MeshList
     , Model
     , RenderData
-    , Controller
     , Uniforms
     , Vertex
-    , Camera
-    , Earth
-    , CanvasDimensions
-    , Hero
     , fragmentShader
     , meshPositionMap
     , vertexShader

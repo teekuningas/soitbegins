@@ -12,11 +12,11 @@ module World exposing
 
 import Common
     exposing
-        ( GameData
-        , Camera
-        , Earth
-        , Hero
+        ( Camera
         , CanvasDimensions
+        , Earth
+        , GameData
+        , Hero
         , MeshList
         , Uniforms
         , Vertex
@@ -101,8 +101,8 @@ earthUnif canvasDimensions earth hero camera =
         translation =
             Mat4.translate
                 (vec3 earth.locationX
-                      earth.locationY
-                      earth.locationZ
+                    earth.locationY
+                    earth.locationZ
                 )
                 Mat4.identity
     in
@@ -178,8 +178,8 @@ heroUnif canvasDimensions earth hero camera =
         postTranslation =
             Mat4.translate
                 (vec3 earth.locationX
-                      earth.locationY
-                      earth.locationZ
+                    earth.locationY
+                    earth.locationZ
                 )
                 Mat4.identity
     in
@@ -527,99 +527,95 @@ makeOverviewCamera canvasDimensions earth hero =
 
 makeHeroCamera : CanvasDimensions -> Earth -> Hero -> Camera -> Mat4
 makeHeroCamera canvasDimensions earth hero camera =
-      let
-          azimoth =
-              camera.azimoth
-  
-          elevation =
-              camera.elevation
-  
-          earthLoc =
-              vec3 earth.locationX
-                   earth.locationY
-                   earth.locationZ
-  
-          -- Generate a general rotation matrix that can transform
-          -- the hero, the camera and even the up vector.
+    let
+        azimoth =
+            camera.azimoth
 
-          earthAxis =
-              Mat4.transform
-                  (Mat4.makeRotate ((23.5 / 180) * pi) (vec3 0 0 1))
-                  Vec3.j
-  
-          latitudeAxis =
-              Vec3.cross earthAxis (vec3 1 0 0)
-  
-          alignRotation =
-              Mat4.makeRotate ((23.5 / 180) * pi) (vec3 0 0 1)
-  
-          latitudeRotation =
-              Mat4.makeRotate (pi / 2 - hero.latitude) latitudeAxis
-  
-          longitudeRotation =
-              Mat4.makeRotate hero.longitude earthAxis
-  
-          earthRotationRotation =
-              Mat4.makeRotate earth.rotationTheta earthAxis
-  
-          rotateAround =
-              List.foldl
-                  Mat4.mul
-                  Mat4.identity
-                  [ alignRotation
-                  , latitudeRotation
-                  , longitudeRotation
-                  , earthRotationRotation
-                  ]
-  
-          -- Find out the target location
+        elevation =
+            camera.elevation
 
-          targetTransformation =
-              List.foldl
-                  Mat4.mul
-                  Mat4.identity
-                  [ Mat4.translate (vec3 0 hero.altitude 0) Mat4.identity
-                  , rotateAround
-                  , Mat4.translate earthLoc Mat4.identity
-                  ]
-  
-          targetLocation =
-              Mat4.transform targetTransformation (vec3 0 0 0)
-  
-          -- Find out the camera location.
-          -- Sits behind the hero.
-          -- Also apply the user controlled parameters azimoth and elevation.
+        earthLoc =
+            vec3 earth.locationX
+                earth.locationY
+                earth.locationZ
 
-          locStart =
-              vec3 0 0 3.0
-  
-          locAz =
-              Mat4.transform (Mat4.makeRotate azimoth (vec3 0 1 0)) locStart
-  
-          locElv =
-              Mat4.transform
-                  (Mat4.makeRotate elevation
-                      (Vec3.cross locAz (vec3 0 1 0))
-                  )
-                  locAz
-  
-          cameraTransformation =
-              List.foldl
-                  Mat4.mul
-                  Mat4.identity
-                  [ Mat4.translate (vec3 0 hero.altitude 0) Mat4.identity
-                  , rotateAround
-                  , Mat4.translate earthLoc Mat4.identity
-                  ]
-  
-          cameraLocation =
-              Mat4.transform cameraTransformation locElv
-  
-          -- And finally the up direction.
+        -- Generate a general rotation matrix that can transform
+        -- the hero, the camera and even the up vector.
+        earthAxis =
+            Mat4.transform
+                (Mat4.makeRotate ((23.5 / 180) * pi) (vec3 0 0 1))
+                Vec3.j
 
-          up =
-              Mat4.transform rotateAround Vec3.j
-      in
-      Mat4.makeLookAt cameraLocation
-                      targetLocation
-                      up
+        latitudeAxis =
+            Vec3.cross earthAxis (vec3 1 0 0)
+
+        alignRotation =
+            Mat4.makeRotate ((23.5 / 180) * pi) (vec3 0 0 1)
+
+        latitudeRotation =
+            Mat4.makeRotate (pi / 2 - hero.latitude) latitudeAxis
+
+        longitudeRotation =
+            Mat4.makeRotate hero.longitude earthAxis
+
+        earthRotationRotation =
+            Mat4.makeRotate earth.rotationTheta earthAxis
+
+        rotateAround =
+            List.foldl
+                Mat4.mul
+                Mat4.identity
+                [ alignRotation
+                , latitudeRotation
+                , longitudeRotation
+                , earthRotationRotation
+                ]
+
+        -- Find out the target location
+        targetTransformation =
+            List.foldl
+                Mat4.mul
+                Mat4.identity
+                [ Mat4.translate (vec3 0 hero.altitude 0) Mat4.identity
+                , rotateAround
+                , Mat4.translate earthLoc Mat4.identity
+                ]
+
+        targetLocation =
+            Mat4.transform targetTransformation (vec3 0 0 0)
+
+        -- Find out the camera location.
+        -- Sits behind the hero.
+        -- Also apply the user controlled parameters azimoth and elevation.
+        locStart =
+            vec3 0 0 3.0
+
+        locAz =
+            Mat4.transform (Mat4.makeRotate azimoth (vec3 0 1 0)) locStart
+
+        locElv =
+            Mat4.transform
+                (Mat4.makeRotate elevation
+                    (Vec3.cross locAz (vec3 0 1 0))
+                )
+                locAz
+
+        cameraTransformation =
+            List.foldl
+                Mat4.mul
+                Mat4.identity
+                [ Mat4.translate (vec3 0 hero.altitude 0) Mat4.identity
+                , rotateAround
+                , Mat4.translate earthLoc Mat4.identity
+                ]
+
+        cameraLocation =
+            Mat4.transform cameraTransformation locElv
+
+        -- And finally the up direction.
+        up =
+            Mat4.transform rotateAround Vec3.j
+    in
+    Mat4.makeLookAt cameraLocation
+        targetLocation
+        up

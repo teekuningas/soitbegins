@@ -39,14 +39,13 @@ triangularEarthToMeshVertex triangularMesh =
             if length <= lowlimit then
                 vec3 0 0 1
 
-            else
-                if length >= highlimit then
-                    vec3 0.54 0.27 0.075
+            else if length >= highlimit then
+                vec3 0.54 0.27 0.075
 
-                else
-                    vec3 (factor * 0.54 + (1 - factor) * 0.5)
-                        (factor * 0.27 + (1 - factor) * 1.0)
-                        (factor * 0.075 + (1 - factor) * 0.0)
+            else
+                vec3 (factor * 0.54 + (1 - factor) * 0.5)
+                    (factor * 0.27 + (1 - factor) * 1.0)
+                    (factor * 0.075 + (1 - factor) * 0.0)
 
         posToVertex val =
             let
