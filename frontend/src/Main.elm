@@ -139,10 +139,9 @@ init flagsMsg =
 fpsOverlay : RenderData -> Html msg
 fpsOverlay renderData =
     let
-        fpsFun previous current =
-            round (1000 / (current - previous))
-        fps = renderData.previousElapsed
-            |> Maybe.map (fpsFun renderData.elapsed)
+        fpsFun previous =
+            round (1000 / (renderData.elapsed - previous))
+        fps = Maybe.map fpsFun renderData.previousElapsed
             |> Maybe.map String.fromInt
             |> Maybe.withDefault ""
     in
