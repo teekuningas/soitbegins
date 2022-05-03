@@ -1,138 +1,168 @@
-module Common exposing (Model, 
-                        GameState(..), 
-                        ConnectionState(..), 
-                        DragState(..), 
-                        GameData, 
-                        ConnectionData,
-                        Data,
-                        RenderData,
-                        MeshList, 
-                        Vertex, 
-                        Uniforms, 
-                        viewportSize, 
-                        meshPositionMap, 
-                        vertexShader, 
-                        fragmentShader)
+module Common exposing
+    ( ConnectionData
+    , ConnectionState(..)
+    , Data
+    , DragState(..)
+    , GameData
+    , GameState(..)
+    , MeshList
+    , Model
+    , RenderData
+    , Uniforms
+    , Vertex
+    , Camera
+    , Earth
+    , CanvasDimensions
+    , Hero
+    , fragmentShader
+    , meshPositionMap
+    , vertexShader
+    , viewportSize
+    )
 
 import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector3 as Vec3 exposing (Vec3)
+import WebGL exposing (Mesh, Shader)
 
-import WebGL exposing (Shader, Mesh)
 
-
-viewportSize : (Int, Int)
-viewportSize = (800, 800)
+viewportSize : ( Int, Int )
+viewportSize =
+    ( 800, 800 )
 
 
 type alias Model =
-  { gameState : GameState,
-  , connectionState : ConnectionState,
-  , data : Data
-  }
-
-type alias Data = 
-  { earthMesh : Maybe (Mesh Vertex)
-  }
+    { gameState : GameState
+    , connectionState : ConnectionState
+    , data : Data
+    }
 
 
-type GameState = MainMenu | FlightMode GameData | InitializationFailed
+type alias Data =
+    { earthMesh : Maybe (Mesh Vertex)
+    }
 
-type alias GameData = 
-  { earth : Maybe Earth
-  , camera : Camera
-  , controller : Controller
-  , hero : Hero
-  , renderData : Maybe RenderData
-  , canvasDimensions : Maybe CanvasDimensions
-  }
+
+type GameState
+    = MainMenu
+    | FlightMode GameData
+    | InitializationFailed
+
+
+type alias GameData =
+    { earth : Maybe Earth
+    , camera : Camera
+    , controller : Controller
+    , hero : Hero
+    , renderData : Maybe RenderData
+    , canvasDimensions : Maybe CanvasDimensions
+    }
+
 
 type alias CanvasDimensions =
-  { width : Int
-  , height : Int
-  }
-
-type alias Hero = 
-  { altitude : Float 
-  , canvasDimensions : { width: Int, height: Int }
-  , latitude : Float
-  , longitude : Float
-  , rotationTheta : Float 
-  , power : Float
-  }
-
-type alias Earth = 
-  { locationX : Float
-  , locationY : Float
-  , locationZ : Float
-  , rotationTheta : Float
-  }
-
-type alias Camera = 
-  { azimoth : Float
-  , elevation : Float
-  }
-
-type alias RenderData = 
-  {
-  , elapsed : Float
-  , elapsedPrevious : Maybe Float
-  }
+    { width : Int
+    , height : Int
+    }
 
 
-type DragState = Drag | NoDrag
-
-type alias Controller = 
-  { dragState : DragState 
-  , pointerOffset : { x: Int, y: Int }
-  , previousOffset : { x: Int, y: Int }
-  , downButtonDown : Bool
-  , upButtonDown : Bool
-  }
+type alias Hero =
+    { altitude : Float
+    , latitude : Float
+    , longitude : Float
+    , rotationTheta : Float
+    , power : Float
+    }
 
 
-type ConnectionState = Connected ConnectionData | Disconnected
+type alias Earth =
+    { locationX : Float
+    , locationY : Float
+    , locationZ : Float
+    , rotationTheta : Float
+    }
 
-type alias ConnectionData = 
-  { earth : Maybe { msgEarth : Earth
-                  , previousMsgEarth : Earth }
-  , elapsed : Maybe { msgElapsed : Float
-                    , previousMsgElapsed : Maybe Float }
-  }
+
+type alias Camera =
+    { azimoth : Float
+    , elevation : Float
+    }
+
+
+type alias RenderData =
+    { elapsed : Float
+    , elapsedPrevious : Maybe Float
+    }
+
+
+type DragState
+    = Drag
+    | NoDrag
+
+
+type alias Controller =
+    { dragState : DragState
+    , pointerOffset : { x : Int, y : Int }
+    , previousOffset : { x : Int, y : Int }
+    , downButtonDown : Bool
+    , upButtonDown : Bool
+    }
+
+
+type ConnectionState
+    = Connected ConnectionData
+    | Disconnected
+
+
+type alias ConnectionData =
+    { earth :
+        Maybe
+            { msgEarth : Earth
+            , previousMsgEarth : Earth
+            }
+    , elapsed :
+        Maybe
+            { msgElapsed : Float
+            , previousMsgElapsed : Maybe Float
+            }
+    }
+
 
 
 -- WebGL-related types
 
 
 type alias Uniforms =
-  { preScale : Mat4
-  , preRotation : Mat4
-  , preTranslation : Mat4
-  , scale : Mat4
-  , rotation : Mat4
-  , translation : Mat4
-  , postScale : Mat4
-  , postRotation : Mat4
-  , postTranslation : Mat4
-  , perspective : Mat4
-  , camera : Mat4
-  , shade : Float
-  }
+    { preScale : Mat4
+    , preRotation : Mat4
+    , preTranslation : Mat4
+    , scale : Mat4
+    , rotation : Mat4
+    , translation : Mat4
+    , postScale : Mat4
+    , postRotation : Mat4
+    , postTranslation : Mat4
+    , perspective : Mat4
+    , camera : Mat4
+    , shade : Float
+    }
 
 
 type alias Vertex =
-  { color : Vec3
-  , position : Vec3
-  }
+    { color : Vec3
+    , position : Vec3
+    }
 
 
-type alias MeshList = List (Vertex, Vertex, Vertex)
+type alias MeshList =
+    List ( Vertex, Vertex, Vertex )
+
 
 
 -- Vertex shader
 
+
 vertexShader : Shader Vertex Uniforms { vcolor : Vec3 }
 vertexShader =
-  [glsl|
+    [glsl|
      attribute vec3 position;
      attribute vec3 color;
      uniform mat4 perspective;
@@ -157,11 +187,13 @@ vertexShader =
   |]
 
 
+
 -- Fragment shader
+
 
 fragmentShader : Shader {} Uniforms { vcolor : Vec3 }
 fragmentShader =
-  [glsl|
+    [glsl|
     precision mediump float;
     uniform float shade;
     varying vec3 vcolor;
@@ -171,16 +203,20 @@ fragmentShader =
   |]
 
 
+
 -- A utility map for Vertex positions
+
 
 meshPositionMap : (Vec3 -> Vec3) -> MeshList -> MeshList
 meshPositionMap fun mesh =
-  case mesh of
-    [] ->
-      []
-    (v1, v2, v3) :: xs ->
-      [ ( { v1 | position = fun v1.position }
-        , { v2 | position = fun v2.position }
-        , { v3 | position = fun v3.position } ) ] ++ (meshPositionMap fun xs)
+    case mesh of
+        [] ->
+            []
 
-
+        ( v1, v2, v3 ) :: xs ->
+            [ ( { v1 | position = fun v1.position }
+              , { v2 | position = fun v2.position }
+              , { v3 | position = fun v3.position }
+              )
+            ]
+                ++ meshPositionMap fun xs
