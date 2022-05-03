@@ -10,6 +10,7 @@
     freetype
     gcc
     glib
+    nodejs
     zlib
     xorg.libX11
     xorg.libXrender
