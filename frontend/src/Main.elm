@@ -48,6 +48,7 @@ import Task
 import Time
 import Update exposing (updateGameData)
 import WebGL exposing (Mesh)
+import Widgets exposing (fpsOverlay)
 import World
     exposing
         ( axisMesh
@@ -134,26 +135,6 @@ init flagsMsg =
 
 
 -- The view function
-
-
-fpsOverlay : RenderData -> Html msg
-fpsOverlay renderData =
-    let
-        fpsFun previous =
-            round (1000 / (renderData.elapsed - previous))
-
-        fps =
-            Maybe.map fpsFun renderData.previousElapsed
-                |> Maybe.map String.fromInt
-                |> Maybe.withDefault ""
-    in
-    div
-        [ id "fps-overlay" ]
-        [ span
-            []
-            [ text ("FPS: " ++ fps)
-            ]
-        ]
 
 
 view : Model -> Html Msg
