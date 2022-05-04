@@ -320,34 +320,21 @@ update msg model =
             in
             case model.connectionState of
                 Connected connectionData ->
-                    case connectionData.earth of
-                        Just earthData ->
-                            let
-                                newEarth =
-                                    { msgEarth = msgEarth
-                                    , previousMsgEarth = earthData.msgEarth
-                                    }
+                    let
+                        newEarth =
+                            { msgEarth = msgEarth
+                            , previousMsgEarth =
+                                connectionData.earth
+                                    |> Maybe.map .msgEarth
+                                    |> Maybe.withDefault msgEarth
+                            }
 
-                                newConnectionData =
-                                    { connectionData | earth = Just newEarth }
-                            in
-                            ( { model | connectionState = Connected newConnectionData }
-                            , Task.perform UpdateTimeMsg Time.now
-                            )
-
-                        Nothing ->
-                            let
-                                newEarth =
-                                    { msgEarth = msgEarth
-                                    , previousMsgEarth = msgEarth
-                                    }
-
-                                newConnectionData =
-                                    { connectionData | earth = Just newEarth }
-                            in
-                            ( { model | connectionState = Connected newConnectionData }
-                            , Task.perform UpdateTimeMsg Time.now
-                            )
+                        newConnectionData =
+                            { connectionData | earth = Just newEarth }
+                    in
+                    ( { model | connectionState = Connected newConnectionData }
+                    , Task.perform UpdateTimeMsg Time.now
+                    )
 
                 Disconnected ->
                     let
@@ -370,35 +357,22 @@ update msg model =
                     let
                         msgElapsed =
                             toFloat (Time.posixToMillis dt)
+
+                        newElapsedData =
+                            { msgElapsed = msgElapsed
+                            , previousMsgElapsed =
+                                connectionData.elapsed
+                                    |> Maybe.map .msgElapsed
+                                    |> Maybe.withDefault msgElapsed
+                                    |> Just
+                            }
+
+                        newConnectionData =
+                            { connectionData | elapsed = Just newElapsedData }
                     in
-                    case connectionData.elapsed of
-                        Just elapsedData ->
-                            let
-                                newElapsedData =
-                                    { msgElapsed = msgElapsed
-                                    , previousMsgElapsed = Just elapsedData.msgElapsed
-                                    }
-
-                                newConnectionData =
-                                    { connectionData | elapsed = Just newElapsedData }
-                            in
-                            ( { model | connectionState = Connected newConnectionData }
-                            , Cmd.none
-                            )
-
-                        Nothing ->
-                            let
-                                newElapsedData =
-                                    { msgElapsed = msgElapsed
-                                    , previousMsgElapsed = Just msgElapsed
-                                    }
-
-                                newConnectionData =
-                                    { connectionData | elapsed = Just newElapsedData }
-                            in
-                            ( { model | connectionState = Connected newConnectionData }
-                            , Cmd.none
-                            )
+                    ( { model | connectionState = Connected newConnectionData }
+                    , Cmd.none
+                    )
 
                 Disconnected ->
                     ( model, Cmd.none )
@@ -470,23 +444,14 @@ update msg model =
                                                     case elapsedData.previousMsgElapsed of
                                                         Just previousMsgElapsed ->
                                                             let
-                                                                msgElapsed =
-                                                                    elapsedData.msgElapsed
-
-                                                                msgEarth =
-                                                                    earthData.msgEarth
-
-                                                                previousMsgEarth =
-                                                                    earthData.previousMsgEarth
-
                                                                 updatedGameData =
                                                                     updateGameData
                                                                         elapsed
                                                                         previousElapsed
-                                                                        msgElapsed
+                                                                        elapsedData.msgElapsed
                                                                         previousMsgElapsed
-                                                                        msgEarth
-                                                                        previousMsgEarth
+                                                                        earthData.msgEarth
+                                                                        earthData.previousMsgEarth
                                                                         gameData
 
                                                                 newGameData =
@@ -527,11 +492,8 @@ update msg model =
                     case event of
                         MouseUp struct ->
                             let
-                                controller =
-                                    gameData.controller
-
                                 newController =
-                                    handleUp controller
+                                    handleUp gameData.controller
 
                                 newGameData =
                                     { gameData | controller = newController }
@@ -540,14 +502,11 @@ update msg model =
 
                         MouseDown struct ->
                             let
-                                offsetPos =
-                                    struct.offsetPos
-
-                                canvasDimensions =
-                                    gameData.canvasDimensions
-
                                 newController =
-                                    handleDown gameData.controller offsetPos canvasDimensions
+                                    handleDown
+                                        gameData.controller
+                                        struct.offsetPos
+                                        gameData.canvasDimensions
 
                                 newGameData =
                                     { gameData | controller = newController }
@@ -556,17 +515,11 @@ update msg model =
 
                         MouseMove struct ->
                             let
-                                offsetPos =
-                                    struct.offsetPos
-
-                                controller =
-                                    gameData.controller
-
-                                camera =
-                                    gameData.camera
-
                                 ( newController, newCamera ) =
-                                    handleMove controller camera offsetPos
+                                    handleMove
+                                        gameData.controller
+                                        gameData.camera
+                                        struct.offsetPos
 
                                 newGameData =
                                     { gameData
@@ -604,14 +557,11 @@ update msg model =
 
                                 Just x ->
                                     let
-                                        offsetPos =
-                                            x.clientPos
-
-                                        canvasDimensions =
-                                            gameData.canvasDimensions
-
                                         newController =
-                                            handleDown gameData.controller offsetPos canvasDimensions
+                                            handleDown
+                                                gameData.controller
+                                                x.clientPos
+                                                gameData.canvasDimensions
 
                                         newGameData =
                                             { gameData | controller = newController }
@@ -625,17 +575,11 @@ update msg model =
 
                                 Just x ->
                                     let
-                                        offsetPos =
-                                            x.clientPos
-
-                                        controller =
-                                            gameData.controller
-
-                                        camera =
-                                            gameData.camera
-
                                         ( newController, newCamera ) =
-                                            handleMove controller camera offsetPos
+                                            handleMove
+                                                gameData.controller
+                                                gameData.camera
+                                                x.clientPos
 
                                         newGameData =
                                             { gameData
