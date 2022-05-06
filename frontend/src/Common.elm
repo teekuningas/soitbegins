@@ -42,13 +42,15 @@ type Model
 
 type alias InitData =
     { earthMesh : Maybe (Mesh Vertex)
+    , canvasDimensions : Maybe CanvasDimensions
     }
 
 
 type alias GameLoaderData =
     { earth : Maybe Earth
-    , renderData : Maybe RenderData 
+    , renderData : Maybe PreparingRenderData 
     , connectionData : Maybe PreparingConnectionData
+    , canvasDimensions : CanvasDimensions
     , earthMesh : EarthMesh
     }
 
@@ -67,9 +69,8 @@ type alias GameData =
 
 type alias MenuData 
     { earthMesh : Mesh Vertex
-    , 
+    , canvasDimensions : CanvasDimensions
     }
-
 
 
 type alias CanvasDimensions =
@@ -101,10 +102,17 @@ type alias Camera =
     }
 
 
-type alias RenderData =
+type alias PreparingRenderData =
     { elapsed : Float
     , previousElapsed : Maybe Float
     }
+    
+type alias RenderData =
+    { elapsed : Float
+    , previousElapsed : Float
+    }
+
+
 
 
 type DragState

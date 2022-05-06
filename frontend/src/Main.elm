@@ -277,36 +277,6 @@ update msg model =
                 _ ->
                     (model, Cmd.none)
 
---      StartGameMsg ->
---          let
---              gameData =
---                  { earth = Nothing
---                  , camera =
---                      { azimoth = 0
---                      , elevation = 0
---                      }
---                  , controller =
---                      { dragState = NoDrag
---                      , pointerOffset = { x = 0, y = 0 }
---                      , previousOffset = { x = 0, y = 0 }
---                      , upButtonDown = False
---                      , downButtonDown = False
---                      }
---                  , hero =
---                      { altitude = 11
---                      , latitude = -0.3
---                      , longitude = 0.0
---                      , rotationTheta = 0
---                      , power = 1
---                      }
---                  , canvasDimensions = Nothing
---                  , renderData = Nothing
---                  }
---          in
---          ( { model | gameState = FlightMode gameData }
---          , Task.attempt ViewportMsg (getViewportOf "webgl-canvas")
---          )
-
         RecvServerMsgError message ->
             case model of
                 InGameLoader gameLoaderData ->
@@ -461,18 +431,101 @@ update msg model =
                 _ ->
                     (model, Cmd.none)
 
-        -- Continue here.
-
-
         TimeElapsed dt ->
-            case model.gameState of
-                MainMenu ->
-                    ( model, Cmd.none )
+            case model of
 
-                Termination _ ->
-                    ( model, Cmd.none )
+                InGameLoader gameLoaderData ->
+                    case (gameLoaderData.renderData, gameLoaderData.earth, gameLoaderData.connectionData) of
+                        (Just renderData, Just earth, Just connectionData) ->
+                            case connectionData.elapsed.previousElapsed of
+                                Just _ ->
+                                    let
+                                        elapsed =
+                                            toFloat (Time.posixToMillis dt)
 
-                FlightMode gameData ->
+                                        newGameData =
+                                            { earth = earth
+                                            , camera =
+                                              { azimoth = 0
+                                              , elevation = 0
+                                              }
+                                            , controller =
+                                              { dragState = NoDrag
+                                              , pointerOffset = { x = 0, y = 0 }
+                                              , previousOffset = { x = 0, y = 0 }
+                                              , upButtonDown = False
+                                              , downButtonDown = False
+                                              }
+                                           , hero =
+                                              { altitude = 11
+                                              , latitude = -0.3
+                                              , longitude = 0.0
+                                              , rotationTheta = 0
+                                              , power = 1
+                                              }
+                                           , renderData = { elapsed = elapsed
+                                                          , perviousElapsed = renderData.elapsed }
+                                           , canvasDimensions = gameLoaderData.canvasDimensions
+                                           , connectionData = 
+                                               { earth = { earthMsg = connectionData.earth.earthMsg
+                                                         , previousEarthMsg = Just connectionData.earth.previousEarthMsg
+                                                         }
+                                               , elapsed = { elapsedMsg = connectionData.elapsed.elapsedMsg
+                                                           , previousElapsedMsg = Just connectionData.elapsed.previousElapsedMsg
+                                                           }
+                                               }
+                                           , earthMesh = gameLoaderData.earthMesh
+                                           }
+                                    in
+                                    ( InGame newGameData
+                                    , Task.attempt ViewportMsg (getViewportOf "webgl-canvas")
+                                    )
+                                Nothing ->
+                                    let newRenderData =
+                                        { elapsed = elapsed
+                                        , previousElapsed = Just renderData.elapsed
+                                        }
+        
+                                        newGameLoaderData =
+                                            { gameLoaderData | renderData = Just newRenderData }
+                                        in
+                                        ( InGameLoader newGameLoaderData
+                                        , Cmd.none
+                                        )
+
+                        (Just renderData, _, _) ->
+                            let newRenderData =
+                                { elapsed = elapsed
+                                , previousElapsed = Just renderData.elapsed
+                                }
+
+                                newGameLoaderData =
+                                    { gameLoaderData | renderData = Just newRenderData }
+                                in
+                                ( InGameLoader newGameLoaderData
+                                , Cmd.none
+                                )
+
+
+                        Nothing ->
+                            let
+                                newRenderData =
+                                    { elapsed = elapsed
+                                    , previousElapsed = Nothing
+                                    }
+
+                                newGameLoaderData =
+                                    { gameLoaderData | renderData = Just newRenderData }
+                                           
+                            in
+                            ( InGameLoader newGameLoaderData
+                            , Cmd.none
+                            )
+
+                -- Continue here! Ja muista lisätä CanvasDimensions
+
+
+                InGame gameData ->
                     let
                         elapsed =
                             toFloat (Time.posixToMillis dt)
@@ -565,6 +618,11 @@ update msg model =
                                                     ( { model | gameState = FlightMode newGameData }
                                                     , Cmd.none
                                                     )
+                _ -> 
+                    (model, Cmd.none)
+
+
+
 
         -- Here mouse and touch related events are handled
         PointerEventMsg event ->
