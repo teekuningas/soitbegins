@@ -10,7 +10,8 @@ import Common
         , ConnectionState(..)
         , DragState(..)
         , GameData
-        , GameState(..)
+        , LoaderData
+        , MenuData
         , Model
         , RenderData
         , Vertex
@@ -94,44 +95,34 @@ init flagsMsg =
         flags =
             Json.Decode.decodeValue Flags.flagsDecoder flagsMsg
 
-        gameState =
-            case flags of
-                Ok value ->
-                    MainMenu
+    in
+    case flags of 
+        Err _ ->
+            Termination "Could not read environment variables"
 
-                Err _ ->
-                    InitializationFailed
+        Ok value ->
+            let 
 
-        modelEarth =
-            case flags of
-                Ok value ->
+                initData = 
+                    { earthMesh : Nothing
+                    }
+
+                modelEarthUrl =
                     value.modelEarth
 
-                Err _ ->
-                    ""
-
-        cmd =
-            case flags of
-                Ok value ->
+                cmd =
                     Http.get
-                        { url = modelEarth
+                        { url = modelEarthUrl
                         , expect =
-                            expectObj
-                                EarthMeshLoaded
-                                meters
-                                ObjLoader.earthMeshDecoder
+                              expectObj
+                              EarthMeshLoaded
+                              meters
+                              ObjLoader.earthMeshDecoder
                         }
 
-                Err _ ->
-                    Cmd.none
-    in
-    ( { gameState = gameState
-      , connectionState = Disconnected
-      , data = { earthMesh = Nothing }
-      }
-    , cmd
-    )
-
+            in
+            ( Initialization initData
+            , cmd )
 
 
 -- The view function
@@ -139,16 +130,22 @@ init flagsMsg =
 
 view : Model -> Html Msg
 view model =
-    case
-        ( model.gameState
-        , model.connectionState
-        , model.data.earthMesh
-        )
+    case model
     of
-        ( InitializationFailed, _, _ ) ->
-            div [] [ text "Initialization failed" ]
+        ( Termination msg) ->
+            div [] [ text msg ]
 
-        ( MainMenu, _, _ ) ->
+        ( Initialization _ ) ->
+            embedInCanvas
+                [ div
+                    [ class "initialization-container" ]
+                    [ p [] [ text "Loading assets.." ]
+                    ]
+                ]
+                []
+                []
+
+        ( MainMenu _ ) ->
             embedInCanvas
                 [ div
                     [ class "main-menu-container" ]
@@ -159,95 +156,92 @@ view model =
                 []
                 []
 
-        ( FlightMode gameData, Connected connectionData, Just earthMesh ) ->
-            case ( gameData.earth, gameData.renderData, gameData.canvasDimensions ) of
-                ( Just earth, Just renderData, Just canvasDimensions ) ->
-                    let
-                        camera =
-                            gameData.camera
-
-                        hero =
-                            gameData.hero
-                    in
-                    embedInCanvas
-                        [ fpsOverlay renderData
-                        ]
-                        [ Touch.onEnd (PointerEventMsg << TouchUp)
-                        , Touch.onStart (PointerEventMsg << TouchDown)
-                        , Touch.onMove (PointerEventMsg << TouchMove)
-                        , Mouse.onUp (PointerEventMsg << MouseUp)
-                        , Mouse.onDown (PointerEventMsg << MouseDown)
-                        , Mouse.onMove (PointerEventMsg << MouseMove)
-                        ]
-                        [ WebGL.entity
-                            vertexShader
-                            fragmentShader
-                            heroMesh
-                            (heroUnif canvasDimensions earth hero camera)
-                        , WebGL.entity
-                            vertexShader
-                            fragmentShader
-                            fireMesh
-                            (fireUnif canvasDimensions earth hero camera)
-                        , WebGL.entity
-                            vertexShader
-                            fragmentShader
-                            earthMesh
-                            (earthUnif canvasDimensions earth hero camera)
-                        , WebGL.entity
-                            vertexShader
-                            fragmentShader
-                            axisMesh
-                            (axisUnif canvasDimensions earth hero camera)
-                        , WebGL.entity
-                            vertexShader
-                            fragmentShader
-                            sunMesh
-                            (sunUnif canvasDimensions earth hero camera)
-                        , WebGL.entity
-                            vertexShader
-                            fragmentShader
-                            controllerMeshUp
-                            (controllerUnif canvasDimensions
-                                (if gameData.controller.upButtonDown then
-                                    1.0
-
-                                 else
-                                    0.5
-                                )
-                            )
-                        , WebGL.entity
-                            vertexShader
-                            fragmentShader
-                            controllerMeshDown
-                            (controllerUnif canvasDimensions
-                                (if gameData.controller.downButtonDown then
-                                    1.0
-
-                                 else
-                                    0.5
-                                )
-                            )
-                        ]
-
-                ( _, _, _ ) ->
-                    embedInCanvas
-                        [ div
-                            [ class "loading-screen" ]
-                            [ span [] [ text "Loading.." ] ]
-                        ]
-                        []
-                        []
-
-        ( FlightMode _, _, _ ) ->
+        ( InGameLoader _ ) ->
             embedInCanvas
                 [ div
-                    [ class "loading-screen" ]
-                    [ span [] [ text "Loading.." ] ]
+                    [ class "initialization-container" ]
+                    [ p [] [ text "Loading game.." ]
+                    ]
                 ]
                 []
                 []
 
+        ( InGame gameData ) ->
+            let 
+                earth = 
+                    gameData.earth
+
+                renderData =
+                    gameData.renderData
+
+                canvasDimensions =
+                    gameData.canvasDimensions
+
+                camera = 
+                    gameData.camera
+
+                hero = 
+                    gameData.hero
+
+            in
+            embedInCanvas
+                [ fpsOverlay renderData
+                ]
+                [ Touch.onEnd (PointerEventMsg << TouchUp)
+                , Touch.onStart (PointerEventMsg << TouchDown)
+                , Touch.onMove (PointerEventMsg << TouchMove)
+                , Mouse.onUp (PointerEventMsg << MouseUp)
+                , Mouse.onDown (PointerEventMsg << MouseDown)
+                , Mouse.onMove (PointerEventMsg << MouseMove)
+                ]
+                [ WebGL.entity
+                    vertexShader
+                    fragmentShader
+                    heroMesh
+                    (heroUnif canvasDimensions earth hero camera)
+                , WebGL.entity
+                    vertexShader
+                    fragmentShader
+                    fireMesh
+                    (fireUnif canvasDimensions earth hero camera)
+                , WebGL.entity
+                    vertexShader
+                    fragmentShader
+                    earthMesh
+                    (earthUnif canvasDimensions earth hero camera)
+                , WebGL.entity
+                    vertexShader
+                    fragmentShader
+                    axisMesh
+                    (axisUnif canvasDimensions earth hero camera)
+                , WebGL.entity
+                    vertexShader
+                    fragmentShader
+                    sunMesh
+                    (sunUnif canvasDimensions earth hero camera)
+                , WebGL.entity
+                    vertexShader
+                    fragmentShader
+                    controllerMeshUp
+                    (controllerUnif canvasDimensions
+                        (if gameData.controller.upButtonDown then
+                            1.0
+                         else
+                            0.5
+                        )
+                    )
+                , WebGL.entity
+                    vertexShader
+                    fragmentShader
+                    controllerMeshDown
+                    (controllerUnif canvasDimensions
+                        (if gameData.controller.downButtonDown then
+                            1.0
+                         else
+                            0.5
+                        )
+                    )
+                ]
 
 
 -- Subscriptions
@@ -382,7 +376,7 @@ update msg model =
                 MainMenu ->
                     ( model, Cmd.none )
 
-                InitializationFailed ->
+                Termination _ ->
                     ( model, Cmd.none )
 
                 FlightMode gameData ->
@@ -485,7 +479,7 @@ update msg model =
                 MainMenu ->
                     ( model, Cmd.none )
 
-                InitializationFailed ->
+                Termination _ ->
                     ( model, Cmd.none )
 
                 FlightMode gameData ->
@@ -618,7 +612,7 @@ update msg model =
                         MainMenu ->
                             ( model, Cmd.none )
 
-                        InitializationFailed ->
+                        Termination _ ->
                             ( model, Cmd.none )
 
                 Err errMsg ->

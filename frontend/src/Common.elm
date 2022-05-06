@@ -2,13 +2,14 @@ module Common exposing
     ( Camera
     , CanvasDimensions
     , ConnectionData
-    , ConnectionState(..)
+    , PreparingConnectionData
     , Controller
     , Data
     , DragState(..)
     , Earth
     , GameData
-    , GameState(..)
+    , InitData
+    , MenuData
     , Hero
     , MeshList
     , Model
@@ -31,32 +32,44 @@ viewportSize =
     ( 800, 800 )
 
 
-type alias Model =
-    { gameState : GameState
-    , connectionState : ConnectionState
-    , data : Data
-    }
+type Model 
+    = Initialization InitData
+    | MainMenu MenuData 
+    | InGameLoader GameLoaderData
+    | InGame GameData 
+    | Termination String
 
 
-type alias Data =
+type alias InitData =
     { earthMesh : Maybe (Mesh Vertex)
     }
 
 
-type GameState
-    = MainMenu
-    | FlightMode GameData
-    | InitializationFailed
+type alias GameLoaderData =
+    { earth : Maybe Earth
+    , renderData : Maybe RenderData 
+    , connectionState : Maybe PreparingConnectionData
+    , earthMesh : EarthMesh
+    }
 
 
 type alias GameData =
-    { earth : Maybe Earth
+    { earth : Earth
     , camera : Camera
     , controller : Controller
     , hero : Hero
-    , renderData : Maybe RenderData
-    , canvasDimensions : Maybe CanvasDimensions
+    , renderData : RenderData
+    , canvasDimensions : CanvasDimensions
+    , connectionData : ConnectionData
+    , earthMesh : Mesh Vertex
     }
+
+
+type alias MenuData 
+    { earthMesh : Mesh Vertex
+    , 
+    }
+
 
 
 type alias CanvasDimensions =
@@ -108,12 +121,19 @@ type alias Controller =
     }
 
 
-type ConnectionState
-    = Connected ConnectionData
-    | Disconnected
+type alias ConnectionData = 
+    { earth :
+          { msgEarth : Earth
+          , previousMsgEarth : Earth
+          }
+    , elapsed 
+          { msgElapsed : Float
+          , previousMsgElapsed : Float
+          }
+    }
 
 
-type alias ConnectionData =
+type alias PreparingConnectionData =
     { earth :
         Maybe
             { msgEarth : Earth
