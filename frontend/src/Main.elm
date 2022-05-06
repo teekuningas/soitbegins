@@ -264,112 +264,205 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         StartGameMsg ->
-            let
-                gameData =
-                    { earth = Nothing
-                    , camera =
-                        { azimoth = 0
-                        , elevation = 0
+            case model of 
+                MainMenu menuData ->
+
+                    gameLoaderData =
+                        { earthMesh = menuData.earthMesh
+                        , renderData = Nothing
+                        , connectionData = Nothing
+                        , earth = Nothing
                         }
-                    , controller =
-                        { dragState = NoDrag
-                        , pointerOffset = { x = 0, y = 0 }
-                        , previousOffset = { x = 0, y = 0 }
-                        , upButtonDown = False
-                        , downButtonDown = False
-                        }
-                    , hero =
-                        { altitude = 11
-                        , latitude = -0.3
-                        , longitude = 0.0
-                        , rotationTheta = 0
-                        , power = 1
-                        }
-                    , canvasDimensions = Nothing
-                    , renderData = Nothing
-                    }
-            in
-            ( { model | gameState = FlightMode gameData }
-            , Task.attempt ViewportMsg (getViewportOf "webgl-canvas")
-            )
+
+                _ ->
+                    (model, Cmd.none)
+
+--      StartGameMsg ->
+--          let
+--              gameData =
+--                  { earth = Nothing
+--                  , camera =
+--                      { azimoth = 0
+--                      , elevation = 0
+--                      }
+--                  , controller =
+--                      { dragState = NoDrag
+--                      , pointerOffset = { x = 0, y = 0 }
+--                      , previousOffset = { x = 0, y = 0 }
+--                      , upButtonDown = False
+--                      , downButtonDown = False
+--                      }
+--                  , hero =
+--                      { altitude = 11
+--                      , latitude = -0.3
+--                      , longitude = 0.0
+--                      , rotationTheta = 0
+--                      , power = 1
+--                      }
+--                  , canvasDimensions = Nothing
+--                  , renderData = Nothing
+--                  }
+--          in
+--          ( { model | gameState = FlightMode gameData }
+--          , Task.attempt ViewportMsg (getViewportOf "webgl-canvas")
+--          )
 
         RecvServerMsgError message ->
-            case model.connectionState of
-                Connected connectionData ->
-                    ( { model | connectionState = Disconnected }
-                    , Cmd.none
-                    )
+            case model of
+                InGameLoader gameLoaderData ->
+                    let
+                        newGameLoaderData = 
+                            { gameLoaderData | connectionData = Nothing }
+                    in
+                    ( InGameLoader gameLoaderData, Cmd.none )
 
-                Disconnected ->
+                InGame gameData ->
+                    let 
+                        newGameLoaderData =
+                            { earth = Nothing
+                            , renderData = Just gameData.renderData
+                            , connectionData = Nothing
+                            , earthMesh = gameData.earthMesh }
+                    in
+                    ( InGameLoader newGameLoaderData, Cmd.none)
+
+                _ ->
                     ( model, Cmd.none )
 
         RecvServerMsg message ->
-            let
-                msgEarth =
-                    { locationX = message.earth.locationX
-                    , locationY = message.earth.locationY
-                    , locationZ = message.earth.locationZ
-                    , rotationTheta = message.earth.rotationTheta
-                    }
-            in
-            case model.connectionState of
-                Connected connectionData ->
+            case model of
+                InGameLoader gameLoaderData ->
                     let
+                        msgEarth =
+                            { locationX = message.earth.locationX
+                            , locationY = message.earth.locationY
+                            , locationZ = message.earth.locationZ
+                            , rotationTheta = message.earth.rotationTheta
+                            }
+                    in
+                    case model.connectionData of
+                        Just preparingConnectionData ->
+                            let
+                                newEarth =
+                                    { msgEarth = msgEarth
+                                    , previousMsgEarth =
+                                        preparingConnectionData.earth
+                                            |> Maybe.map .msgEarth
+                                            |> Maybe.withDefault msgEarth
+                                    }
+
+                                newConnectionData =
+                                    { preparingConnectionData | earth = Just newEarth }
+
+                                newGameLoaderData = { gameLoaderData | connectionData = Just newConnectionData }
+                            in
+                            ( InGameLoader newGameLoaderData
+                            , Task.perform UpdateTimeMsg Time.now
+                            )
+
+
+                        Nothing ->
+
+                            let
+                                newConnectionData =
+                                    { earth =
+                                        Just
+                                            { msgEarth = msgEarth
+                                            , previousMsgEarth = Nothing
+                                            }
+                                    , elapsed = Nothing
+                                    }
+
+                                newGameLoaderData = { gameLoaderData | connectionData = Just newConnectionData }
+                            in
+                            ( InGameLoader gameLoaderData
+                            , Task.perform UpdateTimeMsg Time.now
+                            )
+
+
+                InGame gameData ->
+                    let
+                        msgEarth =
+                            { locationX = message.earth.locationX
+                            , locationY = message.earth.locationY
+                            , locationZ = message.earth.locationZ
+                            , rotationTheta = message.earth.rotationTheta
+                            }
+
                         newEarth =
                             { msgEarth = msgEarth
                             , previousMsgEarth =
-                                connectionData.earth
-                                    |> Maybe.map .msgEarth
-                                    |> Maybe.withDefault msgEarth
+                                preparingConnectionData.earth
                             }
 
                         newConnectionData =
-                            { connectionData | earth = Just newEarth }
-                    in
-                    ( { model | connectionState = Connected newConnectionData }
-                    , Task.perform UpdateTimeMsg Time.now
-                    )
+                            { preparingConnectionData | earth = newEarth }
 
-                Disconnected ->
-                    let
-                        newConnectionData =
-                            { earth =
-                                Just
-                                    { msgEarth = msgEarth
-                                    , previousMsgEarth = msgEarth
-                                    }
-                            , elapsed = Nothing
-                            }
-                    in
-                    ( { model | connectionState = Connected newConnectionData }
-                    , Task.perform UpdateTimeMsg Time.now
-                    )
+                        newGameData = { gameData | connectionData = newConnectionData }
+                        in
+                        ( InGame newGameData
+                        , Task.perform UpdateTimeMsg Time.now
+                        )
+
+                _ ->
+                    (model, Cmd.none)
 
         UpdateTimeMsg dt ->
-            case model.connectionState of
-                Connected connectionData ->
+            case model of
+                InGameLoader gameLoaderData ->
+                    case model.connectionData of
+                        Just preparingconnectionData ->
+                            let
+                                msgElapsed =
+                                    toFloat (Time.posixToMillis dt)
+
+                                newElapsedData =
+                                    { msgElapsed = msgElapsed
+                                    , previousMsgElapsed =
+                                        connectionData.elapsed
+                                            |> Maybe.map .msgElapsed
+                                            |> Maybe.withDefault msgElapsed
+                                            |> Just
+                                    }
+
+                                newConnectionData =
+                                    { connectionData | elapsed = Just newElapsedData }
+
+                                newGameLoaderData = { gameLoaderData | connectionData = Just newConnectionData }
+                            in
+                            ( InGameLoader newGameLoaderData
+                            , Cmd.none
+                            )
+
+                        Nothing ->
+                            ( model, Cmd.none )
+
+
+                InGame gameData ->
                     let
                         msgElapsed =
                             toFloat (Time.posixToMillis dt)
 
                         newElapsedData =
-                            { msgElapsed = msgElapsed
-                            , previousMsgElapsed =
-                                connectionData.elapsed
-                                    |> Maybe.map .msgElapsed
-                                    |> Maybe.withDefault msgElapsed
-                                    |> Just
-                            }
+                           { msgElapsed = msgElapsed
+                           , previousMsgElapsed =
+                               gameData.connectionData.elapsed
+                           }
 
-                        newConnectionData =
-                            { connectionData | elapsed = Just newElapsedData }
+                       newConnectionData =
+                           { connectionData | elapsed = newElapsedData }
+
+                       newGameData = { gameData | connectionData = newConnectionData }
                     in
-                    ( { model | connectionState = Connected newConnectionData }
+                    ( InGame newGameData
                     , Cmd.none
                     )
 
-                Disconnected ->
-                    ( model, Cmd.none )
+                _ ->
+                    (model, Cmd.none)
+
+        -- Continue here.
+
 
         TimeElapsed dt ->
             case model.gameState of
@@ -422,7 +515,7 @@ update msg model =
                                             , previousElapsed = Just renderData.elapsed
                                             }
                                     in
-                                    case model.connectionState of
+                                    case model.connectionData of
                                         Disconnected ->
                                             let
                                                 newGameData =

@@ -48,7 +48,7 @@ type alias InitData =
 type alias GameLoaderData =
     { earth : Maybe Earth
     , renderData : Maybe RenderData 
-    , connectionState : Maybe PreparingConnectionData
+    , connectionData : Maybe PreparingConnectionData
     , earthMesh : EarthMesh
     }
 
@@ -137,7 +137,7 @@ type alias PreparingConnectionData =
     { earth :
         Maybe
             { msgEarth : Earth
-            , previousMsgEarth : Earth
+            , previousMsgEarth : Maybe Earth
             }
     , elapsed :
         Maybe
