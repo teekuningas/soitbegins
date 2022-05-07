@@ -5,15 +5,8 @@ import Browser.Dom exposing (Viewport, getViewportOf)
 import Browser.Events exposing (onAnimationFrame, onResize)
 import Common
     exposing
-        ( CanvasDimensions
-        , ConnectionData
-        , ConnectionState(..)
-        , DragState(..)
-        , GameData
-        , LoaderData
-        , MenuData
-        , Model
-        , RenderData
+        ( DragState(..)
+        , Model(..)
         , Vertex
         , fragmentShader
         , vertexShader
@@ -94,35 +87,42 @@ init flagsMsg =
     let
         flags =
             Json.Decode.decodeValue Flags.flagsDecoder flagsMsg
-
     in
-    case flags of 
+    case flags of
         Err _ ->
-            Termination "Could not read environment variables"
+            ( Termination "Could not read environment variables"
+            , Cmd.none
+            )
 
         Ok value ->
-            let 
-
-                initData = 
-                    { earthMesh : Nothing
+            let
+                initData =
+                    { canvasDimensions =
+                        { width = Tuple.first viewportSize
+                        , height = Tuple.second viewportSize
+                        }
                     }
 
                 modelEarthUrl =
                     value.modelEarth
 
                 cmd =
-                    Http.get
-                        { url = modelEarthUrl
-                        , expect =
-                              expectObj
-                              EarthMeshLoaded
-                              meters
-                              ObjLoader.earthMeshDecoder
-                        }
-
+                    Platform.Cmd.batch
+                        [ Http.get
+                            { url = modelEarthUrl
+                            , expect =
+                                expectObj
+                                    EarthMeshLoaded
+                                    meters
+                                    ObjLoader.earthMeshDecoder
+                            }
+                        , Task.attempt ViewportMsg (getViewportOf "webgl-canvas")
+                        ]
             in
             ( Initialization initData
-            , cmd )
+            , cmd
+            )
+
 
 
 -- The view function
@@ -130,12 +130,11 @@ init flagsMsg =
 
 view : Model -> Html Msg
 view model =
-    case model
-    of
-        ( Termination msg) ->
+    case model of
+        Termination msg ->
             div [] [ text msg ]
 
-        ( Initialization _ ) ->
+        Initialization _ ->
             embedInCanvas
                 [ div
                     [ class "initialization-container" ]
@@ -145,7 +144,7 @@ view model =
                 []
                 []
 
-        ( MainMenu _ ) ->
+        MainMenu _ ->
             embedInCanvas
                 [ div
                     [ class "main-menu-container" ]
@@ -156,19 +155,22 @@ view model =
                 []
                 []
 
-        ( InGameLoader _ ) ->
+        InGameLoader gameLoaderData ->
             embedInCanvas
                 [ div
-                    [ class "initialization-container" ]
+                    [ class "game-loader-container" ]
                     [ p [] [ text "Loading game.." ]
+                    , p [] [ text (Debug.toString gameLoaderData.connectionData) ]
+                    , p [] [ text (Debug.toString gameLoaderData.earth) ]
+                    , p [] [ text (Debug.toString gameLoaderData.renderData) ]
                     ]
                 ]
                 []
                 []
 
-        ( InGame gameData ) ->
-            let 
-                earth = 
+        InGame gameData ->
+            let
+                earth =
                     gameData.earth
 
                 renderData =
@@ -177,12 +179,14 @@ view model =
                 canvasDimensions =
                     gameData.canvasDimensions
 
-                camera = 
+                camera =
                     gameData.camera
 
-                hero = 
+                hero =
                     gameData.hero
 
+                earthMesh =
+                    gameData.earthMesh
             in
             embedInCanvas
                 [ fpsOverlay renderData
@@ -226,6 +230,7 @@ view model =
                     (controllerUnif canvasDimensions
                         (if gameData.controller.upButtonDown then
                             1.0
+
                          else
                             0.5
                         )
@@ -237,11 +242,13 @@ view model =
                     (controllerUnif canvasDimensions
                         (if gameData.controller.downButtonDown then
                             1.0
+
                          else
                             0.5
                         )
                     )
                 ]
+
 
 
 -- Subscriptions
@@ -264,37 +271,46 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         StartGameMsg ->
-            case model of 
+            case model of
                 MainMenu menuData ->
-
-                    gameLoaderData =
-                        { earthMesh = menuData.earthMesh
-                        , renderData = Nothing
-                        , connectionData = Nothing
-                        , earth = Nothing
-                        }
+                    let
+                        gameLoaderData =
+                            { earthMesh = menuData.earthMesh
+                            , renderData = Nothing
+                            , connectionData = Nothing
+                            , earth = Nothing
+                            , canvasDimensions = menuData.canvasDimensions
+                            }
+                    in
+                    ( InGameLoader gameLoaderData
+                    , Task.attempt ViewportMsg (getViewportOf "webgl-canvas")
+                    )
 
                 _ ->
-                    (model, Cmd.none)
+                    ( model
+                    , Cmd.none
+                    )
 
         RecvServerMsgError message ->
             case model of
                 InGameLoader gameLoaderData ->
                     let
-                        newGameLoaderData = 
+                        newGameLoaderData =
                             { gameLoaderData | connectionData = Nothing }
                     in
                     ( InGameLoader gameLoaderData, Cmd.none )
 
                 InGame gameData ->
-                    let 
+                    let
                         newGameLoaderData =
                             { earth = Nothing
-                            , renderData = Just gameData.renderData
+                            , renderData = Nothing
                             , connectionData = Nothing
-                            , earthMesh = gameData.earthMesh }
+                            , earthMesh = gameData.earthMesh
+                            , canvasDimensions = gameData.canvasDimensions
+                            }
                     in
-                    ( InGameLoader newGameLoaderData, Cmd.none)
+                    ( InGameLoader newGameLoaderData, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
@@ -310,7 +326,7 @@ update msg model =
                             , rotationTheta = message.earth.rotationTheta
                             }
                     in
-                    case model.connectionData of
+                    case gameLoaderData.connectionData of
                         Just preparingConnectionData ->
                             let
                                 newEarth =
@@ -319,20 +335,20 @@ update msg model =
                                         preparingConnectionData.earth
                                             |> Maybe.map .msgEarth
                                             |> Maybe.withDefault msgEarth
+                                            |> Just
                                     }
 
                                 newConnectionData =
                                     { preparingConnectionData | earth = Just newEarth }
 
-                                newGameLoaderData = { gameLoaderData | connectionData = Just newConnectionData }
+                                newGameLoaderData =
+                                    { gameLoaderData | connectionData = Just newConnectionData }
                             in
                             ( InGameLoader newGameLoaderData
                             , Task.perform UpdateTimeMsg Time.now
                             )
 
-
                         Nothing ->
-
                             let
                                 newConnectionData =
                                     { earth =
@@ -343,12 +359,12 @@ update msg model =
                                     , elapsed = Nothing
                                     }
 
-                                newGameLoaderData = { gameLoaderData | connectionData = Just newConnectionData }
+                                newGameLoaderData =
+                                    { gameLoaderData | connectionData = Just newConnectionData }
                             in
-                            ( InGameLoader gameLoaderData
+                            ( InGameLoader newGameLoaderData
                             , Task.perform UpdateTimeMsg Time.now
                             )
-
 
                 InGame gameData ->
                     let
@@ -362,26 +378,30 @@ update msg model =
                         newEarth =
                             { msgEarth = msgEarth
                             , previousMsgEarth =
-                                preparingConnectionData.earth
+                                gameData.connectionData.earth.msgEarth
                             }
 
-                        newConnectionData =
-                            { preparingConnectionData | earth = newEarth }
+                        connectionData =
+                            gameData.connectionData
 
-                        newGameData = { gameData | connectionData = newConnectionData }
-                        in
-                        ( InGame newGameData
-                        , Task.perform UpdateTimeMsg Time.now
-                        )
+                        newConnectionData =
+                            { connectionData | earth = newEarth }
+
+                        newGameData =
+                            { gameData | connectionData = newConnectionData }
+                    in
+                    ( InGame newGameData
+                    , Task.perform UpdateTimeMsg Time.now
+                    )
 
                 _ ->
-                    (model, Cmd.none)
+                    ( model, Cmd.none )
 
         UpdateTimeMsg dt ->
             case model of
                 InGameLoader gameLoaderData ->
-                    case model.connectionData of
-                        Just preparingconnectionData ->
+                    case gameLoaderData.connectionData of
+                        Just preparingConnectionData ->
                             let
                                 msgElapsed =
                                     toFloat (Time.posixToMillis dt)
@@ -389,16 +409,17 @@ update msg model =
                                 newElapsedData =
                                     { msgElapsed = msgElapsed
                                     , previousMsgElapsed =
-                                        connectionData.elapsed
+                                        preparingConnectionData.elapsed
                                             |> Maybe.map .msgElapsed
                                             |> Maybe.withDefault msgElapsed
                                             |> Just
                                     }
 
                                 newConnectionData =
-                                    { connectionData | elapsed = Just newElapsedData }
+                                    { preparingConnectionData | elapsed = Just newElapsedData }
 
-                                newGameLoaderData = { gameLoaderData | connectionData = Just newConnectionData }
+                                newGameLoaderData =
+                                    { gameLoaderData | connectionData = Just newConnectionData }
                             in
                             ( InGameLoader newGameLoaderData
                             , Cmd.none
@@ -407,233 +428,219 @@ update msg model =
                         Nothing ->
                             ( model, Cmd.none )
 
-
                 InGame gameData ->
                     let
                         msgElapsed =
                             toFloat (Time.posixToMillis dt)
 
                         newElapsedData =
-                           { msgElapsed = msgElapsed
-                           , previousMsgElapsed =
-                               gameData.connectionData.elapsed
-                           }
+                            { msgElapsed = msgElapsed
+                            , previousMsgElapsed =
+                                gameData.connectionData.elapsed.msgElapsed
+                            }
 
-                       newConnectionData =
-                           { connectionData | elapsed = newElapsedData }
+                        connectionData =
+                            gameData.connectionData
 
-                       newGameData = { gameData | connectionData = newConnectionData }
+                        newConnectionData =
+                            { connectionData | elapsed = newElapsedData }
+
+                        newGameData =
+                            { gameData | connectionData = newConnectionData }
                     in
                     ( InGame newGameData
                     , Cmd.none
                     )
 
                 _ ->
-                    (model, Cmd.none)
+                    ( model, Cmd.none )
 
         TimeElapsed dt ->
             case model of
-
                 InGameLoader gameLoaderData ->
-                    case (gameLoaderData.renderData, gameLoaderData.earth, gameLoaderData.connectionData) of
-                        (Just renderData, Just earth, Just connectionData) ->
-                            case connectionData.elapsed.previousElapsed of
-                                Just _ ->
+                    let
+                        initGameData renderData msgElapsed previousMsgElapsed msgEarth previousMsgEarth =
+                            let
+                                elapsed =
+                                    toFloat (Time.posixToMillis dt)
+
+                                newConnectionData =
+                                    { earth =
+                                        { msgEarth = msgEarth
+                                        , previousMsgEarth = previousMsgEarth
+                                        }
+                                    , elapsed =
+                                        { msgElapsed = msgElapsed
+                                        , previousMsgElapsed = previousMsgElapsed
+                                        }
+                                    }
+                            in
+                            { earth = msgEarth
+                            , camera =
+                                { azimoth = 0
+                                , elevation = 0
+                                }
+                            , controller =
+                                { dragState = NoDrag
+                                , pointerOffset = { x = 0, y = 0 }
+                                , previousOffset = { x = 0, y = 0 }
+                                , upButtonDown = False
+                                , downButtonDown = False
+                                }
+                            , hero =
+                                { altitude = 11
+                                , latitude = -0.3
+                                , longitude = 0.0
+                                , rotationTheta = 0
+                                , power = 1
+                                }
+                            , renderData =
+                                { elapsed = elapsed
+                                , previousElapsed = renderData.elapsed
+                                }
+                            , canvasDimensions = gameLoaderData.canvasDimensions
+                            , connectionData = newConnectionData
+                            , earthMesh = gameLoaderData.earthMesh
+                            }
+                    in
+                    case ( gameLoaderData.renderData, gameLoaderData.connectionData ) of
+                        ( Just renderData, Just connectionData ) ->
+                            case ( connectionData.elapsed, connectionData.earth ) of
+                                ( Just elapsedData, Just earthData ) ->
+                                    case ( elapsedData.previousMsgElapsed, earthData.previousMsgEarth ) of
+                                        ( Just previousMsgElapsed, Just previousMsgEarth ) ->
+                                            let
+                                                msgElapsed =
+                                                    elapsedData.msgElapsed
+
+                                                msgEarth =
+                                                    earthData.msgEarth
+
+                                                newGameData =
+                                                    initGameData
+                                                        renderData
+                                                        msgElapsed
+                                                        previousMsgElapsed
+                                                        msgEarth
+                                                        previousMsgEarth
+                                            in
+                                            ( InGame newGameData
+                                            , Task.attempt ViewportMsg (getViewportOf "webgl-canvas")
+                                            )
+
+                                        _ ->
+                                            let
+                                                elapsed =
+                                                    toFloat (Time.posixToMillis dt)
+
+                                                newRenderData =
+                                                    { elapsed = elapsed
+                                                    , previousElapsed = Just renderData.elapsed
+                                                    }
+
+                                                newGameLoaderData =
+                                                    { gameLoaderData | renderData = Just newRenderData }
+                                            in
+                                            ( InGameLoader newGameLoaderData
+                                            , Cmd.none
+                                            )
+
+                                _ ->
                                     let
                                         elapsed =
                                             toFloat (Time.posixToMillis dt)
 
-                                        newGameData =
-                                            { earth = earth
-                                            , camera =
-                                              { azimoth = 0
-                                              , elevation = 0
-                                              }
-                                            , controller =
-                                              { dragState = NoDrag
-                                              , pointerOffset = { x = 0, y = 0 }
-                                              , previousOffset = { x = 0, y = 0 }
-                                              , upButtonDown = False
-                                              , downButtonDown = False
-                                              }
-                                           , hero =
-                                              { altitude = 11
-                                              , latitude = -0.3
-                                              , longitude = 0.0
-                                              , rotationTheta = 0
-                                              , power = 1
-                                              }
-                                           , renderData = { elapsed = elapsed
-                                                          , perviousElapsed = renderData.elapsed }
-                                           , canvasDimensions = gameLoaderData.canvasDimensions
-                                           , connectionData = 
-                                               { earth = { earthMsg = connectionData.earth.earthMsg
-                                                         , previousEarthMsg = Just connectionData.earth.previousEarthMsg
-                                                         }
-                                               , elapsed = { elapsedMsg = connectionData.elapsed.elapsedMsg
-                                                           , previousElapsedMsg = Just connectionData.elapsed.previousElapsedMsg
-                                                           }
-                                               }
-                                           , earthMesh = gameLoaderData.earthMesh
-                                           }
-                                    in
-                                    ( InGame newGameData
-                                    , Task.attempt ViewportMsg (getViewportOf "webgl-canvas")
-                                    )
-                                Nothing ->
-                                    let newRenderData =
-                                        { elapsed = elapsed
-                                        , previousElapsed = Just renderData.elapsed
-                                        }
-        
+                                        newRenderData =
+                                            { elapsed = elapsed
+                                            , previousElapsed = Just renderData.elapsed
+                                            }
+
                                         newGameLoaderData =
                                             { gameLoaderData | renderData = Just newRenderData }
-                                        in
-                                        ( InGameLoader newGameLoaderData
-                                        , Cmd.none
-                                        )
+                                    in
+                                    ( InGameLoader newGameLoaderData
+                                    , Cmd.none
+                                    )
 
-                        (Just renderData, _, _) ->
-                            let newRenderData =
-                                { elapsed = elapsed
-                                , previousElapsed = Just renderData.elapsed
-                                }
-
-                                newGameLoaderData =
-                                    { gameLoaderData | renderData = Just newRenderData }
-                                in
-                                ( InGameLoader newGameLoaderData
-                                , Cmd.none
-                                )
-
-
-                        Nothing ->
+                        ( Just renderData, _ ) ->
                             let
+                                elapsed =
+                                    toFloat (Time.posixToMillis dt)
+
                                 newRenderData =
                                     { elapsed = elapsed
-                                    , previousElapsed = Nothing
+                                    , previousElapsed = Just renderData.elapsed
                                     }
 
                                 newGameLoaderData =
                                     { gameLoaderData | renderData = Just newRenderData }
-                                           
                             in
                             ( InGameLoader newGameLoaderData
                             , Cmd.none
                             )
 
-                -- Continue here! Ja muista lisätä CanvasDimensions
-
-
-                InGame gameData ->
-                    let
-                        elapsed =
-                            toFloat (Time.posixToMillis dt)
-                    in
-                    case gameData.renderData of
-                        Nothing ->
+                        _ ->
                             let
+                                elapsed =
+                                    toFloat (Time.posixToMillis dt)
+
                                 newRenderData =
                                     { elapsed = elapsed
                                     , previousElapsed = Nothing
                                     }
 
-                                newGameData =
-                                    { gameData | renderData = Just newRenderData }
+                                newGameLoaderData =
+                                    { gameLoaderData | renderData = Just newRenderData }
                             in
-                            ( { model | gameState = FlightMode newGameData }
+                            ( InGameLoader newGameLoaderData
                             , Cmd.none
                             )
 
-                        Just renderData ->
-                            case renderData.previousElapsed of
-                                Nothing ->
-                                    let
-                                        newRenderData =
-                                            { elapsed = elapsed
-                                            , previousElapsed = Just renderData.elapsed
-                                            }
+                InGame gameData ->
+                    let
+                        elapsed =
+                            toFloat (Time.posixToMillis dt)
 
-                                        newGameData =
-                                            { gameData | renderData = Just newRenderData }
-                                    in
-                                    ( { model | gameState = FlightMode newGameData }
-                                    , Cmd.none
-                                    )
+                        previousElapsed =
+                            gameData.renderData.elapsed
 
-                                Just previousElapsed ->
-                                    let
-                                        newRenderData =
-                                            { elapsed = elapsed
-                                            , previousElapsed = Just renderData.elapsed
-                                            }
-                                    in
-                                    case model.connectionData of
-                                        Disconnected ->
-                                            let
-                                                newGameData =
-                                                    { gameData | renderData = Just newRenderData }
-                                            in
-                                            ( { model | gameState = FlightMode newGameData }
-                                            , Cmd.none
-                                            )
+                        newRenderData =
+                            { elapsed = elapsed
+                            , previousElapsed = previousElapsed
+                            }
 
-                                        Connected connectionData ->
-                                            case ( connectionData.earth, connectionData.elapsed ) of
-                                                ( Just earthData, Just elapsedData ) ->
-                                                    case elapsedData.previousMsgElapsed of
-                                                        Just previousMsgElapsed ->
-                                                            let
-                                                                updatedGameData =
-                                                                    updateGameData
-                                                                        elapsed
-                                                                        previousElapsed
-                                                                        elapsedData.msgElapsed
-                                                                        previousMsgElapsed
-                                                                        earthData.msgEarth
-                                                                        earthData.previousMsgEarth
-                                                                        gameData
+                        connectionData =
+                            gameData.connectionData
 
-                                                                newGameData =
-                                                                    { updatedGameData | renderData = Just newRenderData }
-                                                            in
-                                                            ( { model | gameState = FlightMode newGameData }
-                                                            , Cmd.none
-                                                            )
+                        earthData =
+                            connectionData.earth
 
-                                                        Nothing ->
-                                                            let
-                                                                newGameData =
-                                                                    { gameData | renderData = Just newRenderData }
-                                                            in
-                                                            ( { model | gameState = FlightMode newGameData }
-                                                            , Cmd.none
-                                                            )
+                        elapsedData =
+                            connectionData.elapsed
 
-                                                ( _, _ ) ->
-                                                    let
-                                                        newGameData =
-                                                            { gameData | renderData = Just newRenderData }
-                                                    in
-                                                    ( { model | gameState = FlightMode newGameData }
-                                                    , Cmd.none
-                                                    )
-                _ -> 
-                    (model, Cmd.none)
+                        updatedGameData =
+                            updateGameData
+                                elapsed
+                                previousElapsed
+                                elapsedData.msgElapsed
+                                elapsedData.previousMsgElapsed
+                                earthData.msgEarth
+                                earthData.previousMsgEarth
+                                gameData
 
+                        newGameData =
+                            { updatedGameData | renderData = newRenderData }
+                    in
+                    ( InGame newGameData
+                    , Cmd.none
+                    )
 
+                _ ->
+                    ( model, Cmd.none )
 
-
-        -- Here mouse and touch related events are handled
         PointerEventMsg event ->
-            case model.gameState of
-                MainMenu ->
-                    ( model, Cmd.none )
-
-                Termination _ ->
-                    ( model, Cmd.none )
-
-                FlightMode gameData ->
+            case model of
+                InGame gameData ->
                     case event of
                         MouseUp struct ->
                             let
@@ -643,7 +650,7 @@ update msg model =
                                 newGameData =
                                     { gameData | controller = newController }
                             in
-                            ( { model | gameState = FlightMode newGameData }, Cmd.none )
+                            ( InGame newGameData, Cmd.none )
 
                         MouseDown struct ->
                             let
@@ -656,7 +663,7 @@ update msg model =
                                 newGameData =
                                     { gameData | controller = newController }
                             in
-                            ( { model | gameState = FlightMode newGameData }, Cmd.none )
+                            ( InGame newGameData, Cmd.none )
 
                         MouseMove struct ->
                             let
@@ -672,9 +679,7 @@ update msg model =
                                         , camera = newCamera
                                     }
                             in
-                            ( { model
-                                | gameState = FlightMode newGameData
-                              }
+                            ( InGame newGameData
                             , Cmd.none
                             )
 
@@ -693,7 +698,9 @@ update msg model =
                                 newGameData =
                                     { gameData | controller = newController }
                             in
-                            ( { model | gameState = FlightMode newGameData }, Cmd.none )
+                            ( InGame newGameData
+                            , Cmd.none
+                            )
 
                         TouchDown struct ->
                             case List.head struct.touches of
@@ -711,7 +718,9 @@ update msg model =
                                         newGameData =
                                             { gameData | controller = newController }
                                     in
-                                    ( { model | gameState = FlightMode newGameData }, Cmd.none )
+                                    ( InGame newGameData
+                                    , Cmd.none
+                                    )
 
                         TouchMove struct ->
                             case List.head struct.touches of
@@ -732,54 +741,124 @@ update msg model =
                                                 , camera = newCamera
                                             }
                                     in
-                                    ( { model
-                                        | gameState = FlightMode newGameData
-                                      }
+                                    ( InGame newGameData
                                     , Cmd.none
                                     )
+
+                _ ->
+                    ( model, Cmd.none )
 
         ResizeMsg ->
             ( model, Task.attempt ViewportMsg (getViewportOf "webgl-canvas") )
 
         -- This Msg is often induced by code also, as it refreshes the screen..
         ViewportMsg returnValue ->
-            case returnValue of
-                Ok struct ->
-                    case model.gameState of
-                        FlightMode gameData ->
-                            let
-                                newCanvasDimensions =
-                                    { width = round struct.viewport.width
-                                    , height = round struct.viewport.height
-                                    }
+            case model of
+                Termination _ ->
+                    ( model, Cmd.none )
 
-                                newGameData =
-                                    { gameData | canvasDimensions = Just newCanvasDimensions }
+                Initialization initData ->
+                    let
+                        newCanvasDimensions =
+                            returnValue
+                                |> Result.map .viewport
+                                |> Result.map
+                                    (\v ->
+                                        { width = round v.width
+                                        , height = round v.height
+                                        }
+                                    )
+                                |> Result.withDefault initData.canvasDimensions
+
+                        newInitData =
+                            { initData | canvasDimensions = newCanvasDimensions }
+                    in
+                    ( Initialization newInitData
+                    , Cmd.none
+                    )
+
+                MainMenu menuData ->
+                    let
+                        newCanvasDimensions =
+                            returnValue
+                                |> Result.map .viewport
+                                |> Result.map
+                                    (\v ->
+                                        { width = round v.width
+                                        , height = round v.height
+                                        }
+                                    )
+                                |> Result.withDefault menuData.canvasDimensions
+
+                        newMenuData =
+                            { menuData | canvasDimensions = newCanvasDimensions }
+                    in
+                    ( MainMenu newMenuData
+                    , Cmd.none
+                    )
+
+                InGameLoader gameLoaderData ->
+                    let
+                        newCanvasDimensions =
+                            returnValue
+                                |> Result.map .viewport
+                                |> Result.map
+                                    (\v ->
+                                        { width = round v.width
+                                        , height = round v.height
+                                        }
+                                    )
+                                |> Result.withDefault gameLoaderData.canvasDimensions
+
+                        newGameLoaderData =
+                            { gameLoaderData | canvasDimensions = newCanvasDimensions }
+                    in
+                    ( InGameLoader newGameLoaderData
+                    , Cmd.none
+                    )
+
+                InGame gameData ->
+                    let
+                        newCanvasDimensions =
+                            returnValue
+                                |> Result.map .viewport
+                                |> Result.map
+                                    (\v ->
+                                        { width = round v.width
+                                        , height = round v.height
+                                        }
+                                    )
+                                |> Result.withDefault gameData.canvasDimensions
+
+                        newGameData =
+                            { gameData | canvasDimensions = newCanvasDimensions }
+                    in
+                    ( InGame newGameData
+                    , Cmd.none
+                    )
+
+        EarthMeshLoaded result ->
+            case model of
+                Initialization initData ->
+                    case result of
+                        Ok mesh ->
+                            let
+                                newMenuData =
+                                    { earthMesh = mesh
+                                    , canvasDimensions = initData.canvasDimensions
+                                    }
                             in
-                            ( { model | gameState = FlightMode newGameData }
+                            ( MainMenu newMenuData
+                            , Task.attempt ViewportMsg (getViewportOf "webgl-canvas")
+                            )
+
+                        Err _ ->
+                            ( Termination "Could not download assets"
                             , Cmd.none
                             )
 
-                        MainMenu ->
-                            ( model, Cmd.none )
-
-                        Termination _ ->
-                            ( model, Cmd.none )
-
-                Err errMsg ->
+                _ ->
                     ( model, Cmd.none )
-
-        EarthMeshLoaded result ->
-            let
-                data =
-                    model.data
-
-                newData =
-                    { data | earthMesh = Result.toMaybe result }
-            in
-            ( { model | data = newData }
-            , Task.attempt ViewportMsg (getViewportOf "webgl-canvas")
-            )
 
 
 

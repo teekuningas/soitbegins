@@ -2,19 +2,49 @@ body {
   background-color: #e6f9ff;
   margin: 0;
 }
+
+
+.initialization-container { 
+  width: 100%;
+  padding: 0;
+}
+
+.initialization-container p {
+  width: 100%;
+  font-size: 3em;
+  text-align: center;
+}
+
+
+.game-loader-container { 
+  width: 100%;
+  padding: 0;
+}
+
+.game-loader-container p {
+  width: 100%;
+  font-size: 3em;
+  text-align: center;
+}
+
+
 .main-menu-container { 
-  padding: 1em;
+  padding: 0;
+  width: 100%;
 }
 
 .main-menu-container p {
+  width: 100%;
   font-size: 3em;
   text-align: center;
 }
 
 .main-menu-container button {
+  padding: 1em;
   width: 100%;
   height: 5em;
 }
+
 
 #canvas-container #fps-overlay {
   position: absolute; 

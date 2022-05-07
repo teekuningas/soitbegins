@@ -8,13 +8,9 @@ import Html.Attributes exposing (id)
 fpsOverlay : RenderData -> Html msg
 fpsOverlay renderData =
     let
-        fpsFun previous =
-            round (1000 / (renderData.elapsed - previous))
-
         fps =
-            Maybe.map fpsFun renderData.previousElapsed
-                |> Maybe.map String.fromInt
-                |> Maybe.withDefault ""
+            round (1000 / (renderData.elapsed - renderData.previousElapsed))
+                |> String.fromInt
     in
     div
         [ id "fps-overlay" ]

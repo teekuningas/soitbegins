@@ -1,18 +1,13 @@
 module Common exposing
     ( Camera
     , CanvasDimensions
-    , ConnectionData
-    , PreparingConnectionData
     , Controller
-    , Data
     , DragState(..)
     , Earth
     , GameData
-    , InitData
-    , MenuData
     , Hero
     , MeshList
-    , Model
+    , Model(..)
     , RenderData
     , Uniforms
     , Vertex
@@ -32,26 +27,25 @@ viewportSize =
     ( 800, 800 )
 
 
-type Model 
+type Model
     = Initialization InitData
-    | MainMenu MenuData 
+    | MainMenu MenuData
     | InGameLoader GameLoaderData
-    | InGame GameData 
+    | InGame GameData
     | Termination String
 
 
 type alias InitData =
-    { earthMesh : Maybe (Mesh Vertex)
-    , canvasDimensions : Maybe CanvasDimensions
+    { canvasDimensions : CanvasDimensions
     }
 
 
 type alias GameLoaderData =
     { earth : Maybe Earth
-    , renderData : Maybe PreparingRenderData 
+    , renderData : Maybe PreparingRenderData
     , connectionData : Maybe PreparingConnectionData
     , canvasDimensions : CanvasDimensions
-    , earthMesh : EarthMesh
+    , earthMesh : Mesh Vertex
     }
 
 
@@ -67,7 +61,7 @@ type alias GameData =
     }
 
 
-type alias MenuData 
+type alias MenuData =
     { earthMesh : Mesh Vertex
     , canvasDimensions : CanvasDimensions
     }
@@ -106,13 +100,12 @@ type alias PreparingRenderData =
     { elapsed : Float
     , previousElapsed : Maybe Float
     }
-    
+
+
 type alias RenderData =
     { elapsed : Float
     , previousElapsed : Float
     }
-
-
 
 
 type DragState
@@ -129,15 +122,15 @@ type alias Controller =
     }
 
 
-type alias ConnectionData = 
+type alias ConnectionData =
     { earth :
-          { msgEarth : Earth
-          , previousMsgEarth : Earth
-          }
-    , elapsed 
-          { msgElapsed : Float
-          , previousMsgElapsed : Float
-          }
+        { msgEarth : Earth
+        , previousMsgEarth : Earth
+        }
+    , elapsed :
+        { msgElapsed : Float
+        , previousMsgElapsed : Float
+        }
     }
 
 

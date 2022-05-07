@@ -112,58 +112,53 @@ controllerMeshUp =
         |> WebGL.triangles
 
 
-coordinatesWithinUpButton : Maybe CanvasDimensions -> ( Float, Float ) -> Bool
+coordinatesWithinUpButton : CanvasDimensions -> ( Float, Float ) -> Bool
 coordinatesWithinUpButton canvasDimensions offset =
     coordinatesWithinButton canvasDimensions offset (controllerParams.trans + 0.5)
 
 
-coordinatesWithinDownButton : Maybe CanvasDimensions -> ( Float, Float ) -> Bool
+coordinatesWithinDownButton : CanvasDimensions -> ( Float, Float ) -> Bool
 coordinatesWithinDownButton canvasDimensions offset =
     coordinatesWithinButton canvasDimensions offset (-controllerParams.trans - 0.5)
 
 
-coordinatesWithinButton : Maybe CanvasDimensions -> ( Float, Float ) -> Float -> Bool
-coordinatesWithinButton maybeCanvas pointerOffset trans =
-    case maybeCanvas of
-        Just canvasDimensions ->
-            let
-                yscale =
-                    toFloat canvasDimensions.height
-                        / toFloat (Tuple.second viewportSize)
+coordinatesWithinButton : CanvasDimensions -> ( Float, Float ) -> Float -> Bool
+coordinatesWithinButton canvasDimensions pointerOffset trans =
+    let
+        yscale =
+            toFloat canvasDimensions.height
+                / toFloat (Tuple.second viewportSize)
 
-                xscale =
-                    toFloat canvasDimensions.width
-                        / toFloat (Tuple.first viewportSize)
+        xscale =
+            toFloat canvasDimensions.width
+                / toFloat (Tuple.first viewportSize)
 
-                size =
-                    controllerParams.size
+        size =
+            controllerParams.size
 
-                fixedTrans =
-                    (trans * size) / yscale
+        fixedTrans =
+            (trans * size) / yscale
 
-                middlepointX =
-                    (1 + controllerParams.x) * (toFloat canvasDimensions.width / 2)
+        middlepointX =
+            (1 + controllerParams.x) * (toFloat canvasDimensions.width / 2)
 
-                middlepointY =
-                    (1 - controllerParams.y - fixedTrans) * (toFloat canvasDimensions.height / 2)
+        middlepointY =
+            (1 - controllerParams.y - fixedTrans) * (toFloat canvasDimensions.height / 2)
 
-                sizeLimitX =
-                    size * toFloat (Tuple.first viewportSize) / 2
+        sizeLimitX =
+            size * toFloat (Tuple.first viewportSize) / 2
 
-                sizeLimitY =
-                    size * toFloat (Tuple.second viewportSize) / 4
-            in
-            if
-                (abs (middlepointX - Tuple.first pointerOffset) < sizeLimitX)
-                    && (abs (middlepointY - Tuple.second pointerOffset) < sizeLimitY)
-            then
-                True
+        sizeLimitY =
+            size * toFloat (Tuple.second viewportSize) / 4
+    in
+    if
+        (abs (middlepointX - Tuple.first pointerOffset) < sizeLimitX)
+            && (abs (middlepointY - Tuple.second pointerOffset) < sizeLimitY)
+    then
+        True
 
-            else
-                False
-
-        Nothing ->
-            False
+    else
+        False
 
 
 handleUp : Controller -> Controller
@@ -175,7 +170,7 @@ handleUp controller =
     }
 
 
-handleDown : Controller -> ( Float, Float ) -> Maybe CanvasDimensions -> Controller
+handleDown : Controller -> ( Float, Float ) -> CanvasDimensions -> Controller
 handleDown controller offsetPos canvasDimensions =
     let
         coordsInUp =

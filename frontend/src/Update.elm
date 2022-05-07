@@ -72,7 +72,7 @@ updateGameData elapsed previousElapsed msgElapsed previousMsgElapsed msgEarth pr
         newGameData =
             { gameData
                 | hero = newHero
-                , earth = Just newEarth
+                , earth = newEarth
             }
     in
     newGameData
