@@ -1,17 +1,13 @@
 module Common exposing
     ( Camera
     , CanvasDimensions
-    , ConnectionData
-    , ConnectionState(..)
     , Controller
-    , Data
     , DragState(..)
     , Earth
     , GameData
-    , GameState(..)
     , Hero
     , MeshList
-    , Model
+    , Model(..)
     , RenderData
     , Uniforms
     , Vertex
@@ -31,31 +27,43 @@ viewportSize =
     ( 800, 800 )
 
 
-type alias Model =
-    { gameState : GameState
-    , connectionState : ConnectionState
-    , data : Data
+type Model
+    = Initialization InitData
+    | MainMenu MenuData
+    | InGameLoader GameLoaderData
+    | InGame GameData
+    | Termination String
+
+
+type alias InitData =
+    { canvasDimensions : CanvasDimensions
     }
 
 
-type alias Data =
-    { earthMesh : Maybe (Mesh Vertex)
+type alias GameLoaderData =
+    { earth : Maybe Earth
+    , renderData : Maybe PreparingRenderData
+    , connectionData : Maybe PreparingConnectionData
+    , canvasDimensions : CanvasDimensions
+    , earthMesh : Mesh Vertex
     }
-
-
-type GameState
-    = MainMenu
-    | FlightMode GameData
-    | InitializationFailed
 
 
 type alias GameData =
-    { earth : Maybe Earth
+    { earth : Earth
     , camera : Camera
     , controller : Controller
     , hero : Hero
-    , renderData : Maybe RenderData
-    , canvasDimensions : Maybe CanvasDimensions
+    , renderData : RenderData
+    , canvasDimensions : CanvasDimensions
+    , connectionData : ConnectionData
+    , earthMesh : Mesh Vertex
+    }
+
+
+type alias MenuData =
+    { earthMesh : Mesh Vertex
+    , canvasDimensions : CanvasDimensions
     }
 
 
@@ -88,9 +96,15 @@ type alias Camera =
     }
 
 
-type alias RenderData =
+type alias PreparingRenderData =
     { elapsed : Float
     , previousElapsed : Maybe Float
+    }
+
+
+type alias RenderData =
+    { elapsed : Float
+    , previousElapsed : Float
     }
 
 
@@ -108,16 +122,23 @@ type alias Controller =
     }
 
 
-type ConnectionState
-    = Connected ConnectionData
-    | Disconnected
-
-
 type alias ConnectionData =
+    { earth :
+        { msgEarth : Earth
+        , previousMsgEarth : Earth
+        }
+    , elapsed :
+        { msgElapsed : Float
+        , previousMsgElapsed : Float
+        }
+    }
+
+
+type alias PreparingConnectionData =
     { earth :
         Maybe
             { msgEarth : Earth
-            , previousMsgEarth : Earth
+            , previousMsgEarth : Maybe Earth
             }
     , elapsed :
         Maybe
