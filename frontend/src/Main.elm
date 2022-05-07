@@ -160,9 +160,6 @@ view model =
                 [ div
                     [ class "game-loader-container" ]
                     [ p [] [ text "Loading game.." ]
-                    , p [] [ text (Debug.toString gameLoaderData.connectionData) ]
-                    , p [] [ text (Debug.toString gameLoaderData.earth) ]
-                    , p [] [ text (Debug.toString gameLoaderData.renderData) ]
                     ]
                 ]
                 []
