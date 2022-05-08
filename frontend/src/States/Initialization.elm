@@ -113,7 +113,7 @@ update msg initData =
                             }
                     in
                     ( MainMenu newMenuData
-                    , Cmd.none 
+                    , Cmd.none
                     )
 
                 Err _ ->

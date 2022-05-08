@@ -132,86 +132,64 @@ subscriptions model =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case model of
-        Initialization initData ->
-            case msg of
-                InitializationMsg convMsg ->
-                    let
-                        ( newModel, cmdMsg ) =
-                            States.Initialization.update convMsg initData
-                    in
-                    ( newModel
-                    , Platform.Cmd.map
-                        (\s -> InitializationMsg s)
-                        cmdMsg
-                    )
+    case ( msg, model ) of
+        ( InitializationMsg stateMsg, Initialization initData ) ->
+            let
+                ( newModel, cmdMsg ) =
+                    States.Initialization.update stateMsg initData
+            in
+            ( newModel
+            , Platform.Cmd.map
+                (\s -> InitializationMsg s)
+                cmdMsg
+            )
 
-                _ ->
-                    ( model, Cmd.none )
+        ( MainMenuMsg stateMsg, MainMenu menuData ) ->
+            let
+                ( newModel, cmdMsg ) =
+                    States.MainMenu.update stateMsg menuData
+            in
+            ( newModel
+            , Platform.Cmd.map
+                (\s -> MainMenuMsg s)
+                cmdMsg
+            )
 
-        MainMenu menuData ->
-            case msg of
-                MainMenuMsg convMsg ->
-                    let
-                        ( newModel, cmdMsg ) =
-                            States.MainMenu.update convMsg menuData
-                    in
-                    ( newModel
-                    , Platform.Cmd.map
-                        (\s -> MainMenuMsg s)
-                        cmdMsg
-                    )
+        ( InGameLoaderMsg stateMsg, InGameLoader gameLoaderData ) ->
+            let
+                ( newModel, cmdMsg ) =
+                    States.InGameLoader.update stateMsg gameLoaderData
+            in
+            ( newModel
+            , Platform.Cmd.map
+                (\s -> InGameLoaderMsg s)
+                cmdMsg
+            )
 
-                _ ->
-                    ( model, Cmd.none )
+        ( InGameMsg stateMsg, InGame gameData ) ->
+            let
+                ( newModel, cmdMsg ) =
+                    States.InGame.update stateMsg gameData
+            in
+            ( newModel
+            , Platform.Cmd.map
+                (\s -> InGameMsg s)
+                cmdMsg
+            )
 
-        InGameLoader gameLoaderData ->
-            case msg of
-                InGameLoaderMsg convMsg ->
-                    let
-                        ( newModel, cmdMsg ) =
-                            States.InGameLoader.update convMsg gameLoaderData
-                    in
-                    ( newModel
-                    , Platform.Cmd.map
-                        (\s -> InGameLoaderMsg s)
-                        cmdMsg
-                    )
+        ( TerminationMsg stateMsg, Termination message ) ->
+            let
+                ( newModel, cmdMsg ) =
+                    States.Termination.update stateMsg message
+            in
+            ( newModel
+            , Platform.Cmd.map
+                (\s -> TerminationMsg s)
+                cmdMsg
+            )
 
-                _ ->
-                    ( model, Cmd.none )
-
-        InGame gameData ->
-            case msg of
-                InGameMsg convMsg ->
-                    let
-                        ( newModel, cmdMsg ) =
-                            States.InGame.update convMsg gameData
-                    in
-                    ( newModel
-                    , Platform.Cmd.map
-                        (\s -> InGameMsg s)
-                        cmdMsg
-                    )
-
-                _ ->
-                    ( model, Cmd.none )
-
-        Termination message ->
-            case msg of
-                TerminationMsg convMsg ->
-                    let
-                        ( newModel, cmdMsg ) =
-                            States.Termination.update convMsg message
-                    in
-                    ( newModel
-                    , Platform.Cmd.map
-                        (\s -> TerminationMsg s)
-                        cmdMsg
-                    )
-
-                _ ->
-                    ( model, Cmd.none )
+        _ ->
+            ( model, Cmd.none )
 
 
 
