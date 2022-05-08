@@ -5,7 +5,10 @@ module Common exposing
     , DragState(..)
     , Earth
     , GameData
+    , GameLoaderData
     , Hero
+    , InitData
+    , MenuData
     , MeshList
     , Model(..)
     , RenderData
