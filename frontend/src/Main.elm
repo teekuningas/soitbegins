@@ -1,38 +1,36 @@
 module Main exposing (main)
 
 import Browser
-
-import Html exposing (Html)
-
-import Length exposing (Meters, meters)
-
-import Common exposing ( Model(..) 
-                       , viewportSize )
-import Flags
-
 import Browser.Dom exposing (getViewportOf)
-
+import Common
+    exposing
+        ( Model(..)
+        , viewportSize
+        )
+import Flags
+import Html exposing (Html)
 import Http
 import Json.Decode
+import Length exposing (Meters, meters)
 import Obj.Decode exposing (expectObj)
 import ObjLoader
 import Platform.Cmd
 import Platform.Sub
-import Task
-
+import States.InGame
+import States.InGameLoader
 import States.Initialization
 import States.MainMenu
-import States.InGameLoader
-import States.InGame
 import States.Termination
+import Task
 
 
-type Msg 
+type Msg
     = InitializationMsg States.Initialization.Msg
     | MainMenuMsg States.MainMenu.Msg
     | InGameLoaderMsg States.InGameLoader.Msg
     | InGameMsg States.InGame.Msg
     | TerminationMsg States.Termination.Msg
+
 
 
 -- The model initialization
@@ -51,14 +49,16 @@ init flagsMsg =
             )
 
         Ok value ->
-            let 
-                (newModel, cmdMsg) = States.Initialization.init value
-            in 
+            let
+                ( newModel, cmdMsg ) =
+                    States.Initialization.init value
+            in
             ( newModel
             , Platform.Cmd.map
                 (\s -> InitializationMsg s)
                 cmdMsg
             )
+
 
 
 -- The view function
@@ -93,6 +93,7 @@ view model =
                 (States.InGame.view gameData)
 
 
+
 -- Subscriptions
 
 
@@ -100,29 +101,30 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     case model of
         Initialization initData ->
-            Platform.Sub.map 
+            Platform.Sub.map
                 (\s -> InitializationMsg s)
                 (States.Initialization.subscriptions initData)
 
         MainMenu menuData ->
-            Platform.Sub.map 
+            Platform.Sub.map
                 (\s -> MainMenuMsg s)
                 (States.MainMenu.subscriptions menuData)
 
         InGameLoader gameLoaderData ->
-            Platform.Sub.map 
+            Platform.Sub.map
                 (\s -> InGameLoaderMsg s)
                 (States.InGameLoader.subscriptions gameLoaderData)
 
         InGame gameData ->
-            Platform.Sub.map 
+            Platform.Sub.map
                 (\s -> InGameMsg s)
                 (States.InGame.subscriptions gameData)
 
         Termination message ->
-            Platform.Sub.map 
+            Platform.Sub.map
                 (\s -> TerminationMsg s)
                 (States.Termination.subscriptions message)
+
 
 
 -- Updates
@@ -130,79 +132,86 @@ subscriptions model =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-
     case model of
         Initialization initData ->
-            case msg of 
-                (InitializationMsg convMsg) ->
-                    let 
-                        (newModel, cmdMsg) = States.Initialization.update convMsg initData
-                    in 
+            case msg of
+                InitializationMsg convMsg ->
+                    let
+                        ( newModel, cmdMsg ) =
+                            States.Initialization.update convMsg initData
+                    in
                     ( newModel
                     , Platform.Cmd.map
                         (\s -> InitializationMsg s)
                         cmdMsg
                     )
+
                 _ ->
-                    ( model, Cmd.none)
+                    ( model, Cmd.none )
 
         MainMenu menuData ->
-            case msg of 
-                (MainMenuMsg convMsg) ->
-                    let 
-                        (newModel, cmdMsg) = States.MainMenu.update convMsg menuData
-                    in 
+            case msg of
+                MainMenuMsg convMsg ->
+                    let
+                        ( newModel, cmdMsg ) =
+                            States.MainMenu.update convMsg menuData
+                    in
                     ( newModel
                     , Platform.Cmd.map
                         (\s -> MainMenuMsg s)
                         cmdMsg
                     )
+
                 _ ->
-                    ( model, Cmd.none)
+                    ( model, Cmd.none )
 
         InGameLoader gameLoaderData ->
-            case msg of 
-                (InGameLoaderMsg convMsg) ->
-                    let 
-                        (newModel, cmdMsg) = States.InGameLoader.update convMsg gameLoaderData
-                    in 
+            case msg of
+                InGameLoaderMsg convMsg ->
+                    let
+                        ( newModel, cmdMsg ) =
+                            States.InGameLoader.update convMsg gameLoaderData
+                    in
                     ( newModel
                     , Platform.Cmd.map
                         (\s -> InGameLoaderMsg s)
                         cmdMsg
                     )
+
                 _ ->
-                    ( model, Cmd.none)
+                    ( model, Cmd.none )
 
         InGame gameData ->
-            case msg of 
-                (InGameMsg convMsg) ->
-                    let 
-                        (newModel, cmdMsg) = States.InGame.update convMsg gameData
-                    in 
+            case msg of
+                InGameMsg convMsg ->
+                    let
+                        ( newModel, cmdMsg ) =
+                            States.InGame.update convMsg gameData
+                    in
                     ( newModel
                     , Platform.Cmd.map
                         (\s -> InGameMsg s)
                         cmdMsg
                     )
+
                 _ ->
-                    ( model, Cmd.none)
+                    ( model, Cmd.none )
 
         Termination message ->
-            case msg of 
-                (TerminationMsg convMsg) ->
-                    let 
-                        (newModel, cmdMsg) = States.Termination.update convMsg message
-                    in 
+            case msg of
+                TerminationMsg convMsg ->
+                    let
+                        ( newModel, cmdMsg ) =
+                            States.Termination.update convMsg message
+                    in
                     ( newModel
                     , Platform.Cmd.map
                         (\s -> TerminationMsg s)
                         cmdMsg
                     )
+
                 _ ->
-                    ( model, Cmd.none)
-
-
+                    ( model, Cmd.none )
 
 
 
@@ -217,5 +226,3 @@ main =
         , subscriptions = subscriptions
         , update = update
         }
-
-

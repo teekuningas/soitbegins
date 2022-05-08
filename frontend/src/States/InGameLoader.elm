@@ -1,23 +1,15 @@
-module States.InGameLoader exposing (Msg, subscriptions, view, update)
-
-import Common exposing (GameLoaderData, DragState(..))
-
-import Time
-
-import Receiver
-import Task
+module States.InGameLoader exposing (Msg, subscriptions, update, view)
 
 import Browser.Dom exposing (getViewportOf)
 import Browser.Events exposing (onAnimationFrame, onResize)
-import Browser.Dom
-
-import Html exposing (div, text, p, Html)
+import Common exposing (DragState(..), GameLoaderData, Model(..))
+import Html exposing (Html, div, p, text)
 import Html.Attributes exposing (class)
-import Platform.Sub
-
 import Page exposing (embedInCanvas)
-
-import Common exposing (Model(..))
+import Platform.Sub
+import Receiver
+import Task
+import Time
 
 
 type Msg
@@ -30,7 +22,7 @@ type Msg
 
 
 subscriptions : GameLoaderData -> Sub Msg
-subscriptions gameLoaderData = 
+subscriptions gameLoaderData =
     Platform.Sub.batch
         [ onAnimationFrame (\x -> TimeElapsed x)
         , onResize (\width height -> ResizeMsg)
@@ -39,193 +31,174 @@ subscriptions gameLoaderData =
 
 
 view : GameLoaderData -> Html Msg
-view gameLoaderData = 
+view gameLoaderData =
     embedInCanvas
         [ div
             [ class "game-loader-container" ]
             [ p [] [ text "Loading game.." ] ]
-        ] [] []
+        ]
+        []
+        []
 
 
 update : Msg -> GameLoaderData -> ( Model, Cmd Msg )
-update msg gameLoaderData = 
+update msg gameLoaderData =
     case msg of
-
         RecvServerMsgError message ->
-                    let
-                        newGameLoaderData =
-                            { gameLoaderData | connectionData = Nothing }
-                    in
-                    ( InGameLoader gameLoaderData, Cmd.none )
-
+            let
+                newGameLoaderData =
+                    { gameLoaderData | connectionData = Nothing }
+            in
+            ( InGameLoader gameLoaderData, Cmd.none )
 
         RecvServerMsg message ->
+            let
+                msgEarth =
+                    { locationX = message.earth.locationX
+                    , locationY = message.earth.locationY
+                    , locationZ = message.earth.locationZ
+                    , rotationTheta = message.earth.rotationTheta
+                    }
+            in
+            case gameLoaderData.connectionData of
+                Just preparingConnectionData ->
                     let
-                        msgEarth =
-                            { locationX = message.earth.locationX
-                            , locationY = message.earth.locationY
-                            , locationZ = message.earth.locationZ
-                            , rotationTheta = message.earth.rotationTheta
+                        newEarth =
+                            { msgEarth = msgEarth
+                            , previousMsgEarth =
+                                preparingConnectionData.earth
+                                    |> Maybe.map .msgEarth
+                                    |> Maybe.withDefault msgEarth
+                                    |> Just
                             }
+
+                        newConnectionData =
+                            { preparingConnectionData | earth = Just newEarth }
+
+                        newGameLoaderData =
+                            { gameLoaderData | connectionData = Just newConnectionData }
                     in
-                    case gameLoaderData.connectionData of
-                        Just preparingConnectionData ->
-                            let
-                                newEarth =
+                    ( InGameLoader newGameLoaderData
+                    , Task.perform UpdateTimeMsg Time.now
+                    )
+
+                Nothing ->
+                    let
+                        newConnectionData =
+                            { earth =
+                                Just
                                     { msgEarth = msgEarth
-                                    , previousMsgEarth =
-                                        preparingConnectionData.earth
-                                            |> Maybe.map .msgEarth
-                                            |> Maybe.withDefault msgEarth
-                                            |> Just
+                                    , previousMsgEarth = Nothing
                                     }
+                            , elapsed = Nothing
+                            }
 
-                                newConnectionData =
-                                    { preparingConnectionData | earth = Just newEarth }
-
-                                newGameLoaderData =
-                                    { gameLoaderData | connectionData = Just newConnectionData }
-                            in
-                            ( InGameLoader newGameLoaderData
-                            , Task.perform UpdateTimeMsg Time.now
-                            )
-
-                        Nothing ->
-                            let
-                                newConnectionData =
-                                    { earth =
-                                        Just
-                                            { msgEarth = msgEarth
-                                            , previousMsgEarth = Nothing
-                                            }
-                                    , elapsed = Nothing
-                                    }
-
-                                newGameLoaderData =
-                                    { gameLoaderData | connectionData = Just newConnectionData }
-                            in
-                            ( InGameLoader newGameLoaderData
-                            , Task.perform UpdateTimeMsg Time.now
-                            )
-
+                        newGameLoaderData =
+                            { gameLoaderData | connectionData = Just newConnectionData }
+                    in
+                    ( InGameLoader newGameLoaderData
+                    , Task.perform UpdateTimeMsg Time.now
+                    )
 
         UpdateTimeMsg dt ->
-                    case gameLoaderData.connectionData of
-                        Just preparingConnectionData ->
-                            let
-                                msgElapsed =
-                                    toFloat (Time.posixToMillis dt)
+            case gameLoaderData.connectionData of
+                Just preparingConnectionData ->
+                    let
+                        msgElapsed =
+                            toFloat (Time.posixToMillis dt)
 
-                                newElapsedData =
-                                    { msgElapsed = msgElapsed
-                                    , previousMsgElapsed =
-                                        preparingConnectionData.elapsed
-                                            |> Maybe.map .msgElapsed
-                                            |> Maybe.withDefault msgElapsed
-                                            |> Just
-                                    }
+                        newElapsedData =
+                            { msgElapsed = msgElapsed
+                            , previousMsgElapsed =
+                                preparingConnectionData.elapsed
+                                    |> Maybe.map .msgElapsed
+                                    |> Maybe.withDefault msgElapsed
+                                    |> Just
+                            }
 
-                                newConnectionData =
-                                    { preparingConnectionData | elapsed = Just newElapsedData }
+                        newConnectionData =
+                            { preparingConnectionData | elapsed = Just newElapsedData }
 
-                                newGameLoaderData =
-                                    { gameLoaderData | connectionData = Just newConnectionData }
-                            in
-                            ( InGameLoader newGameLoaderData
-                            , Cmd.none
-                            )
+                        newGameLoaderData =
+                            { gameLoaderData | connectionData = Just newConnectionData }
+                    in
+                    ( InGameLoader newGameLoaderData
+                    , Cmd.none
+                    )
 
-                        Nothing ->
-                            ( InGameLoader gameLoaderData, Cmd.none )
-
+                Nothing ->
+                    ( InGameLoader gameLoaderData, Cmd.none )
 
         TimeElapsed dt ->
+            let
+                initGameData renderData msgElapsed previousMsgElapsed msgEarth previousMsgEarth =
                     let
-                        initGameData renderData msgElapsed previousMsgElapsed msgEarth previousMsgEarth =
-                            let
-                                elapsed =
-                                    toFloat (Time.posixToMillis dt)
+                        elapsed =
+                            toFloat (Time.posixToMillis dt)
 
-                                newConnectionData =
-                                    { earth =
-                                        { msgEarth = msgEarth
-                                        , previousMsgEarth = previousMsgEarth
-                                        }
-                                    , elapsed =
-                                        { msgElapsed = msgElapsed
-                                        , previousMsgElapsed = previousMsgElapsed
-                                        }
-                                    }
-                            in
-                            { earth = msgEarth
-                            , camera =
-                                { azimoth = 0
-                                , elevation = 0
+                        newConnectionData =
+                            { earth =
+                                { msgEarth = msgEarth
+                                , previousMsgEarth = previousMsgEarth
                                 }
-                            , controller =
-                                { dragState = NoDrag
-                                , pointerOffset = { x = 0, y = 0 }
-                                , previousOffset = { x = 0, y = 0 }
-                                , upButtonDown = False
-                                , downButtonDown = False
+                            , elapsed =
+                                { msgElapsed = msgElapsed
+                                , previousMsgElapsed = previousMsgElapsed
                                 }
-                            , hero =
-                                { altitude = 11
-                                , latitude = -0.3
-                                , longitude = 0.0
-                                , rotationTheta = 0
-                                , power = 1
-                                }
-                            , renderData =
-                                { elapsed = elapsed
-                                , previousElapsed = renderData.elapsed
-                                }
-                            , canvasDimensions = gameLoaderData.canvasDimensions
-                            , connectionData = newConnectionData
-                            , earthMesh = gameLoaderData.earthMesh
                             }
                     in
-                    case ( gameLoaderData.renderData, gameLoaderData.connectionData ) of
-                        ( Just renderData, Just connectionData ) ->
-                            case ( connectionData.elapsed, connectionData.earth ) of
-                                ( Just elapsedData, Just earthData ) ->
-                                    case ( elapsedData.previousMsgElapsed, earthData.previousMsgEarth ) of
-                                        ( Just previousMsgElapsed, Just previousMsgEarth ) ->
-                                            let
-                                                msgElapsed =
-                                                    elapsedData.msgElapsed
+                    { earth = msgEarth
+                    , camera =
+                        { azimoth = 0
+                        , elevation = 0
+                        }
+                    , controller =
+                        { dragState = NoDrag
+                        , pointerOffset = { x = 0, y = 0 }
+                        , previousOffset = { x = 0, y = 0 }
+                        , upButtonDown = False
+                        , downButtonDown = False
+                        }
+                    , hero =
+                        { altitude = 11
+                        , latitude = -0.3
+                        , longitude = 0.0
+                        , rotationTheta = 0
+                        , power = 1
+                        }
+                    , renderData =
+                        { elapsed = elapsed
+                        , previousElapsed = renderData.elapsed
+                        }
+                    , canvasDimensions = gameLoaderData.canvasDimensions
+                    , connectionData = newConnectionData
+                    , earthMesh = gameLoaderData.earthMesh
+                    }
+            in
+            case ( gameLoaderData.renderData, gameLoaderData.connectionData ) of
+                ( Just renderData, Just connectionData ) ->
+                    case ( connectionData.elapsed, connectionData.earth ) of
+                        ( Just elapsedData, Just earthData ) ->
+                            case ( elapsedData.previousMsgElapsed, earthData.previousMsgEarth ) of
+                                ( Just previousMsgElapsed, Just previousMsgEarth ) ->
+                                    let
+                                        msgElapsed =
+                                            elapsedData.msgElapsed
 
-                                                msgEarth =
-                                                    earthData.msgEarth
+                                        msgEarth =
+                                            earthData.msgEarth
 
-                                                newGameData =
-                                                    initGameData
-                                                        renderData
-                                                        msgElapsed
-                                                        previousMsgElapsed
-                                                        msgEarth
-                                                        previousMsgEarth
-                                            in
-                                            ( InGame newGameData
-                                            , Task.attempt ViewportMsg (getViewportOf "webgl-canvas")
-                                            )
-
-                                        _ ->
-                                            let
-                                                elapsed =
-                                                    toFloat (Time.posixToMillis dt)
-
-                                                newRenderData =
-                                                    { elapsed = elapsed
-                                                    , previousElapsed = Just renderData.elapsed
-                                                    }
-
-                                                newGameLoaderData =
-                                                    { gameLoaderData | renderData = Just newRenderData }
-                                            in
-                                            ( InGameLoader newGameLoaderData
-                                            , Cmd.none
-                                            )
+                                        newGameData =
+                                            initGameData
+                                                renderData
+                                                msgElapsed
+                                                previousMsgElapsed
+                                                msgEarth
+                                                previousMsgEarth
+                                    in
+                                    ( InGame newGameData
+                                    , Cmd.none
+                                    )
 
                                 _ ->
                                     let
@@ -244,7 +217,7 @@ update msg gameLoaderData =
                                     , Cmd.none
                                     )
 
-                        ( Just renderData, _ ) ->
+                        _ ->
                             let
                                 elapsed =
                                     toFloat (Time.posixToMillis dt)
@@ -261,48 +234,63 @@ update msg gameLoaderData =
                             , Cmd.none
                             )
 
-                        _ ->
-                            let
-                                elapsed =
-                                    toFloat (Time.posixToMillis dt)
+                ( Just renderData, _ ) ->
+                    let
+                        elapsed =
+                            toFloat (Time.posixToMillis dt)
 
-                                newRenderData =
-                                    { elapsed = elapsed
-                                    , previousElapsed = Nothing
-                                    }
+                        newRenderData =
+                            { elapsed = elapsed
+                            , previousElapsed = Just renderData.elapsed
+                            }
 
-                                newGameLoaderData =
-                                    { gameLoaderData | renderData = Just newRenderData }
-                            in
-                            ( InGameLoader newGameLoaderData
-                            , Cmd.none
-                            )
+                        newGameLoaderData =
+                            { gameLoaderData | renderData = Just newRenderData }
+                    in
+                    ( InGameLoader newGameLoaderData
+                    , Cmd.none
+                    )
 
+                _ ->
+                    let
+                        elapsed =
+                            toFloat (Time.posixToMillis dt)
 
+                        newRenderData =
+                            { elapsed = elapsed
+                            , previousElapsed = Nothing
+                            }
+
+                        newGameLoaderData =
+                            { gameLoaderData | renderData = Just newRenderData }
+                    in
+                    ( InGameLoader newGameLoaderData
+                    , Cmd.none
+                    )
 
         ResizeMsg ->
             ( InGameLoader gameLoaderData, Task.attempt ViewportMsg (getViewportOf "webgl-canvas") )
 
         -- This Msg is often induced by code also, as it refreshes the screen..
         ViewportMsg returnValue ->
-                    let
-                        newCanvasDimensions =
-                            returnValue
-                                |> Result.map .viewport
-                                |> Result.map
-                                    (\v ->
-                                        { width = round v.width
-                                        , height = round v.height
-                                        }
-                                    )
-                                |> Result.withDefault gameLoaderData.canvasDimensions
+            let
+                newCanvasDimensions =
+                    returnValue
+                        |> Result.map .viewport
+                        |> Result.map
+                            (\v ->
+                                { width = round v.width
+                                , height = round v.height
+                                }
+                            )
+                        |> Result.withDefault gameLoaderData.canvasDimensions
 
-                        newGameLoaderData =
-                            { gameLoaderData | canvasDimensions = newCanvasDimensions }
-                    in
-                    ( InGameLoader newGameLoaderData
-                    , Cmd.none
-                    )
+                newGameLoaderData =
+                    { gameLoaderData | canvasDimensions = newCanvasDimensions }
+            in
+            ( InGameLoader newGameLoaderData
+            , Cmd.none
+            )
 
 
 recvServerJson : String -> Msg
