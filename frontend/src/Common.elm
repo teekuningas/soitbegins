@@ -4,7 +4,10 @@ module Common exposing
     , Controller
     , DragState(..)
     , Earth
+    , MenuData
     , GameData
+    , GameLoaderData
+    , InitData
     , Hero
     , MeshList
     , Model(..)
