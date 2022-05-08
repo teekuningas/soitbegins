@@ -61,6 +61,7 @@ type alias GameData =
     , canvasDimensions : CanvasDimensions
     , connectionData : ConnectionData
     , earthMesh : Mesh Vertex
+    , refreshed : Bool 
     }
 
 

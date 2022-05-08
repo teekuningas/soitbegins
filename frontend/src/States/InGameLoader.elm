@@ -173,6 +173,7 @@ update msg gameLoaderData =
                     , canvasDimensions = gameLoaderData.canvasDimensions
                     , connectionData = newConnectionData
                     , earthMesh = gameLoaderData.earthMesh
+                    , refreshed = False
                     }
             in
             case ( gameLoaderData.renderData, gameLoaderData.connectionData ) of

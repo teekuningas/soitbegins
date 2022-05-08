@@ -268,11 +268,19 @@ update msg gameData =
                         earthData.previousMsgEarth
                         gameData
 
+                cmd = 
+                    if updatedGameData.refreshed == False 
+                    then
+                        Task.attempt ViewportMsg (getViewportOf "webgl-canvas")
+                    else
+                        Cmd.none
+
                 newGameData =
-                    { updatedGameData | renderData = newRenderData }
+                    { updatedGameData | renderData = newRenderData
+                                      , refreshed = True }
             in
             ( InGame newGameData
-            , Cmd.none
+            , cmd
             )
 
         PointerEventMsg event ->

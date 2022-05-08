@@ -58,6 +58,7 @@ init flags =
                             meters
                             ObjLoader.earthMeshDecoder
                     }
+                , Task.attempt ViewportMsg (getViewportOf "webgl-canvas")
                 ]
     in
     ( Initialization initData
@@ -112,7 +113,7 @@ update msg initData =
                             }
                     in
                     ( MainMenu newMenuData
-                    , Task.attempt ViewportMsg (getViewportOf "webgl-canvas")
+                    , Cmd.none 
                     )
 
                 Err _ ->
