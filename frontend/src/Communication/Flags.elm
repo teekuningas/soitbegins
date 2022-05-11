@@ -1,4 +1,4 @@
-module Flags exposing (FlagsValue, flagsDecoder)
+module Communication.Flags exposing (FlagsValue, flagsDecoder)
 
 import Json.Decode
 

@@ -2,11 +2,11 @@ module States.MainMenu exposing (Msg, subscriptions, update, view)
 
 import Browser.Dom exposing (getViewportOf)
 import Browser.Events exposing (onResize)
-import Common exposing (MenuData, Model(..))
+import HUD.Page exposing (embedInCanvas)
 import Html exposing (Html, button, div, p, text)
 import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
-import Page exposing (embedInCanvas)
+import Model.Model exposing (MenuData, Model(..))
 import Platform.Sub
 import Task
 

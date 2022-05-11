@@ -1,19 +1,13 @@
 module Main exposing (main)
 
 import Browser
-import Browser.Dom exposing (getViewportOf)
-import Common
+import Communication.Flags as Flags
+import Html exposing (Html)
+import Json.Decode
+import Model.Model
     exposing
         ( Model(..)
-        , viewportSize
         )
-import Flags
-import Html exposing (Html)
-import Http
-import Json.Decode
-import Length exposing (Meters, meters)
-import Obj.Decode exposing (expectObj)
-import ObjLoader
 import Platform.Cmd
 import Platform.Sub
 import States.InGame
@@ -21,7 +15,6 @@ import States.InGameLoader
 import States.Initialization
 import States.MainMenu
 import States.Termination
-import Task
 
 
 type Msg

@@ -1,4 +1,4 @@
-port module Receiver exposing
+port module Communication.Receiver exposing
     ( RecvServerValue
     , decodeJson
     , messageReceiver

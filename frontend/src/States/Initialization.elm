@@ -2,14 +2,12 @@ module States.Initialization exposing (Msg, init, subscriptions, update, view)
 
 import Browser.Dom exposing (getViewportOf)
 import Browser.Events exposing (onResize)
-import Common
+import Communication.Flags exposing (FlagsValue)
+import HUD.Page
     exposing
-        ( InitData
-        , Model(..)
-        , Vertex
+        ( embedInCanvas
         , viewportSize
         )
-import Flags exposing (FlagsValue)
 import Html
     exposing
         ( Html
@@ -20,19 +18,24 @@ import Html
 import Html.Attributes exposing (class)
 import Http
 import Length exposing (Meters, meters)
+import Model.Model
+    exposing
+        ( InitData
+        , Model(..)
+        )
 import Obj.Decode exposing (expectObj)
-import ObjLoader
-import Page exposing (embedInCanvas)
 import Platform.Cmd
 import Platform.Sub
 import Task
 import WebGL exposing (Mesh)
+import World.ObjLoader as ObjLoader
+import World.World as World
 
 
 type Msg
     = ResizeMsg
     | ViewportMsg (Result Browser.Dom.Error Browser.Dom.Viewport)
-    | EarthMeshLoaded (Result Http.Error (Mesh Vertex))
+    | EarthMeshLoaded (Result Http.Error (Mesh World.Vertex))
 
 
 init : FlagsValue -> ( Model, Cmd Msg )

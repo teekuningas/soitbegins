@@ -1,6 +1,6 @@
-module Update exposing (updateGameData)
+module World.Update exposing (updateGameData)
 
-import Common exposing (Earth, GameData)
+import Model.Model exposing (Earth, GameData)
 
 
 updateGameData : Float -> Float -> Float -> Float -> Earth -> Earth -> GameData -> GameData

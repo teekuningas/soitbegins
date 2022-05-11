@@ -1,7 +1,7 @@
 module States.Termination exposing (Msg, subscriptions, update, view)
 
-import Common exposing (Model(..))
 import Html exposing (Html, div, text)
+import Model.Model exposing (Model(..))
 import Platform.Sub
 
 

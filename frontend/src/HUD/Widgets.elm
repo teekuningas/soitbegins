@@ -1,8 +1,8 @@
-module Widgets exposing (fpsOverlay)
+module HUD.Widgets exposing (fpsOverlay)
 
-import Common exposing (RenderData)
 import Html exposing (Html, div, span, text)
 import Html.Attributes exposing (id)
+import Model.Model exposing (RenderData)
 
 
 fpsOverlay : RenderData -> Html msg

@@ -1,19 +1,10 @@
 module States.InGame exposing (Msg, subscriptions, update, view)
 
-import Browser
 import Browser.Dom exposing (getViewportOf)
 import Browser.Events exposing (onAnimationFrame, onResize)
-import Common
-    exposing
-        ( DragState(..)
-        , GameData
-        , Model(..)
-        , Vertex
-        , fragmentShader
-        , vertexShader
-        , viewportSize
-        )
-import Controller
+import Communication.Flags
+import Communication.Receiver as Receiver
+import HUD.Controller as Controller
     exposing
         ( controllerMeshDown
         , controllerMeshUp
@@ -22,29 +13,25 @@ import Controller
         , handleMove
         , handleUp
         )
-import Flags
-import Html exposing (Html, button, div, p, span, text)
-import Html.Attributes exposing (class, height, id, style, width)
-import Html.Events exposing (onClick)
+import HUD.Page exposing (embedInCanvas)
+import HUD.Widgets exposing (fpsOverlay)
+import Html exposing (Html)
 import Html.Events.Extra.Mouse as Mouse
 import Html.Events.Extra.Touch as Touch
-import Http
-import Json.Decode
-import Length exposing (Meters, meters)
 import List
-import Math.Vector3 as Vec3 exposing (vec3)
-import Obj.Decode exposing (expectObj)
-import ObjLoader
-import Page exposing (embedInCanvas)
+import Model.Model
+    exposing
+        ( DragState(..)
+        , GameData
+        , Model(..)
+        )
 import Platform.Cmd
 import Platform.Sub
-import Receiver
 import Task
 import Time
-import Update exposing (updateGameData)
-import WebGL exposing (Mesh)
-import Widgets exposing (fpsOverlay)
-import World
+import WebGL
+import World.Update exposing (updateGameData)
+import World.World as World
     exposing
         ( axisMesh
         , axisUnif
@@ -118,33 +105,33 @@ view gameData =
         , Mouse.onMove (PointerEventMsg << MouseMove)
         ]
         [ WebGL.entity
-            vertexShader
-            fragmentShader
+            World.vertexShader
+            World.fragmentShader
             heroMesh
             (heroUnif canvasDimensions earth hero camera)
         , WebGL.entity
-            vertexShader
-            fragmentShader
+            World.vertexShader
+            World.fragmentShader
             fireMesh
             (fireUnif canvasDimensions earth hero camera)
         , WebGL.entity
-            vertexShader
-            fragmentShader
+            World.vertexShader
+            World.fragmentShader
             earthMesh
             (earthUnif canvasDimensions earth hero camera)
         , WebGL.entity
-            vertexShader
-            fragmentShader
+            World.vertexShader
+            World.fragmentShader
             axisMesh
             (axisUnif canvasDimensions earth hero camera)
         , WebGL.entity
-            vertexShader
-            fragmentShader
+            World.vertexShader
+            World.fragmentShader
             sunMesh
             (sunUnif canvasDimensions earth hero camera)
         , WebGL.entity
-            vertexShader
-            fragmentShader
+            Controller.vertexShader
+            Controller.fragmentShader
             controllerMeshUp
             (controllerUnif canvasDimensions
                 (if gameData.controller.upButtonDown then
@@ -155,8 +142,8 @@ view gameData =
                 )
             )
         , WebGL.entity
-            vertexShader
-            fragmentShader
+            Controller.vertexShader
+            Controller.fragmentShader
             controllerMeshDown
             (controllerUnif canvasDimensions
                 (if gameData.controller.downButtonDown then

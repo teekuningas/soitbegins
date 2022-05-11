@@ -1,6 +1,5 @@
-module ObjLoader exposing (earthMeshDecoder)
+module World.ObjLoader exposing (earthMeshDecoder)
 
-import Common exposing (Vertex)
 import Length exposing (Meters, inMeters)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import Obj.Decode exposing (ObjCoordinates)
@@ -9,6 +8,7 @@ import Quantity exposing (Unitless)
 import TriangularMesh exposing (TriangularMesh)
 import Vector3d exposing (Vector3d)
 import WebGL exposing (Mesh)
+import World.World as World
 
 
 triangularEarthToMeshVertex :
@@ -16,7 +16,7 @@ triangularEarthToMeshVertex :
         { position : Point3d Meters ObjCoordinates
         , normal : Vector3d Unitless ObjCoordinates
         }
-    -> Mesh Vertex
+    -> Mesh World.Vertex
 triangularEarthToMeshVertex triangularMesh =
     let
         vertices =
@@ -70,6 +70,6 @@ triangularEarthToMeshVertex triangularMesh =
     WebGL.triangles earthMesh
 
 
-earthMeshDecoder : Obj.Decode.Decoder (Mesh Vertex)
+earthMeshDecoder : Obj.Decode.Decoder (Mesh World.Vertex)
 earthMeshDecoder =
     Obj.Decode.map triangularEarthToMeshVertex Obj.Decode.faces

@@ -1,9 +1,13 @@
-module Page exposing (embedInCanvas)
+module HUD.Page exposing (embedInCanvas, viewportSize)
 
-import Common exposing (viewportSize)
 import Html exposing (Html, div)
 import Html.Attributes exposing (height, id, style, width)
 import WebGL
+
+
+viewportSize : ( Int, Int )
+viewportSize =
+    ( 800, 800 )
 
 
 embedInCanvas : List (Html msg) -> List (Html.Attribute msg) -> List WebGL.Entity -> Html msg

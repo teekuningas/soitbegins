@@ -2,12 +2,17 @@ module States.InGameLoader exposing (Msg, subscriptions, update, view)
 
 import Browser.Dom exposing (getViewportOf)
 import Browser.Events exposing (onAnimationFrame, onResize)
-import Common exposing (DragState(..), GameLoaderData, Model(..))
+import Communication.Receiver as Receiver
+import HUD.Page exposing (embedInCanvas)
 import Html exposing (Html, div, p, text)
 import Html.Attributes exposing (class)
-import Page exposing (embedInCanvas)
+import Model.Model
+    exposing
+        ( DragState(..)
+        , GameLoaderData
+        , Model(..)
+        )
 import Platform.Sub
-import Receiver
 import Task
 import Time
 
