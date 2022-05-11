@@ -42,15 +42,8 @@ init flagsMsg =
             )
 
         Ok value ->
-            let
-                ( newModel, cmdMsg ) =
-                    States.Initialization.init value
-            in
-            ( newModel
-            , Platform.Cmd.map
-                (\s -> InitializationMsg s)
-                cmdMsg
-            )
+            States.Initialization.init value
+                |> Tuple.mapBoth identity (Platform.Cmd.map InitializationMsg)
 
 
 
@@ -62,27 +55,27 @@ view model =
     case model of
         Termination message ->
             Html.map
-                (\m -> TerminationMsg m)
+                TerminationMsg
                 (States.Termination.view message)
 
         Initialization initData ->
             Html.map
-                (\m -> InitializationMsg m)
+                InitializationMsg
                 (States.Initialization.view initData)
 
         MainMenu menuData ->
             Html.map
-                (\m -> MainMenuMsg m)
+                MainMenuMsg
                 (States.MainMenu.view menuData)
 
         InGameLoader gameLoaderData ->
             Html.map
-                (\m -> InGameLoaderMsg m)
+                InGameLoaderMsg
                 (States.InGameLoader.view gameLoaderData)
 
         InGame gameData ->
             Html.map
-                (\m -> InGameMsg m)
+                InGameMsg
                 (States.InGame.view gameData)
 
 
@@ -95,27 +88,27 @@ subscriptions model =
     case model of
         Initialization initData ->
             Platform.Sub.map
-                (\s -> InitializationMsg s)
+                InitializationMsg
                 (States.Initialization.subscriptions initData)
 
         MainMenu menuData ->
             Platform.Sub.map
-                (\s -> MainMenuMsg s)
+                MainMenuMsg
                 (States.MainMenu.subscriptions menuData)
 
         InGameLoader gameLoaderData ->
             Platform.Sub.map
-                (\s -> InGameLoaderMsg s)
+                InGameLoaderMsg
                 (States.InGameLoader.subscriptions gameLoaderData)
 
         InGame gameData ->
             Platform.Sub.map
-                (\s -> InGameMsg s)
+                InGameMsg
                 (States.InGame.subscriptions gameData)
 
         Termination message ->
             Platform.Sub.map
-                (\s -> TerminationMsg s)
+                TerminationMsg
                 (States.Termination.subscriptions message)
 
 
@@ -127,59 +120,24 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case ( msg, model ) of
         ( InitializationMsg stateMsg, Initialization initData ) ->
-            let
-                ( newModel, cmdMsg ) =
-                    States.Initialization.update stateMsg initData
-            in
-            ( newModel
-            , Platform.Cmd.map
-                (\s -> InitializationMsg s)
-                cmdMsg
-            )
+            States.Initialization.update stateMsg initData
+                |> Tuple.mapSecond (Platform.Cmd.map InitializationMsg)
 
         ( MainMenuMsg stateMsg, MainMenu menuData ) ->
-            let
-                ( newModel, cmdMsg ) =
-                    States.MainMenu.update stateMsg menuData
-            in
-            ( newModel
-            , Platform.Cmd.map
-                (\s -> MainMenuMsg s)
-                cmdMsg
-            )
+            States.MainMenu.update stateMsg menuData
+                |> Tuple.mapSecond (Platform.Cmd.map MainMenuMsg)
 
         ( InGameLoaderMsg stateMsg, InGameLoader gameLoaderData ) ->
-            let
-                ( newModel, cmdMsg ) =
-                    States.InGameLoader.update stateMsg gameLoaderData
-            in
-            ( newModel
-            , Platform.Cmd.map
-                (\s -> InGameLoaderMsg s)
-                cmdMsg
-            )
+            States.InGameLoader.update stateMsg gameLoaderData
+                |> Tuple.mapSecond (Platform.Cmd.map InGameLoaderMsg)
 
         ( InGameMsg stateMsg, InGame gameData ) ->
-            let
-                ( newModel, cmdMsg ) =
-                    States.InGame.update stateMsg gameData
-            in
-            ( newModel
-            , Platform.Cmd.map
-                (\s -> InGameMsg s)
-                cmdMsg
-            )
+            States.InGame.update stateMsg gameData
+                |> Tuple.mapSecond (Platform.Cmd.map InGameMsg)
 
         ( TerminationMsg stateMsg, Termination message ) ->
-            let
-                ( newModel, cmdMsg ) =
-                    States.Termination.update stateMsg message
-            in
-            ( newModel
-            , Platform.Cmd.map
-                (\s -> TerminationMsg s)
-                cmdMsg
-            )
+            States.Termination.update stateMsg message
+                |> Tuple.mapSecond (Platform.Cmd.map TerminationMsg)
 
         _ ->
             ( model, Cmd.none )
