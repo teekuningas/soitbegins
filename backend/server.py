@@ -14,10 +14,8 @@ time_at_beginning = datetime.datetime.now().timestamp() * 1000
 # holds the game state
 state = {
     'elapsed': 0,
-    'earth': {'locationX': 5000,
-              'locationY': 0,
-              'locationZ': 0,
-              'rotationTheta': 0}
+    'earth': {'rotationAroundSun': 0,
+              'rotationAroundAxis': 0}
 }
 
 
@@ -31,7 +29,8 @@ async def update():
                             time_at_beginning)
 
         # update earth rotation
-        state['earth']['rotationTheta'] = state['elapsed'] / 100000
+        state['earth']['rotationAroundAxis'] = state['elapsed'] / 100000
+        state['earth']['rotationAroundSun'] = state['elapsed'] / 10000000
 
 
 # update game state with incoming messages
@@ -67,6 +66,8 @@ if __name__ == '__main__':
 
     # get event loop
     event_loop = asyncio.get_event_loop()
+
+    print("Starting server..")
 
     # start the server
     start_server = websockets.serve(socket_fun, 'localhost', 8765)

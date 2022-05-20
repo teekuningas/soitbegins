@@ -92,14 +92,18 @@ earthUnif canvasDimensions earth hero camera =
         rotation =
             Mat4.mul
                 (Mat4.makeRotate ((23.5 / 180) * pi) (vec3 0 0 1))
-                (Mat4.makeRotate earth.rotationTheta (vec3 0 1 0))
+                (Mat4.makeRotate earth.rotationAroundAxis (vec3 0 1 0))
+
+        earthLocationX = -5000
+        earthLocationY = 0
+        earthLocationZ = 0
 
         -- Move to the correct location
         translation =
             Mat4.translate
-                (vec3 earth.locationX
-                    earth.locationY
-                    earth.locationZ
+                (vec3 earthLocationX
+                    earthLocationY
+                    earthLocationZ
                 )
                 Mat4.identity
     in
@@ -159,7 +163,7 @@ heroUnif canvasDimensions earth hero camera =
             Mat4.makeRotate hero.longitude earthAxis
 
         earthRotationRotation =
-            Mat4.makeRotate earth.rotationTheta earthAxis
+            Mat4.makeRotate earth.rotationAroundAxis earthAxis
 
         postRotation =
             List.foldl
@@ -171,12 +175,16 @@ heroUnif canvasDimensions earth hero camera =
                 , earthRotationRotation
                 ]
 
+        earthLocationX = -5000
+        earthLocationY = 0
+        earthLocationZ = 0
+
         -- And finally moved to the earth
         postTranslation =
             Mat4.translate
-                (vec3 earth.locationX
-                    earth.locationY
-                    earth.locationZ
+                (vec3 earthLocationX
+                    earthLocationY
+                    earthLocationZ
                 )
                 Mat4.identity
     in
@@ -514,10 +522,14 @@ subdivideProject clr mesh =
 
 makeOverviewCamera : CanvasDimensions -> Earth -> Hero -> Mat4
 makeOverviewCamera canvasDimensions earth hero =
+    let earthLocationX = -5000
+        earthLocationY = 0
+        earthLocationZ = 0
+    in
     Mat4.makeLookAt (vec3 5 0 5)
-        (vec3 earth.locationX
-            earth.locationY
-            earth.locationZ
+        (vec3 earthLocationX
+            earthLocationY
+            earthLocationZ
         )
         (vec3 0 1 0)
 
@@ -531,10 +543,14 @@ makeHeroCamera canvasDimensions earth hero camera =
         elevation =
             camera.elevation
 
+        earthLocationX = -5000
+        earthLocationY = 0
+        earthLocationZ = 0
+
         earthLoc =
-            vec3 earth.locationX
-                earth.locationY
-                earth.locationZ
+            vec3 earthLocationX
+                earthLocationY
+                earthLocationZ
 
         -- Generate a general rotation matrix that can transform
         -- the hero, the camera and even the up vector.
@@ -556,7 +572,7 @@ makeHeroCamera canvasDimensions earth hero camera =
             Mat4.makeRotate hero.longitude earthAxis
 
         earthRotationRotation =
-            Mat4.makeRotate earth.rotationTheta earthAxis
+            Mat4.makeRotate earth.rotationAroundAxis earthAxis
 
         rotateAround =
             List.foldl

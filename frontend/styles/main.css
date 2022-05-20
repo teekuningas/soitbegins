@@ -3,7 +3,6 @@ body {
   margin: 0;
 }
 
-
 .initialization-container { 
   width: 100%;
   padding: 0;
@@ -15,7 +14,6 @@ body {
   text-align: center;
 }
 
-
 .game-loader-container { 
   width: 100%;
   padding: 0;
@@ -26,7 +24,6 @@ body {
   font-size: 3em;
   text-align: center;
 }
-
 
 .main-menu-container { 
   padding: 0;
@@ -40,11 +37,11 @@ body {
 }
 
 .main-menu-container button {
-  padding: 1em;
+  padding: 0.5em;
   width: 100%;
-  height: 5em;
+  height: 4em;
+  font-size: 3em;
 }
-
 
 #canvas-container #fps-overlay {
   position: absolute; 
@@ -52,9 +49,40 @@ body {
   padding: 0.5em;
   border-radius: 5px;
   background-color: rgba(0,0,0,0.2);
-  font-size: 20px;
+  font-size: 3rem;
 }
+
+#canvas-container #overview-toggle-overlay.overview-toggle-on {
+  position: absolute;
+  right: 0;
+  margin: 0.5em;
+  padding: 0.5em;
+  border-radius: 5px;
+  background-color: rgba(0,0,150,0.5);
+  font-size: 3rem;
+}
+
+#canvas-container #overview-toggle-overlay.overview-toggle-off {
+  position: absolute;
+  right: 0;
+  margin: 0.5em;
+  padding: 0.5em;
+  border-radius: 5px;
+  background-color: rgba(0,0,0,0.2);
+  font-size: 3rem;
+}
+
 
 #canvas-container .main-menu-container {
   position: absolute;
+}
+
+.noselect {
+  -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+     -khtml-user-select: none; /* Konqueror HTML */
+       -moz-user-select: none; /* Old versions of Firefox */
+        -ms-user-select: none; /* Internet Explorer/Edge */
+            user-select: none; /* Non-prefixed version, currently
+                                  supported by Chrome, Edge, Opera and Firefox */
 }

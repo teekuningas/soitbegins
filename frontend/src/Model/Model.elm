@@ -50,6 +50,7 @@ type alias GameData =
     , connectionData : ConnectionData
     , earthMesh : Mesh Vertex
     , refreshed : Bool
+    , overviewToggle : Bool
     }
 
 
@@ -75,10 +76,8 @@ type alias Hero =
 
 
 type alias Earth =
-    { locationX : Float
-    , locationY : Float
-    , locationZ : Float
-    , rotationTheta : Float
+    { rotationAroundSun : Float
+    , rotationAroundAxis : Float
     }
 
 

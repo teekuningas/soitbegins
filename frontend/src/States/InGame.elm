@@ -14,7 +14,10 @@ import HUD.Controller as Controller
         , handleUp
         )
 import HUD.Page exposing (embedInCanvas)
-import HUD.Widgets exposing (fpsOverlay)
+import HUD.Widgets exposing ( fpsOverlay
+                            , overviewToggleOverlay
+                            , Msg(..)
+                            )
 import Html exposing (Html)
 import Html.Events.Extra.Mouse as Mouse
 import Html.Events.Extra.Touch as Touch
@@ -53,6 +56,7 @@ type Msg
     | RecvServerMsg Receiver.RecvServerValue
     | RecvServerMsgError String
     | UpdateTimeMsg Time.Posix
+    | WidgetsMsg HUD.Widgets.Msg 
 
 
 type PointerEvent
@@ -95,7 +99,8 @@ view gameData =
             gameData.earthMesh
     in
     embedInCanvas
-        [ fpsOverlay renderData
+        [ Html.map WidgetsMsg (fpsOverlay renderData)
+        , Html.map WidgetsMsg (overviewToggleOverlay gameData.overviewToggle)
         ]
         [ Touch.onEnd (PointerEventMsg << TouchUp)
         , Touch.onStart (PointerEventMsg << TouchDown)
@@ -174,10 +179,8 @@ update msg gameData =
         RecvServerMsg message ->
             let
                 msgEarth =
-                    { locationX = message.earth.locationX
-                    , locationY = message.earth.locationY
-                    , locationZ = message.earth.locationZ
-                    , rotationTheta = message.earth.rotationTheta
+                    { rotationAroundSun = message.earth.rotationAroundSun
+                    , rotationAroundAxis = message.earth.rotationAroundAxis
                     }
 
                 newEarth =
@@ -400,7 +403,14 @@ update msg gameData =
             , Cmd.none
             )
 
-
+        WidgetsMsg widgetsMsg ->
+            case widgetsMsg of 
+                OverviewToggleMsg -> 
+                    let newGameData = { gameData | overviewToggle = not gameData.overviewToggle }
+                    in
+                    ( InGame newGameData
+                    , Cmd.none
+                    )
 
 -- Some helpers.
 

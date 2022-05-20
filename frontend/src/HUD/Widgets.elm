@@ -1,11 +1,15 @@
-module HUD.Widgets exposing (fpsOverlay)
+module HUD.Widgets exposing (fpsOverlay, overviewToggleOverlay, Msg(..))
 
 import Html exposing (Html, div, span, text)
-import Html.Attributes exposing (id)
+import Html.Attributes exposing (id, class)
+import Html.Events exposing (onMouseDown)
 import Model.Model exposing (RenderData)
 
 
-fpsOverlay : RenderData -> Html msg
+type Msg = OverviewToggleMsg
+
+
+fpsOverlay : RenderData -> Html Msg
 fpsOverlay renderData =
     let
         fps =
@@ -19,3 +23,18 @@ fpsOverlay renderData =
             [ text ("FPS: " ++ fps)
             ]
         ]
+
+overviewToggleOverlay : Bool -> Html Msg
+overviewToggleOverlay isOn =
+    let
+        className = if isOn then "overview-toggle-on" else "overview-toggle-off"
+    in
+    div
+        [ id "overview-toggle-overlay" 
+        , class (String.append className " noselect")
+        , onMouseDown OverviewToggleMsg
+        ]
+        [ div 
+            [ ] 
+            [ text "Overview" ]
+        ] 

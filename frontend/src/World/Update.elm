@@ -17,10 +17,8 @@ updateGameData elapsed previousElapsed msgElapsed previousMsgElapsed msgEarth pr
             p1 + w * (p2 - p1)
 
         newEarth =
-            { rotationTheta = weightedAve previousMsgEarth.rotationTheta msgEarth.rotationTheta weight
-            , locationX = weightedAve previousMsgEarth.locationX msgEarth.locationX weight
-            , locationY = weightedAve previousMsgEarth.locationY msgEarth.locationY weight
-            , locationZ = weightedAve previousMsgEarth.locationZ msgEarth.locationZ weight
+            { rotationAroundAxis = weightedAve previousMsgEarth.rotationAroundAxis msgEarth.rotationAroundAxis weight
+            , rotationAroundSun = weightedAve previousMsgEarth.rotationAroundSun msgEarth.rotationAroundSun weight
             }
 
         newPowerChange =

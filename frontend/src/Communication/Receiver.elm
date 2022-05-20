@@ -12,10 +12,8 @@ type alias RecvServerValue =
 
 
 type alias RecvServerValueEarth =
-    { locationX : Float
-    , locationY : Float
-    , locationZ : Float
-    , rotationTheta : Float
+    { rotationAroundSun : Float
+    , rotationAroundAxis : Float
     }
 
 
@@ -29,11 +27,9 @@ decodeJson value =
 
 msgEarthDecoder : Json.Decode.Decoder RecvServerValueEarth
 msgEarthDecoder =
-    Json.Decode.map4 RecvServerValueEarth
-        (Json.Decode.field "locationX" Json.Decode.float)
-        (Json.Decode.field "locationY" Json.Decode.float)
-        (Json.Decode.field "locationZ" Json.Decode.float)
-        (Json.Decode.field "rotationTheta" Json.Decode.float)
+    Json.Decode.map2 RecvServerValueEarth
+        (Json.Decode.field "rotationAroundAxis" Json.Decode.float)
+        (Json.Decode.field "rotationAroundSun" Json.Decode.float)
 
 
 msgDecoder : Json.Decode.Decoder RecvServerValue

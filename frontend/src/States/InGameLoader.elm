@@ -59,10 +59,8 @@ update msg gameLoaderData =
         RecvServerMsg message ->
             let
                 msgEarth =
-                    { locationX = message.earth.locationX
-                    , locationY = message.earth.locationY
-                    , locationZ = message.earth.locationZ
-                    , rotationTheta = message.earth.rotationTheta
+                    { rotationAroundSun = message.earth.rotationAroundSun
+                    , rotationAroundAxis = message.earth.rotationAroundAxis
                     }
             in
             case gameLoaderData.connectionData of
@@ -179,6 +177,7 @@ update msg gameLoaderData =
                     , connectionData = newConnectionData
                     , earthMesh = gameLoaderData.earthMesh
                     , refreshed = False
+                    , overviewToggle = False
                     }
             in
             case ( gameLoaderData.renderData, gameLoaderData.connectionData ) of
