@@ -32,11 +32,12 @@ generalUnif overviewToggle canvasDimensions earth hero camera =
             toFloat canvasDimensions.width
                 / toFloat canvasDimensions.height
 
-        cameraMat = 
-            if overviewToggle == True
-            then makeOverviewCamera canvasDimensions earth hero
-            else makeHeroCamera canvasDimensions earth hero camera
+        cameraMat =
+            if overviewToggle == True then
+                makeOverviewCamera canvasDimensions earth hero
 
+            else
+                makeHeroCamera canvasDimensions earth hero camera
     in
     { preScale =
         Mat4.identity
@@ -97,12 +98,17 @@ earthUnif overviewToggle canvasDimensions earth hero camera =
         -- Tilt and rotate along the correct axis
         rotation =
             Mat4.mul
-              (Mat4.makeRotate ((23.5 / 180) * pi) (vec3 0 0 1))
-              (Mat4.makeRotate earth.rotationAroundAxis (vec3 0 1 0))
+                (Mat4.makeRotate ((23.5 / 180) * pi) (vec3 0 0 1))
+                (Mat4.makeRotate earth.rotationAroundAxis (vec3 0 1 0))
 
-        earthLocationX = 1000 * (cos (earth.rotationAroundSun) + sin (earth.rotationAroundSun))
-        earthLocationY = 0
-        earthLocationZ = 1000 * (cos (earth.rotationAroundSun) - sin (earth.rotationAroundSun))
+        earthLocationX =
+            1000 * (cos earth.rotationAroundSun + sin earth.rotationAroundSun)
+
+        earthLocationY =
+            0
+
+        earthLocationZ =
+            1000 * (cos earth.rotationAroundSun - sin earth.rotationAroundSun)
 
         -- Move to the correct location
         translation =
@@ -181,9 +187,14 @@ heroUnif overviewToggle canvasDimensions earth hero camera =
                 , earthRotationRotation
                 ]
 
-        earthLocationX = 1000 * (cos (earth.rotationAroundSun) + sin (earth.rotationAroundSun))
-        earthLocationY = 0
-        earthLocationZ = 1000 * (cos (earth.rotationAroundSun) - sin (earth.rotationAroundSun))
+        earthLocationX =
+            1000 * (cos earth.rotationAroundSun + sin earth.rotationAroundSun)
+
+        earthLocationY =
+            0
+
+        earthLocationZ =
+            1000 * (cos earth.rotationAroundSun - sin earth.rotationAroundSun)
 
         -- And finally moved to the earth
         postTranslation =
@@ -528,10 +539,15 @@ subdivideProject clr mesh =
 
 makeOverviewCamera : CanvasDimensions -> Earth -> Hero -> Mat4
 makeOverviewCamera canvasDimensions earth hero =
-    let 
-        sunLocationX = 0
-        sunLocationY = 0
-        sunLocationZ = 0
+    let
+        sunLocationX =
+            0
+
+        sunLocationY =
+            0
+
+        sunLocationZ =
+            0
     in
     Mat4.makeLookAt (vec3 0 0 -2500)
         (vec3 sunLocationX
@@ -550,9 +566,14 @@ makeHeroCamera canvasDimensions earth hero camera =
         elevation =
             camera.elevation
 
-        earthLocationX = 1000 * (cos (earth.rotationAroundSun) + sin (earth.rotationAroundSun))
-        earthLocationY = 0
-        earthLocationZ = 1000 * (cos (earth.rotationAroundSun) - sin (earth.rotationAroundSun))
+        earthLocationX =
+            1000 * (cos earth.rotationAroundSun + sin earth.rotationAroundSun)
+
+        earthLocationY =
+            0
+
+        earthLocationZ =
+            1000 * (cos earth.rotationAroundSun - sin earth.rotationAroundSun)
 
         earthLoc =
             vec3 earthLocationX

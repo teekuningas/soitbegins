@@ -14,11 +14,13 @@ import HUD.Controller as Controller
         , handleUp
         )
 import HUD.Page exposing (embedInCanvas)
-import HUD.Widgets exposing ( fpsOverlay
-                            , overviewToggleOverlay
-                            , debugOverlay
-                            , Msg(..)
-                            )
+import HUD.Widgets
+    exposing
+        ( Msg(..)
+        , debugOverlay
+        , fpsOverlay
+        , overviewToggleOverlay
+        )
 import Html exposing (Html)
 import Html.Attributes exposing (class)
 import Html.Events.Extra.Mouse as Mouse
@@ -58,7 +60,7 @@ type Msg
     | RecvServerMsg Receiver.RecvServerValue
     | RecvServerMsgError String
     | UpdateTimeMsg Time.Posix
-    | WidgetsMsg HUD.Widgets.Msg 
+    | WidgetsMsg HUD.Widgets.Msg
 
 
 type PointerEvent
@@ -103,10 +105,12 @@ view gameData =
         overviewToggle =
             gameData.overviewToggle
 
-        containerAttrs = 
-            if overviewToggle 
-            then [ class "background-black" ]
-            else []
+        containerAttrs =
+            if overviewToggle then
+                [ class "background-black" ]
+
+            else
+                []
     in
     embedInCanvas
         containerAttrs
@@ -416,13 +420,17 @@ update msg gameData =
             )
 
         WidgetsMsg widgetsMsg ->
-            case widgetsMsg of 
-                OverviewToggleMsg -> 
-                    let newGameData = { gameData | overviewToggle = not gameData.overviewToggle }
+            case widgetsMsg of
+                OverviewToggleMsg ->
+                    let
+                        newGameData =
+                            { gameData | overviewToggle = not gameData.overviewToggle }
                     in
                     ( InGame newGameData
                     , Cmd.none
                     )
+
+
 
 -- Some helpers.
 

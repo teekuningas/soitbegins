@@ -1,12 +1,13 @@
-module HUD.Widgets exposing (fpsOverlay, overviewToggleOverlay, debugOverlay, Msg(..))
+module HUD.Widgets exposing (Msg(..), debugOverlay, fpsOverlay, overviewToggleOverlay)
 
 import Html exposing (Html, div, span, text)
-import Html.Attributes exposing (id, class)
+import Html.Attributes exposing (class, id)
 import Html.Events exposing (onMouseDown)
-import Model.Model exposing (RenderData, GameData)
+import Model.Model exposing (GameData, RenderData)
 
 
-type Msg = OverviewToggleMsg
+type Msg
+    = OverviewToggleMsg
 
 
 fpsOverlay : RenderData -> Html Msg
@@ -24,33 +25,42 @@ fpsOverlay renderData =
             ]
         ]
 
+
 overviewToggleOverlay : Bool -> Html Msg
 overviewToggleOverlay isOn =
     let
-        className = if isOn then "overview-toggle-on" else "overview-toggle-off"
+        className =
+            if isOn then
+                "overview-toggle-on"
+
+            else
+                "overview-toggle-off"
     in
     div
-        [ id "overview-toggle-overlay" 
+        [ id "overview-toggle-overlay"
         , class (String.append className " noselect")
         , onMouseDown OverviewToggleMsg
         ]
-        [ div 
-            [ ] 
+        [ div
+            []
             [ text "Overview" ]
-        ] 
+        ]
+
 
 debugOverlay : GameData -> Html Msg
 debugOverlay gameData =
     let
-        message = ""
+        message =
+            ""
+
         -- (Debug.toString gameData.earth)
         -- |> String.append (Debug.toString gameData.connectionData.earth)
     in
     div
-        [ id "debug-overlay" 
+        [ id "debug-overlay"
         , class "noselect"
         ]
-        [ div 
-            [ ] 
+        [ div
+            []
             [ text message ]
-        ] 
+        ]
