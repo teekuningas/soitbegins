@@ -16,9 +16,11 @@ import HUD.Controller as Controller
 import HUD.Page exposing (embedInCanvas)
 import HUD.Widgets exposing ( fpsOverlay
                             , overviewToggleOverlay
+                            , debugOverlay
                             , Msg(..)
                             )
 import Html exposing (Html)
+import Html.Attributes exposing (class)
 import Html.Events.Extra.Mouse as Mouse
 import Html.Events.Extra.Touch as Touch
 import List
@@ -97,10 +99,20 @@ view gameData =
 
         earthMesh =
             gameData.earthMesh
+
+        overviewToggle =
+            gameData.overviewToggle
+
+        containerAttrs = 
+            if overviewToggle 
+            then [ class "background-black" ]
+            else []
     in
     embedInCanvas
+        containerAttrs
         [ Html.map WidgetsMsg (fpsOverlay renderData)
         , Html.map WidgetsMsg (overviewToggleOverlay gameData.overviewToggle)
+        , Html.map WidgetsMsg (debugOverlay gameData)
         ]
         [ Touch.onEnd (PointerEventMsg << TouchUp)
         , Touch.onStart (PointerEventMsg << TouchDown)
@@ -113,27 +125,27 @@ view gameData =
             World.vertexShader
             World.fragmentShader
             heroMesh
-            (heroUnif canvasDimensions earth hero camera)
+            (heroUnif overviewToggle canvasDimensions earth hero camera)
         , WebGL.entity
             World.vertexShader
             World.fragmentShader
             fireMesh
-            (fireUnif canvasDimensions earth hero camera)
+            (fireUnif overviewToggle canvasDimensions earth hero camera)
         , WebGL.entity
             World.vertexShader
             World.fragmentShader
             earthMesh
-            (earthUnif canvasDimensions earth hero camera)
+            (earthUnif overviewToggle canvasDimensions earth hero camera)
         , WebGL.entity
             World.vertexShader
             World.fragmentShader
             axisMesh
-            (axisUnif canvasDimensions earth hero camera)
+            (axisUnif overviewToggle canvasDimensions earth hero camera)
         , WebGL.entity
             World.vertexShader
             World.fragmentShader
             sunMesh
-            (sunUnif canvasDimensions earth hero camera)
+            (sunUnif overviewToggle canvasDimensions earth hero camera)
         , WebGL.entity
             Controller.vertexShader
             Controller.fragmentShader

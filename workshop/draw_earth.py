@@ -7,6 +7,8 @@ import numpy as np
 
 from glumpy import app, gl, glm, gloo
 
+DRAW_RESULTS = False
+
 
 # define shaders
 
@@ -204,10 +206,10 @@ with rasterio.open(path) as rds:
     for vert_idx, vert in enumerate(vv):
 
         lon = np.arctan2(vert[1], vert[0])
-        lon = (lon/np.pi)*180
+        lon = (-lon/np.pi)*180
 
         lat = np.arcsin(vert[2])
-        lat = (lat/np.pi)*180
+        lat = -(lat/np.pi)*180
 
         # find corresponding elevation
         elev = list(rds.sample([(lon, lat)]))[0][0]
@@ -233,62 +235,63 @@ write_mesh('output/earth.obj',
            name='earth',
            overwrite=True)
 
+if DRAW_RESULTS:
 
-# create a program to draw the mesh
+    # create a program to draw the mesh
 
-V = np.zeros(len(vv), [("a_position", np.float32, 3),
-                       ("a_color",    np.float32, 4)])
-V["a_position"] = vv
+    V = np.zeros(len(vv), [("a_position", np.float32, 3),
+                           ("a_color",    np.float32, 4)])
+    V["a_position"] = vv
 
-def get_color(pos):
-    if np.linalg.norm(pos) <= 1.00:
-        return [0, 0, 1, 1]
-    elif np.linalg.norm(pos) >= 1.03:
-        return [139/255, 69/255, 19/255, 1]
-    else:
-        return [34/255, 139/255, 34/255, 1]
+    def get_color(pos):
+        if np.linalg.norm(pos) <= 1.00:
+            return [0, 0, 1, 1]
+        elif np.linalg.norm(pos) >= 1.03:
+            return [139/255, 69/255, 19/255, 1]
+        else:
+            return [34/255, 139/255, 34/255, 1]
 
-V["a_color"] = [get_color(vv[idx]) for idx in range(len(vv))]
-
-
-V = V.view(gloo.VertexBuffer)
-
-I = np.array(ff, dtype=np.uint32)
-I = I.view(gloo.IndexBuffer)
-
-earth = gloo.Program(vertex, fragment)
-earth.bind(V)
-
-earth['u_model'] = np.eye(4, dtype=np.float32)
-earth['u_view'] = glm.translation(0, 0, -5)
-theta = 0
+    V["a_color"] = [get_color(vv[idx]) for idx in range(len(vv))]
 
 
-window = app.Window(width=1024, height=1024,  color=(0.30, 0.30, 0.35, 1.00))
+    V = V.view(gloo.VertexBuffer)
 
-@window.event
-def on_draw(dt):
-    global phi, theta
-    window.clear()
+    I = np.array(ff, dtype=np.uint32)
+    I = I.view(gloo.IndexBuffer)
 
-    earth.draw(gl.GL_TRIANGLES, I)
-    
-    # Rotate earth
-    theta += 0.5 # degrees
-    model = np.eye(4, dtype=np.float32)
-    glm.rotate(model, -90, 1, 0, 0)
-    glm.rotate(model, theta, 0, 1, 0)
-    earth['u_model'] = model
+    earth = gloo.Program(vertex, fragment)
+    earth.bind(V)
+
+    earth['u_model'] = np.eye(4, dtype=np.float32)
+    earth['u_view'] = glm.translation(0, 0, -5)
+    theta = 0
 
 
-@window.event
-def on_resize(width, height):
-    earth['u_projection'] = glm.perspective(45.0, width / float(height), 2.0, 100.0)
+    window = app.Window(width=1024, height=1024,  color=(0.30, 0.30, 0.35, 1.00))
 
-@window.event
-def on_init():
-    gl.glEnable(gl.GL_DEPTH_TEST)
+    @window.event
+    def on_draw(dt):
+        global phi, theta
+        window.clear()
+
+        earth.draw(gl.GL_TRIANGLES, I)
+        
+        # Rotate earth
+        theta += 0.5 # degrees
+        model = np.eye(4, dtype=np.float32)
+        glm.rotate(model, -90, 1, 0, 0)
+        glm.rotate(model, theta, 0, 1, 0)
+        earth['u_model'] = model
 
 
-# Start the app
-app.run()
+    @window.event
+    def on_resize(width, height):
+        earth['u_projection'] = glm.perspective(45.0, width / float(height), 2.0, 100.0)
+
+    @window.event
+    def on_init():
+        gl.glEnable(gl.GL_DEPTH_TEST)
+
+
+    # Start the app
+    app.run()

@@ -25,12 +25,18 @@ import Model.Model
 import WebGL exposing (Mesh, Shader)
 
 
-generalUnif : CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
-generalUnif canvasDimensions earth hero camera =
+generalUnif : Bool -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
+generalUnif overviewToggle canvasDimensions earth hero camera =
     let
         aspect =
             toFloat canvasDimensions.width
                 / toFloat canvasDimensions.height
+
+        cameraMat = 
+            if overviewToggle == True
+            then makeOverviewCamera canvasDimensions earth hero
+            else makeHeroCamera canvasDimensions earth hero camera
+
     in
     { preScale =
         Mat4.identity
@@ -51,18 +57,18 @@ generalUnif canvasDimensions earth hero camera =
     , postTranslation =
         Mat4.identity
     , perspective =
-        Mat4.makePerspective 45 aspect 0.001 100000
+        Mat4.makePerspective 45 aspect 1 10000
     , camera =
-        makeHeroCamera canvasDimensions earth hero camera
+        cameraMat
     , shade = 0.75
     }
 
 
-sunUnif : CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
-sunUnif canvasDimensions earth hero camera =
+sunUnif : Bool -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
+sunUnif overviewToggle canvasDimensions earth hero camera =
     let
         unif =
-            generalUnif canvasDimensions earth hero camera
+            generalUnif overviewToggle canvasDimensions earth hero camera
 
         -- Sun lies at the origin but is scaled
         scale =
@@ -71,11 +77,11 @@ sunUnif canvasDimensions earth hero camera =
     { unif | scale = scale }
 
 
-earthUnif : CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
-earthUnif canvasDimensions earth hero camera =
+earthUnif : Bool -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
+earthUnif overviewToggle canvasDimensions earth hero camera =
     let
         unif =
-            generalUnif canvasDimensions earth hero camera
+            generalUnif overviewToggle canvasDimensions earth hero camera
 
         -- The earth mesh comes in wrong position so fix here..
         preScale =
@@ -86,17 +92,17 @@ earthUnif canvasDimensions earth hero camera =
         -- size of the balloon. However, that leads to inaccuracies
         -- in rendering the balloon.
         scale =
-            Mat4.scale (vec3 10 10 10) Mat4.identity
+            Mat4.scale (vec3 100 100 100) Mat4.identity
 
         -- Tilt and rotate along the correct axis
         rotation =
             Mat4.mul
-                (Mat4.makeRotate ((23.5 / 180) * pi) (vec3 0 0 1))
-                (Mat4.makeRotate earth.rotationAroundAxis (vec3 0 1 0))
+              (Mat4.makeRotate ((23.5 / 180) * pi) (vec3 0 0 1))
+              (Mat4.makeRotate earth.rotationAroundAxis (vec3 0 1 0))
 
-        earthLocationX = -5000
+        earthLocationX = 1000 * (cos (earth.rotationAroundSun) + sin (earth.rotationAroundSun))
         earthLocationY = 0
-        earthLocationZ = 0
+        earthLocationZ = 1000 * (cos (earth.rotationAroundSun) - sin (earth.rotationAroundSun))
 
         -- Move to the correct location
         translation =
@@ -115,20 +121,20 @@ earthUnif canvasDimensions earth hero camera =
     }
 
 
-axisUnif : CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
-axisUnif canvasDimensions earth hero camera =
+axisUnif : Bool -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
+axisUnif overviewToggle canvasDimensions earth hero camera =
     let
         unif =
-            earthUnif canvasDimensions earth hero camera
+            earthUnif overviewToggle canvasDimensions earth hero camera
     in
     { unif | preScale = Mat4.identity }
 
 
-heroUnif : CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
-heroUnif canvasDimensions earth hero camera =
+heroUnif : Bool -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
+heroUnif overviewToggle canvasDimensions earth hero camera =
     let
         unif =
-            generalUnif canvasDimensions earth hero camera
+            generalUnif overviewToggle canvasDimensions earth hero camera
 
         -- Hero size
         scale =
@@ -175,9 +181,9 @@ heroUnif canvasDimensions earth hero camera =
                 , earthRotationRotation
                 ]
 
-        earthLocationX = -5000
+        earthLocationX = 1000 * (cos (earth.rotationAroundSun) + sin (earth.rotationAroundSun))
         earthLocationY = 0
-        earthLocationZ = 0
+        earthLocationZ = 1000 * (cos (earth.rotationAroundSun) - sin (earth.rotationAroundSun))
 
         -- And finally moved to the earth
         postTranslation =
@@ -197,11 +203,11 @@ heroUnif canvasDimensions earth hero camera =
     }
 
 
-fireUnif : CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
-fireUnif canvasDimensions earth hero camera =
+fireUnif : Bool -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
+fireUnif overviewToggle canvasDimensions earth hero camera =
     let
         unif =
-            heroUnif canvasDimensions earth hero camera
+            heroUnif overviewToggle canvasDimensions earth hero camera
 
         -- The power source fire is approximately where the hero origin is
         -- but we move and scale it in the hero space to the exact
@@ -522,14 +528,15 @@ subdivideProject clr mesh =
 
 makeOverviewCamera : CanvasDimensions -> Earth -> Hero -> Mat4
 makeOverviewCamera canvasDimensions earth hero =
-    let earthLocationX = -5000
-        earthLocationY = 0
-        earthLocationZ = 0
+    let 
+        sunLocationX = 0
+        sunLocationY = 0
+        sunLocationZ = 0
     in
-    Mat4.makeLookAt (vec3 5 0 5)
-        (vec3 earthLocationX
-            earthLocationY
-            earthLocationZ
+    Mat4.makeLookAt (vec3 0 0 -2500)
+        (vec3 sunLocationX
+            sunLocationY
+            sunLocationZ
         )
         (vec3 0 1 0)
 
@@ -543,9 +550,9 @@ makeHeroCamera canvasDimensions earth hero camera =
         elevation =
             camera.elevation
 
-        earthLocationX = -5000
+        earthLocationX = 1000 * (cos (earth.rotationAroundSun) + sin (earth.rotationAroundSun))
         earthLocationY = 0
-        earthLocationZ = 0
+        earthLocationZ = 1000 * (cos (earth.rotationAroundSun) - sin (earth.rotationAroundSun))
 
         earthLoc =
             vec3 earthLocationX

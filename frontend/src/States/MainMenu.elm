@@ -27,6 +27,7 @@ subscriptions menuData =
 view : MenuData -> Html Msg
 view menuData =
     embedInCanvas
+        []
         [ div
             [ class "main-menu-container" ]
             [ p [] [ text "So it begins (the grand hot air balloon adventure)" ]

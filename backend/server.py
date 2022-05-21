@@ -29,8 +29,8 @@ async def update():
                             time_at_beginning)
 
         # update earth rotation
-        state['earth']['rotationAroundAxis'] = state['elapsed'] / 100000
-        state['earth']['rotationAroundSun'] = state['elapsed'] / 10000000
+        state['earth']['rotationAroundAxis'] = state['elapsed'] / 10000
+        state['earth']['rotationAroundSun'] = state['elapsed'] / 100000
 
 
 # update game state with incoming messages

@@ -10,10 +10,10 @@ viewportSize =
     ( 800, 800 )
 
 
-embedInCanvas : List (Html msg) -> List (Html.Attribute msg) -> List WebGL.Entity -> Html msg
-embedInCanvas outer attr inner =
+embedInCanvas : List(Html.Attribute msg) -> List (Html msg) -> List (Html.Attribute msg) -> List WebGL.Entity -> Html msg
+embedInCanvas containerAttrs outer attrs inner =
     div
-        [ id "canvas-container" ]
+        ([ id "canvas-container" ] ++ containerAttrs)
         (outer
             ++ [ WebGL.toHtml
                     ([ width (Tuple.first viewportSize)
@@ -23,7 +23,7 @@ embedInCanvas outer attr inner =
                      , style "width" "100vw"
                      , id "webgl-canvas"
                      ]
-                        ++ attr
+                        ++ attrs
                     )
                     inner
                ]

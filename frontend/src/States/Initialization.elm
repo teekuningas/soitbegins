@@ -72,6 +72,7 @@ init flags =
 view : InitData -> Html Msg
 view data =
     embedInCanvas
+        []
         [ div
             [ class "initialization-container" ]
             [ p [] [ text "Loading assets.." ] ]

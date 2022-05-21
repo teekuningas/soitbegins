@@ -1,6 +1,12 @@
 body {
-  background-color: #e6f9ff;
   margin: 0;
+  background-color: #e6f9ff;
+}
+#canvas-container {
+  background-color: #e6f9ff;
+}
+#canvas-container.background-black {
+  background-color: black;
 }
 
 .initialization-container { 
@@ -48,7 +54,7 @@ body {
   margin: 0.5em;
   padding: 0.5em;
   border-radius: 5px;
-  background-color: rgba(0,0,0,0.2);
+  background-color: rgba(255,255,255,0.5);
   font-size: 3rem;
 }
 
@@ -58,7 +64,7 @@ body {
   margin: 0.5em;
   padding: 0.5em;
   border-radius: 5px;
-  background-color: rgba(0,0,150,0.5);
+  background-color: rgba(255,255,255,0.75);
   font-size: 3rem;
 }
 
@@ -68,7 +74,7 @@ body {
   margin: 0.5em;
   padding: 0.5em;
   border-radius: 5px;
-  background-color: rgba(0,0,0,0.2);
+  background-color: rgba(255,255,255,0.5);
   font-size: 3rem;
 }
 
@@ -76,6 +82,12 @@ body {
 #canvas-container .main-menu-container {
   position: absolute;
 }
+
+#canvas-container #debug-overlay {
+  position: absolute;
+}
+
+
 
 .noselect {
   -webkit-touch-callout: none; /* iOS Safari */

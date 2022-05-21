@@ -43,15 +43,15 @@ updateGameData elapsed previousElapsed msgElapsed previousMsgElapsed msgEarth pr
             (newPower - 1) / 200
 
         newAltitude =
-            max 10.5
-                (min 100
+            max 105
+                (min 500
                     (gameData.hero.altitude
                         + (timeInBetween * newAltitudeChange)
                     )
                 )
 
         newLongitude =
-            gameData.hero.longitude - timeInBetween * 0.00005
+            gameData.hero.longitude - timeInBetween * 0.00003
 
         newRotationTheta =
             sin (elapsed / 1000) / 20

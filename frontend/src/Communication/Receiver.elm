@@ -28,8 +28,8 @@ decodeJson value =
 msgEarthDecoder : Json.Decode.Decoder RecvServerValueEarth
 msgEarthDecoder =
     Json.Decode.map2 RecvServerValueEarth
-        (Json.Decode.field "rotationAroundAxis" Json.Decode.float)
         (Json.Decode.field "rotationAroundSun" Json.Decode.float)
+        (Json.Decode.field "rotationAroundAxis" Json.Decode.float)
 
 
 msgDecoder : Json.Decode.Decoder RecvServerValue

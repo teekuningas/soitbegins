@@ -38,6 +38,7 @@ subscriptions gameLoaderData =
 view : GameLoaderData -> Html Msg
 view gameLoaderData =
     embedInCanvas
+        []
         [ div
             [ class "game-loader-container" ]
             [ p [] [ text "Loading game.." ] ]
@@ -163,7 +164,7 @@ update msg gameLoaderData =
                         , downButtonDown = False
                         }
                     , hero =
-                        { altitude = 11
+                        { altitude = 110
                         , latitude = -0.3
                         , longitude = 0.0
                         , rotationTheta = 0
