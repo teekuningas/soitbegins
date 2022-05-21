@@ -549,7 +549,7 @@ makeOverviewCamera canvasDimensions earth hero =
         sunLocationZ =
             0
     in
-    Mat4.makeLookAt (vec3 0 0 -2500)
+    Mat4.makeLookAt (vec3 0 0 -4000)
         (vec3 sunLocationX
             sunLocationY
             sunLocationZ
