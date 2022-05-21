@@ -314,47 +314,21 @@ recvServerJson value =
 
 
 unMaybe maybes =
-    case maybes.renderData of
-        Just renderData ->
-            case maybes.msgEarth of
-                Just msgEarth ->
-                    case maybes.previousMsgEarth of
-                        Just previousMsgEarth ->
-                            case maybes.msgElapsed of
-                                Just msgElapsed ->
-                                    case maybes.previousMsgElapsed of
-                                        Just previousMsgElapsed ->
-                                            case maybes.hero of
-                                                Just hero ->
-                                                    Just
-                                                        { renderData =
-                                                            renderData
-                                                        , msgEarth =
-                                                            msgEarth
-                                                        , previousMsgEarth =
-                                                            previousMsgEarth
-                                                        , msgElapsed =
-                                                            msgElapsed
-                                                        , previousMsgElapsed =
-                                                            previousMsgElapsed
-                                                        , hero =
-                                                            hero
-                                                        }
-
-                                                _ ->
-                                                    Nothing
-
-                                        _ ->
-                                            Nothing
-
-                                _ ->
-                                    Nothing
-
-                        _ ->
-                            Nothing
-
-                _ ->
-                    Nothing
-
+    case (maybes.renderData, (maybes.msgEarth, (maybes.previousMsgEarth, (maybes.msgElapsed, (maybes.previousMsgElapsed, maybes.hero))))) of
+        (Just renderData, (Just msgEarth, (Just previousMsgEarth, (Just msgElapsed, (Just previousMsgElapsed, Just hero))))) ->
+            Just
+                { renderData =
+                    renderData
+                , msgEarth =
+                    msgEarth
+                , previousMsgEarth =
+                    previousMsgEarth
+                , msgElapsed =
+                    msgElapsed
+                , previousMsgElapsed =
+                    previousMsgElapsed
+                , hero =
+                    hero
+                }
         _ ->
             Nothing
