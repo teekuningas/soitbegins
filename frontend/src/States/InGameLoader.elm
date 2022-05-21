@@ -152,54 +152,52 @@ update msg gameLoaderData =
 
         TimeElapsed dt ->
             let
-                maybeValues =
-                    { previousMsgElapsed =
-                        gameLoaderData.connectionData
-                            |> Maybe.map .elapsed
-                            |> Maybe.withDefault Nothing
-                            |> Maybe.map .previousMsgElapsed
-                            |> Maybe.withDefault Nothing
-                    , msgElapsed =
-                        gameLoaderData.connectionData
-                            |> Maybe.map .elapsed
-                            |> Maybe.withDefault Nothing
-                            |> Maybe.map .msgElapsed
-                    , previousMsgEarth =
-                        gameLoaderData.connectionData
-                            |> Maybe.map .earth
-                            |> Maybe.withDefault Nothing
-                            |> Maybe.map .previousMsgEarth
-                            |> Maybe.withDefault Nothing
-                    , msgEarth =
-                        gameLoaderData.connectionData
-                            |> Maybe.map .earth
-                            |> Maybe.withDefault Nothing
-                            |> Maybe.map .msgEarth
-                    , renderData =
-                        gameLoaderData.renderData
-                    , hero =
-                        gameLoaderData.hero
-                    }
+                mPreviousMsgElapsed =
+                    gameLoaderData.connectionData
+                        |> Maybe.map .elapsed
+                        |> Maybe.withDefault Nothing
+                        |> Maybe.map .previousMsgElapsed
+                        |> Maybe.withDefault Nothing
+                mMsgElapsed =
+                    gameLoaderData.connectionData
+                        |> Maybe.map .elapsed
+                        |> Maybe.withDefault Nothing
+                        |> Maybe.map .msgElapsed
+                mPreviousMsgEarth =
+                    gameLoaderData.connectionData
+                        |> Maybe.map .earth
+                        |> Maybe.withDefault Nothing
+                        |> Maybe.map .previousMsgEarth
+                        |> Maybe.withDefault Nothing
+                mMsgEarth =
+                    gameLoaderData.connectionData
+                        |> Maybe.map .earth
+                        |> Maybe.withDefault Nothing
+                        |> Maybe.map .msgEarth
+                mRenderData =
+                    gameLoaderData.renderData
+                mHero =
+                    gameLoaderData.hero
             in
-            case unMaybe maybeValues of
-                Just values ->
+            case (mPreviousMsgElapsed, (mMsgElapsed, (mPreviousMsgEarth, (mMsgEarth, (mRenderData, mHero))))) of
+                (Just previousMsgElapsed, (Just msgElapsed, (Just previousMsgEarth, (Just msgEarth, (Just renderData, (Just hero)))))) ->
                     let
                         elapsed =
                             toFloat (Time.posixToMillis dt)
 
                         newConnectionData =
                             { earth =
-                                { msgEarth = values.msgEarth
-                                , previousMsgEarth = values.previousMsgEarth
+                                { msgEarth = msgEarth
+                                , previousMsgEarth = previousMsgEarth
                                 }
                             , elapsed =
-                                { msgElapsed = values.msgElapsed
-                                , previousMsgElapsed = values.previousMsgElapsed
+                                { msgElapsed = msgElapsed
+                                , previousMsgElapsed = previousMsgElapsed
                                 }
                             }
 
                         newGameData =
-                            { earth = values.msgEarth
+                            { earth = msgEarth
                             , camera =
                                 { azimoth = 0
                                 , elevation = 0
@@ -211,10 +209,10 @@ update msg gameLoaderData =
                                 , upButtonDown = False
                                 , downButtonDown = False
                                 }
-                            , hero = values.hero
+                            , hero = hero
                             , renderData =
                                 { elapsed = elapsed
-                                , previousElapsed = values.renderData.elapsed
+                                , previousElapsed = renderData.elapsed
                                 }
                             , canvasDimensions = gameLoaderData.canvasDimensions
                             , connectionData = newConnectionData
@@ -228,7 +226,7 @@ update msg gameLoaderData =
                     , Cmd.none
                     )
 
-                Nothing ->
+                _ ->
                     let
                         elapsed =
                             toFloat (Time.posixToMillis dt)
@@ -312,23 +310,3 @@ recvServerJson value =
         Err errorMessage ->
             RecvServerMsgError "Error while communicating with the server"
 
-
-unMaybe maybes =
-    case (maybes.renderData, (maybes.msgEarth, (maybes.previousMsgEarth, (maybes.msgElapsed, (maybes.previousMsgElapsed, maybes.hero))))) of
-        (Just renderData, (Just msgEarth, (Just previousMsgEarth, (Just msgElapsed, (Just previousMsgElapsed, Just hero))))) ->
-            Just
-                { renderData =
-                    renderData
-                , msgEarth =
-                    msgEarth
-                , previousMsgEarth =
-                    previousMsgEarth
-                , msgElapsed =
-                    msgElapsed
-                , previousMsgElapsed =
-                    previousMsgElapsed
-                , hero =
-                    hero
-                }
-        _ ->
-            Nothing
