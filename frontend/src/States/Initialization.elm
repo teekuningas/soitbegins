@@ -111,12 +111,14 @@ update msg initData =
             case result of
                 Ok mesh ->
                     let
-                        newMenuData =
+                        newGatherInfoData =
                             { earthMesh = mesh
                             , canvasDimensions = initData.canvasDimensions
+                            , user =
+                                { name = "" }
                             }
                     in
-                    ( MainMenu newMenuData
+                    ( GatherInfo newGatherInfoData
                     , Cmd.none
                     )
 

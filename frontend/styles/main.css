@@ -2,52 +2,98 @@ body {
   margin: 0;
   background-color: #e6f9ff;
 }
+
 #canvas-container {
   background-color: #e6f9ff;
 }
+
 #canvas-container.background-black {
   background-color: black;
 }
 
+/*   */ 
+
 .initialization-container { 
+  position: absolute;
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  padding: 0;
 }
 
 .initialization-container p {
-  width: 100%;
   font-size: 3em;
   text-align: center;
 }
 
+/* */
+
 .game-loader-container { 
+  position: absolute;
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  padding: 0;
 }
 
 .game-loader-container p {
-  width: 100%;
   font-size: 3em;
   text-align: center;
 }
 
+/* */ 
+
 .main-menu-container { 
-  padding: 0;
+  display: flex;
+  flex-direction: column;
+  position: absolute;
   width: 100%;
 }
 
 .main-menu-container p {
-  width: 100%;
+  padding: 0.1em;
+  margin: 0.5em;
   font-size: 3em;
   text-align: center;
 }
 
 .main-menu-container button {
-  padding: 0.5em;
-  width: 100%;
-  height: 4em;
+  padding: 0.1em;
+  margin: 0.5em;
+  height: 3em;
   font-size: 3em;
 }
+
+/* */ 
+
+.gather-info-container { 
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  width: 100%;
+}
+
+.gather-info-container p {
+  padding: 0.1em;
+  margin: 0.5em;
+  font-size: 3em;
+  text-align: center;
+}
+
+.gather-info-container input {
+  padding: 0.1em;
+  margin: 0.5em;
+  height: 3em;
+  font-size: 3em;
+  text-align: center;
+}
+
+.gather-info-container button {
+  padding: 0.1em;
+  margin: 0.5em;
+  height: 3em;
+  font-size: 3em;
+}
+
+/* */
 
 #canvas-container #fps-overlay {
   position: absolute; 
@@ -78,16 +124,11 @@ body {
   font-size: 3rem;
 }
 
-
-#canvas-container .main-menu-container {
-  position: absolute;
-}
-
 #canvas-container #debug-overlay {
   position: absolute;
 }
 
-
+/* */
 
 .noselect {
   -webkit-touch-callout: none; /* iOS Safari */

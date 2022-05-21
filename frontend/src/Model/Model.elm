@@ -6,6 +6,7 @@ module Model.Model exposing
     , Earth
     , GameData
     , GameLoaderData
+    , GatherInfoData
     , Hero
     , InitData
     , MenuData
@@ -20,6 +21,7 @@ import WebGL exposing (Mesh)
 
 type Model
     = Initialization InitData
+    | GatherInfo GatherInfoData
     | MainMenu MenuData
     | InGameLoader GameLoaderData
     | InGame GameData
@@ -37,6 +39,8 @@ type alias GameLoaderData =
     , connectionData : Maybe PreparingConnectionData
     , canvasDimensions : CanvasDimensions
     , earthMesh : Mesh Vertex
+    , user : User
+    , hero : Maybe Hero
     }
 
 
@@ -51,12 +55,26 @@ type alias GameData =
     , earthMesh : Mesh Vertex
     , refreshed : Bool
     , overviewToggle : Bool
+    , user : User
     }
 
 
 type alias MenuData =
     { earthMesh : Mesh Vertex
     , canvasDimensions : CanvasDimensions
+    , user : User
+    }
+
+
+type alias GatherInfoData =
+    { earthMesh : Mesh Vertex
+    , canvasDimensions : CanvasDimensions
+    , user : User
+    }
+
+
+type alias User =
+    { name : String
     }
 
 
@@ -70,6 +88,8 @@ type alias Hero =
     { altitude : Float
     , latitude : Float
     , longitude : Float
+    , latSpeed : Float
+    , lonSpeed : Float
     , rotationTheta : Float
     , power : Float
     }

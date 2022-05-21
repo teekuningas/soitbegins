@@ -188,6 +188,8 @@ update msg gameData =
                     , connectionData = Nothing
                     , earthMesh = gameData.earthMesh
                     , canvasDimensions = gameData.canvasDimensions
+                    , user = gameData.user
+                    , hero = Nothing
                     }
             in
             ( InGameLoader newGameLoaderData, Cmd.none )

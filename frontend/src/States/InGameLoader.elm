@@ -13,6 +13,7 @@ import Model.Model
         , Model(..)
         )
 import Platform.Sub
+import Random
 import Task
 import Time
 
@@ -24,6 +25,16 @@ type Msg
     | RecvServerMsg Receiver.RecvServerValue
     | RecvServerMsgError String
     | UpdateTimeMsg Time.Posix
+    | RandomValueMsg RandomValues
+    | TickMsg Time.Posix
+
+
+type alias RandomValues =
+    { longitude : Float
+    , latitude : Float
+    , lonSpeed : Float
+    , latSpeed : Float
+    }
 
 
 subscriptions : GameLoaderData -> Sub Msg
@@ -32,6 +43,7 @@ subscriptions gameLoaderData =
         [ onAnimationFrame (\x -> TimeElapsed x)
         , onResize (\width height -> ResizeMsg)
         , Receiver.messageReceiver recvServerJson
+        , Time.every 1000 TickMsg
         ]
 
 
@@ -50,6 +62,11 @@ view gameLoaderData =
 update : Msg -> GameLoaderData -> ( Model, Cmd Msg )
 update msg gameLoaderData =
     case msg of
+        TickMsg time ->
+            ( InGameLoader gameLoaderData
+            , Random.generate RandomValueMsg randomValues
+            )
+
         RecvServerMsgError message ->
             let
                 newGameLoaderData =
@@ -135,136 +152,94 @@ update msg gameLoaderData =
 
         TimeElapsed dt ->
             let
-                initGameData renderData msgElapsed previousMsgElapsed msgEarth previousMsgEarth =
+                maybeValues =
+                    { previousMsgElapsed =
+                        gameLoaderData.connectionData
+                            |> Maybe.map .elapsed
+                            |> Maybe.withDefault Nothing
+                            |> Maybe.map .previousMsgElapsed
+                            |> Maybe.withDefault Nothing
+                    , msgElapsed =
+                        gameLoaderData.connectionData
+                            |> Maybe.map .elapsed
+                            |> Maybe.withDefault Nothing
+                            |> Maybe.map .msgElapsed
+                    , previousMsgEarth =
+                        gameLoaderData.connectionData
+                            |> Maybe.map .earth
+                            |> Maybe.withDefault Nothing
+                            |> Maybe.map .previousMsgEarth
+                            |> Maybe.withDefault Nothing
+                    , msgEarth =
+                        gameLoaderData.connectionData
+                            |> Maybe.map .earth
+                            |> Maybe.withDefault Nothing
+                            |> Maybe.map .msgEarth
+                    , renderData =
+                        gameLoaderData.renderData
+                    , hero =
+                        gameLoaderData.hero
+                    }
+            in
+            case unMaybe maybeValues of
+                Just values ->
                     let
                         elapsed =
                             toFloat (Time.posixToMillis dt)
 
                         newConnectionData =
                             { earth =
-                                { msgEarth = msgEarth
-                                , previousMsgEarth = previousMsgEarth
+                                { msgEarth = values.msgEarth
+                                , previousMsgEarth = values.previousMsgEarth
                                 }
                             , elapsed =
-                                { msgElapsed = msgElapsed
-                                , previousMsgElapsed = previousMsgElapsed
+                                { msgElapsed = values.msgElapsed
+                                , previousMsgElapsed = values.previousMsgElapsed
                                 }
                             }
-                    in
-                    { earth = msgEarth
-                    , camera =
-                        { azimoth = 0
-                        , elevation = 0
-                        }
-                    , controller =
-                        { dragState = NoDrag
-                        , pointerOffset = { x = 0, y = 0 }
-                        , previousOffset = { x = 0, y = 0 }
-                        , upButtonDown = False
-                        , downButtonDown = False
-                        }
-                    , hero =
-                        { altitude = 110
-                        , latitude = -0.3
-                        , longitude = 0.0
-                        , rotationTheta = 0
-                        , power = 1
-                        }
-                    , renderData =
-                        { elapsed = elapsed
-                        , previousElapsed = renderData.elapsed
-                        }
-                    , canvasDimensions = gameLoaderData.canvasDimensions
-                    , connectionData = newConnectionData
-                    , earthMesh = gameLoaderData.earthMesh
-                    , refreshed = False
-                    , overviewToggle = False
-                    }
-            in
-            case ( gameLoaderData.renderData, gameLoaderData.connectionData ) of
-                ( Just renderData, Just connectionData ) ->
-                    case ( connectionData.elapsed, connectionData.earth ) of
-                        ( Just elapsedData, Just earthData ) ->
-                            case ( elapsedData.previousMsgElapsed, earthData.previousMsgEarth ) of
-                                ( Just previousMsgElapsed, Just previousMsgEarth ) ->
-                                    let
-                                        msgElapsed =
-                                            elapsedData.msgElapsed
 
-                                        msgEarth =
-                                            earthData.msgEarth
-
-                                        newGameData =
-                                            initGameData
-                                                renderData
-                                                msgElapsed
-                                                previousMsgElapsed
-                                                msgEarth
-                                                previousMsgEarth
-                                    in
-                                    ( InGame newGameData
-                                    , Cmd.none
-                                    )
-
-                                _ ->
-                                    let
-                                        elapsed =
-                                            toFloat (Time.posixToMillis dt)
-
-                                        newRenderData =
-                                            { elapsed = elapsed
-                                            , previousElapsed = Just renderData.elapsed
-                                            }
-
-                                        newGameLoaderData =
-                                            { gameLoaderData | renderData = Just newRenderData }
-                                    in
-                                    ( InGameLoader newGameLoaderData
-                                    , Cmd.none
-                                    )
-
-                        _ ->
-                            let
-                                elapsed =
-                                    toFloat (Time.posixToMillis dt)
-
-                                newRenderData =
-                                    { elapsed = elapsed
-                                    , previousElapsed = Just renderData.elapsed
-                                    }
-
-                                newGameLoaderData =
-                                    { gameLoaderData | renderData = Just newRenderData }
-                            in
-                            ( InGameLoader newGameLoaderData
-                            , Cmd.none
-                            )
-
-                ( Just renderData, _ ) ->
-                    let
-                        elapsed =
-                            toFloat (Time.posixToMillis dt)
-
-                        newRenderData =
-                            { elapsed = elapsed
-                            , previousElapsed = Just renderData.elapsed
+                        newGameData =
+                            { earth = values.msgEarth
+                            , camera =
+                                { azimoth = 0
+                                , elevation = 0
+                                }
+                            , controller =
+                                { dragState = NoDrag
+                                , pointerOffset = { x = 0, y = 0 }
+                                , previousOffset = { x = 0, y = 0 }
+                                , upButtonDown = False
+                                , downButtonDown = False
+                                }
+                            , hero = values.hero
+                            , renderData =
+                                { elapsed = elapsed
+                                , previousElapsed = values.renderData.elapsed
+                                }
+                            , canvasDimensions = gameLoaderData.canvasDimensions
+                            , connectionData = newConnectionData
+                            , earthMesh = gameLoaderData.earthMesh
+                            , refreshed = False
+                            , overviewToggle = False
+                            , user = gameLoaderData.user
                             }
-
-                        newGameLoaderData =
-                            { gameLoaderData | renderData = Just newRenderData }
                     in
-                    ( InGameLoader newGameLoaderData
+                    ( InGame newGameData
                     , Cmd.none
                     )
 
-                _ ->
+                Nothing ->
                     let
                         elapsed =
                             toFloat (Time.posixToMillis dt)
 
+                        previousElapsed =
+                            gameLoaderData.renderData
+                                |> Maybe.map .elapsed
+
                         newRenderData =
                             { elapsed = elapsed
-                            , previousElapsed = Nothing
+                            , previousElapsed = previousElapsed
                             }
 
                         newGameLoaderData =
@@ -298,6 +273,35 @@ update msg gameLoaderData =
             , Cmd.none
             )
 
+        RandomValueMsg values ->
+            let
+                hero =
+                    { altitude = 110
+                    , latitude = values.latitude
+                    , longitude = values.longitude
+                    , latSpeed = values.latSpeed / 10000
+                    , lonSpeed = values.lonSpeed / 10000
+                    , rotationTheta = 0
+                    , power = 1
+                    }
+
+                newGameLoaderData =
+                    { gameLoaderData | hero = Just hero }
+            in
+            ( InGameLoader newGameLoaderData
+            , Cmd.none
+            )
+
+
+randomValues : Random.Generator RandomValues
+randomValues =
+    Random.map4
+        RandomValues
+        (Random.float 0 1)
+        (Random.float 0 1)
+        (Random.float 0 1)
+        (Random.float 0 1)
+
 
 recvServerJson : String -> Msg
 recvServerJson value =
@@ -307,3 +311,50 @@ recvServerJson value =
 
         Err errorMessage ->
             RecvServerMsgError "Error while communicating with the server"
+
+
+unMaybe maybes =
+    case maybes.renderData of
+        Just renderData ->
+            case maybes.msgEarth of
+                Just msgEarth ->
+                    case maybes.previousMsgEarth of
+                        Just previousMsgEarth ->
+                            case maybes.msgElapsed of
+                                Just msgElapsed ->
+                                    case maybes.previousMsgElapsed of
+                                        Just previousMsgElapsed ->
+                                            case maybes.hero of
+                                                Just hero ->
+                                                    Just
+                                                        { renderData =
+                                                            renderData
+                                                        , msgEarth =
+                                                            msgEarth
+                                                        , previousMsgEarth =
+                                                            previousMsgEarth
+                                                        , msgElapsed =
+                                                            msgElapsed
+                                                        , previousMsgElapsed =
+                                                            previousMsgElapsed
+                                                        , hero =
+                                                            hero
+                                                        }
+
+                                                _ ->
+                                                    Nothing
+
+                                        _ ->
+                                            Nothing
+
+                                _ ->
+                                    Nothing
+
+                        _ ->
+                            Nothing
+
+                _ ->
+                    Nothing
+
+        _ ->
+            Nothing

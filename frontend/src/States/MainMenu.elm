@@ -31,6 +31,7 @@ view menuData =
         [ div
             [ class "main-menu-container" ]
             [ p [] [ text "So it begins (the grand hot air balloon adventure)" ]
+            , p [] [ text (String.append "Welcome " menuData.user.name) ]
             , button [ onClick StartGameMsg ] [ text "Start here" ]
             ]
         ]
@@ -49,6 +50,8 @@ update msg menuData =
                     , connectionData = Nothing
                     , earth = Nothing
                     , canvasDimensions = menuData.canvasDimensions
+                    , user = menuData.user
+                    , hero = Nothing
                     }
             in
             ( InGameLoader gameLoaderData

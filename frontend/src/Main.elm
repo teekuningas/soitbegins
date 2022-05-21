@@ -10,6 +10,7 @@ import Model.Model
         )
 import Platform.Cmd
 import Platform.Sub
+import States.GatherInfo
 import States.InGame
 import States.InGameLoader
 import States.Initialization
@@ -20,6 +21,7 @@ import States.Termination
 type Msg
     = InitializationMsg States.Initialization.Msg
     | MainMenuMsg States.MainMenu.Msg
+    | GatherInfoMsg States.GatherInfo.Msg
     | InGameLoaderMsg States.InGameLoader.Msg
     | InGameMsg States.InGame.Msg
     | TerminationMsg States.Termination.Msg
@@ -68,6 +70,11 @@ view model =
                 MainMenuMsg
                 (States.MainMenu.view menuData)
 
+        GatherInfo gatherInfoData ->
+            Html.map
+                GatherInfoMsg
+                (States.GatherInfo.view gatherInfoData)
+
         InGameLoader gameLoaderData ->
             Html.map
                 InGameLoaderMsg
@@ -95,6 +102,11 @@ subscriptions model =
             Platform.Sub.map
                 MainMenuMsg
                 (States.MainMenu.subscriptions menuData)
+
+        GatherInfo gatherInfoData ->
+            Platform.Sub.map
+                GatherInfoMsg
+                (States.GatherInfo.subscriptions gatherInfoData)
 
         InGameLoader gameLoaderData ->
             Platform.Sub.map
@@ -126,6 +138,10 @@ update msg model =
         ( MainMenuMsg stateMsg, MainMenu menuData ) ->
             States.MainMenu.update stateMsg menuData
                 |> Tuple.mapSecond (Platform.Cmd.map MainMenuMsg)
+
+        ( GatherInfoMsg stateMsg, GatherInfo gatherInfoData ) ->
+            States.GatherInfo.update stateMsg gatherInfoData
+                |> Tuple.mapSecond (Platform.Cmd.map GatherInfoMsg)
 
         ( InGameLoaderMsg stateMsg, InGameLoader gameLoaderData ) ->
             States.InGameLoader.update stateMsg gameLoaderData
