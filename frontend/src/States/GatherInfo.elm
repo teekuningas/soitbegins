@@ -1,14 +1,19 @@
-module States.GatherInfo exposing (Msg, subscriptions, update, view)
+module States.GatherInfo exposing (Msg(..), subscriptions, update, view, init)
 
+import World.Types exposing (Vertex, MeshList)
 import Browser.Dom exposing (getViewportOf)
 import Browser.Events exposing (onResize)
 import HUD.Page exposing (embedInCanvas)
 import Html exposing (Html, button, div, input, p, text)
 import Html.Attributes exposing (class, placeholder, value)
 import Html.Events exposing (onClick, onInput)
-import Model.Model exposing (GatherInfoData, Model(..))
 import Platform.Sub
 import Task
+import Math.Vector3 as Vec3 exposing (Vec3, vec3)
+import WebGL exposing (Mesh)
+
+import States.GatherInfoTypes exposing (GatherInfoData)
+import States.MainMenuTypes exposing (MenuData)
 
 
 type Msg
@@ -16,6 +21,12 @@ type Msg
     | ViewportMsg (Result Browser.Dom.Error Browser.Dom.Viewport)
     | ContinueMsg
     | NameUpdatedMsg String
+    | TransitionToMainMenuMsg MenuData
+
+
+init : GatherInfoData -> ( GatherInfoData, Cmd Msg )
+init gatherInfoData = 
+    (gatherInfoData, Cmd.none)
 
 
 subscriptions : GatherInfoData -> Sub Msg
@@ -45,24 +56,24 @@ view gatherInfoData =
         []
 
 
-update : Msg -> GatherInfoData -> ( Model, Cmd Msg )
+update : Msg -> GatherInfoData -> ( GatherInfoData, Cmd Msg )
 update msg gatherInfoData =
     case msg of
         ContinueMsg ->
             if gatherInfoData.user.name /= "" then
                 let
-                    newMenuData =
+                    menuData =
                         { earthMesh = gatherInfoData.earthMesh
                         , canvasDimensions = gatherInfoData.canvasDimensions
                         , user = gatherInfoData.user
                         }
                 in
-                ( MainMenu newMenuData
-                , Cmd.none
+                ( gatherInfoData
+                , Task.perform (always (TransitionToMainMenuMsg menuData)) (Task.succeed ())
                 )
 
             else
-                ( GatherInfo gatherInfoData
+                ( gatherInfoData
                 , Cmd.none
                 )
 
@@ -71,12 +82,12 @@ update msg gatherInfoData =
                 user =
                     { name = newName }
             in
-            ( GatherInfo { gatherInfoData | user = user }
+            ( { gatherInfoData | user = user }
             , Cmd.none
             )
 
         ResizeMsg ->
-            ( GatherInfo gatherInfoData, Task.attempt ViewportMsg (getViewportOf "webgl-canvas") )
+            ( gatherInfoData, Task.attempt ViewportMsg (getViewportOf "webgl-canvas") )
 
         ViewportMsg returnValue ->
             let
@@ -94,6 +105,12 @@ update msg gatherInfoData =
                 newGatherInfoData =
                     { gatherInfoData | canvasDimensions = newCanvasDimensions }
             in
-            ( GatherInfo newGatherInfoData
+            ( newGatherInfoData
             , Cmd.none
             )
+        TransitionToMainMenuMsg _ ->
+            ( gatherInfoData
+            , Cmd.none 
+            )
+
+

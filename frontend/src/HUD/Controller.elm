@@ -7,19 +7,42 @@ module HUD.Controller exposing
     , handleMove
     , handleUp
     , vertexShader
+    , Controller
+    , DragState(..)
     )
 
+import World.Types exposing (Vertex, MeshList)
 import HUD.Page exposing (viewportSize)
 import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
-import Model.Model
-    exposing
-        ( Camera
-        , CanvasDimensions
-        , Controller
-        , DragState(..)
-        )
 import WebGL exposing (Mesh, Shader)
+
+
+
+type alias CanvasDimensions =
+    { width : Int
+    , height : Int
+    }
+
+
+type alias Camera =
+    { azimoth : Float
+    , elevation : Float
+    }
+
+
+type DragState
+    = Drag
+    | NoDrag
+
+
+type alias Controller =
+    { dragState : DragState
+    , pointerOffset : { x : Int, y : Int }
+    , previousOffset : { x : Int, y : Int }
+    , downButtonDown : Bool
+    , upButtonDown : Bool
+    }
 
 
 controllerParams : { x : Float, y : Float, size : Float, trans : Float }
@@ -280,16 +303,6 @@ type alias Uniforms =
     }
 
 
-type alias Vertex =
-    { color : Vec3
-    , position : Vec3
-    }
-
-
-type alias MeshList =
-    List ( Vertex, Vertex, Vertex )
-
-
 vertexShader : Shader Vertex Uniforms { vcolor : Vec3 }
 vertexShader =
     [glsl|
@@ -349,3 +362,5 @@ meshPositionMap fun mesh =
             , { v3 | position = fun v3.position }
             )
                 :: meshPositionMap fun xs
+
+

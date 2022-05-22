@@ -8,7 +8,7 @@ import Quantity exposing (Unitless)
 import TriangularMesh exposing (TriangularMesh)
 import Vector3d exposing (Vector3d)
 import WebGL exposing (Mesh)
-import World.World as World
+import World.Types exposing (Vertex, MeshList)
 
 
 triangularEarthToMeshVertex :
@@ -16,7 +16,7 @@ triangularEarthToMeshVertex :
         { position : Point3d Meters ObjCoordinates
         , normal : Vector3d Unitless ObjCoordinates
         }
-    -> Mesh World.Vertex
+    -> Mesh Vertex
 triangularEarthToMeshVertex triangularMesh =
     let
         vertices =
@@ -70,6 +70,6 @@ triangularEarthToMeshVertex triangularMesh =
     WebGL.triangles earthMesh
 
 
-earthMeshDecoder : Obj.Decode.Decoder (Mesh World.Vertex)
+earthMeshDecoder : Obj.Decode.Decoder (Mesh Vertex)
 earthMeshDecoder =
     Obj.Decode.map triangularEarthToMeshVertex Obj.Decode.faces

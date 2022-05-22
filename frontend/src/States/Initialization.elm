@@ -1,5 +1,6 @@
-module States.Initialization exposing (Msg, init, subscriptions, update, view)
+module States.Initialization exposing (Msg(..), init, subscriptions, update, view)
 
+import World.Types exposing (Vertex, MeshList)
 import Browser.Dom exposing (getViewportOf)
 import Browser.Events exposing (onResize)
 import Communication.Flags exposing (FlagsValue)
@@ -18,27 +19,26 @@ import Html
 import Html.Attributes exposing (class)
 import Http
 import Length exposing (Meters, meters)
-import Model.Model
-    exposing
-        ( InitData
-        , Model(..)
-        )
 import Obj.Decode exposing (expectObj)
 import Platform.Cmd
 import Platform.Sub
 import Task
 import WebGL exposing (Mesh)
 import World.ObjLoader as ObjLoader
-import World.World as World
+import Math.Vector3 as Vec3 exposing (Vec3, vec3)
+import States.InitializationTypes exposing (InitData)
+import States.GatherInfoTypes exposing (GatherInfoData)
 
 
 type Msg
     = ResizeMsg
     | ViewportMsg (Result Browser.Dom.Error Browser.Dom.Viewport)
-    | EarthMeshLoaded (Result Http.Error (Mesh World.Vertex))
+    | EarthMeshLoaded (Result Http.Error (Mesh Vertex))
+    | TransitionToGatherInfoMsg GatherInfoData
+    | TransitionToTerminationMsg String
 
 
-init : FlagsValue -> ( Model, Cmd Msg )
+init : FlagsValue -> ( InitData, Cmd Msg )
 init flags =
     let
         initData =
@@ -64,7 +64,7 @@ init flags =
                 , Task.attempt ViewportMsg (getViewportOf "webgl-canvas")
                 ]
     in
-    ( Initialization initData
+    ( initData
     , cmd
     )
 
@@ -81,11 +81,11 @@ view data =
         []
 
 
-update : Msg -> InitData -> ( Model, Cmd Msg )
+update : Msg -> InitData -> ( InitData, Cmd Msg )
 update msg initData =
     case msg of
         ResizeMsg ->
-            ( Initialization initData, Task.attempt ViewportMsg (getViewportOf "webgl-canvas") )
+            ( initData, Task.attempt ViewportMsg (getViewportOf "webgl-canvas") )
 
         ViewportMsg returnValue ->
             let
@@ -103,7 +103,7 @@ update msg initData =
                 newInitData =
                     { initData | canvasDimensions = newCanvasDimensions }
             in
-            ( Initialization newInitData
+            ( newInitData
             , Cmd.none
             )
 
@@ -118,14 +118,17 @@ update msg initData =
                                 { name = "" }
                             }
                     in
-                    ( GatherInfo newGatherInfoData
-                    , Cmd.none
+                    ( initData
+                    , Task.perform (always (TransitionToGatherInfoMsg newGatherInfoData)) (Task.succeed ())
+                    )
+           
+                Err _ ->
+                    ( initData
+                    , Task.perform (always (TransitionToTerminationMsg "Could not download assets")) (Task.succeed ())
                     )
 
-                Err _ ->
-                    ( Termination "Could not download assets"
-                    , Cmd.none
-                    )
+        _ -> 
+            ( initData, Cmd.none )
 
 
 subscriptions : InitData -> Sub Msg
@@ -133,3 +136,6 @@ subscriptions initData =
     Platform.Sub.batch
         [ onResize (\width height -> ResizeMsg)
         ]
+
+
+

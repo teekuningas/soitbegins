@@ -4,27 +4,38 @@ import Browser
 import Communication.Flags as Flags
 import Html exposing (Html)
 import Json.Decode
-import Model.Model
-    exposing
-        ( Model(..)
-        )
 import Platform.Cmd
 import Platform.Sub
-import States.GatherInfo
-import States.InGame
-import States.InGameLoader
-import States.Initialization
-import States.MainMenu exposing (Msg(..))
-import States.Termination
+import States.GatherInfo as GatherInfo
+import States.InGame as InGame
+import States.InGameLoader as InGameLoader
+import States.Initialization as Initialization
+import States.MainMenu as MainMenu
+import States.Termination as Termination
+import States.InitializationTypes exposing (InitData)
+import States.GatherInfoTypes exposing (GatherInfoData)
+import States.MainMenuTypes exposing (MenuData)
+import States.InGameLoaderTypes exposing (GameLoaderData)
+import States.InGameTypes exposing (GameData)
+
+
+
+type Model
+    = Initialization InitData
+    | GatherInfo GatherInfoData
+    | MainMenu MenuData
+    | InGameLoader GameLoaderData
+    | InGame GameData
+    | Termination String
 
 
 type Msg
-    = InitializationMsg States.Initialization.Msg
-    | MainMenuMsg States.MainMenu.Msg
-    | GatherInfoMsg States.GatherInfo.Msg
-    | InGameLoaderMsg States.InGameLoader.Msg
-    | InGameMsg States.InGame.Msg
-    | TerminationMsg States.Termination.Msg
+    = InitializationMsg Initialization.Msg
+    | MainMenuMsg MainMenu.Msg
+    | GatherInfoMsg GatherInfo.Msg
+    | InGameLoaderMsg InGameLoader.Msg
+    | InGameMsg InGame.Msg
+    | TerminationMsg Termination.Msg
 
 
 
@@ -44,8 +55,8 @@ init flagsMsg =
             )
 
         Ok value ->
-            States.Initialization.init value
-                |> Tuple.mapBoth identity (Platform.Cmd.map InitializationMsg)
+            Initialization.init value
+                |> Tuple.mapBoth Initialization (Platform.Cmd.map InitializationMsg)
 
 
 
@@ -58,32 +69,32 @@ view model =
         Termination message ->
             Html.map
                 TerminationMsg
-                (States.Termination.view message)
+                (Termination.view message)
 
         Initialization initData ->
             Html.map
                 InitializationMsg
-                (States.Initialization.view initData)
+                (Initialization.view initData)
 
         MainMenu menuData ->
             Html.map
                 MainMenuMsg
-                (States.MainMenu.view menuData)
+                (MainMenu.view menuData)
 
         GatherInfo gatherInfoData ->
             Html.map
                 GatherInfoMsg
-                (States.GatherInfo.view gatherInfoData)
+                (GatherInfo.view gatherInfoData)
 
         InGameLoader gameLoaderData ->
             Html.map
                 InGameLoaderMsg
-                (States.InGameLoader.view gameLoaderData)
+                (InGameLoader.view gameLoaderData)
 
         InGame gameData ->
             Html.map
                 InGameMsg
-                (States.InGame.view gameData)
+                (InGame.view gameData)
 
 
 
@@ -96,32 +107,32 @@ subscriptions model =
         Initialization initData ->
             Platform.Sub.map
                 InitializationMsg
-                (States.Initialization.subscriptions initData)
+                (Initialization.subscriptions initData)
 
         MainMenu menuData ->
             Platform.Sub.map
                 MainMenuMsg
-                (States.MainMenu.subscriptions menuData)
+                (MainMenu.subscriptions menuData)
 
         GatherInfo gatherInfoData ->
             Platform.Sub.map
                 GatherInfoMsg
-                (States.GatherInfo.subscriptions gatherInfoData)
+                (GatherInfo.subscriptions gatherInfoData)
 
         InGameLoader gameLoaderData ->
             Platform.Sub.map
                 InGameLoaderMsg
-                (States.InGameLoader.subscriptions gameLoaderData)
+                (InGameLoader.subscriptions gameLoaderData)
 
         InGame gameData ->
             Platform.Sub.map
                 InGameMsg
-                (States.InGame.subscriptions gameData)
+                (InGame.subscriptions gameData)
 
         Termination message ->
             Platform.Sub.map
                 TerminationMsg
-                (States.Termination.subscriptions message)
+                (Termination.subscriptions message)
 
 
 
@@ -132,37 +143,71 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case ( msg, model ) of
         ( InitializationMsg stateMsg, Initialization initData ) ->
-            States.Initialization.update stateMsg initData
-                |> Tuple.mapSecond (Platform.Cmd.map InitializationMsg)
+            case stateMsg of 
 
-        ( MainMenuMsg stateMsg, MainMenu menuData ) ->
-            States.MainMenu.update stateMsg menuData
-                |> Tuple.mapSecond (Platform.Cmd.map MainMenuMsg)
+                Initialization.TransitionToGatherInfoMsg data ->
+                    GatherInfo.init data
+                        |> Tuple.mapBoth GatherInfo (Platform.Cmd.map GatherInfoMsg) 
 
-        ( GatherInfoMsg stateMsg, GatherInfo gatherInfoData ) ->
-            States.GatherInfo.update stateMsg gatherInfoData
-                |> Tuple.mapSecond (Platform.Cmd.map GatherInfoMsg)
-
-        ( InGameLoaderMsg stateMsg, InGameLoader gameLoaderData ) ->
-            States.InGameLoader.update stateMsg gameLoaderData
-                |> Tuple.mapSecond (Platform.Cmd.map InGameLoaderMsg)
-
-        ( InGameMsg stateMsg, InGame gameData ) ->
-            States.InGame.update stateMsg gameData
-                |> Tuple.mapSecond (Platform.Cmd.map InGameMsg)
-
-        ( TerminationMsg stateMsg, Termination message ) ->
-            States.Termination.update stateMsg message
-                |> Tuple.mapSecond (Platform.Cmd.map TerminationMsg)
-
-        ( MainMenuMsg stateMsg, InGameLoader gameLoaderData ) ->
-            case stateMsg of
-                States.MainMenu.ChatMsg chatMsg ->
-                    States.InGameLoader.update chatMsg gameLoaderData
-                        |> Tuple.mapSecond (Platform.Cmd.map InGameLoaderMsg)
+                Initialization.TransitionToTerminationMsg data ->
+                    Termination.init data
+                        |> Tuple.mapBoth Termination (Platform.Cmd.map TerminationMsg) 
 
                 _ ->
-                    ( model, Cmd.none )
+                    Initialization.update stateMsg initData
+                        |> Tuple.mapBoth Initialization (Platform.Cmd.map InitializationMsg)
+
+        ( GatherInfoMsg stateMsg, GatherInfo gatherInfoData ) ->
+            case stateMsg of 
+                GatherInfo.TransitionToMainMenuMsg data ->
+                    MainMenu.init data
+                        |> Tuple.mapBoth MainMenu (Platform.Cmd.map MainMenuMsg) 
+
+                _ ->
+                    GatherInfo.update stateMsg gatherInfoData
+                        |> Tuple.mapBoth GatherInfo (Platform.Cmd.map GatherInfoMsg)
+
+        ( MainMenuMsg stateMsg, MainMenu menuData ) ->
+
+            case stateMsg of 
+                MainMenu.TransitionToInGameLoaderMsg data ->
+                    InGameLoader.init data
+                        |> Tuple.mapBoth InGameLoader (Platform.Cmd.map InGameLoaderMsg) 
+
+                _ ->
+                    MainMenu.update stateMsg menuData
+                        |> Tuple.mapBoth MainMenu (Platform.Cmd.map MainMenuMsg)
+
+        ( InGameLoaderMsg stateMsg, InGameLoader gameLoaderData ) ->
+
+            case stateMsg of 
+                InGameLoader.TransitionToInGameMsg data ->
+                    InGame.init data
+                        |> Tuple.mapBoth InGame (Platform.Cmd.map InGameMsg) 
+
+                _ ->
+                    InGameLoader.update stateMsg gameLoaderData
+                        |> Tuple.mapBoth InGameLoader (Platform.Cmd.map InGameLoaderMsg)
+
+
+        ( InGameMsg stateMsg, InGame gameData ) ->
+
+            case stateMsg of 
+
+                InGame.TransitionToInGameLoaderMsg data ->
+                    InGameLoader.init data
+                        |> Tuple.mapBoth InGameLoader (Platform.Cmd.map InGameLoaderMsg) 
+
+                _ ->
+                    InGame.update stateMsg gameData
+                        |> Tuple.mapBoth InGame (Platform.Cmd.map InGameMsg)
+
+
+
+        ( TerminationMsg stateMsg, Termination message ) ->
+
+            Termination.update stateMsg message
+                |> Tuple.mapBoth Termination (Platform.Cmd.map TerminationMsg)
 
         _ ->
             ( model, Cmd.none )

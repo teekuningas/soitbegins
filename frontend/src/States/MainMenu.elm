@@ -1,22 +1,31 @@
-module States.MainMenu exposing (Msg(..), subscriptions, update, view)
+module States.MainMenu exposing (Msg(..), subscriptions, update, view, init)
 
+import World.Types exposing (Vertex, MeshList)
+import States.InGameLoader
 import Browser.Dom exposing (getViewportOf)
 import Browser.Events exposing (onResize)
 import HUD.Page exposing (embedInCanvas)
 import Html exposing (Html, button, div, p, text)
 import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
-import Model.Model exposing (MenuData, Model(..))
 import Platform.Sub
-import States.InGameLoader exposing (Msg)
 import Task
+import WebGL exposing (Mesh)
+import Math.Vector3 as Vec3 exposing (Vec3, vec3)
+import States.MainMenuTypes exposing (MenuData)
+import States.InGameLoaderTypes exposing (GameLoaderData)
 
 
 type Msg
     = ResizeMsg
     | ViewportMsg (Result Browser.Dom.Error Browser.Dom.Viewport)
     | StartGameMsg
-    | ChatMsg States.InGameLoader.Msg
+    | TransitionToInGameLoaderMsg GameLoaderData
+
+
+init : MenuData -> ( MenuData, Cmd Msg )
+init menuData =
+    (menuData, Cmd.none)
 
 
 subscriptions : MenuData -> Sub Msg
@@ -41,7 +50,7 @@ view menuData =
         []
 
 
-update : Msg -> MenuData -> ( Model, Cmd Msg )
+update : Msg -> MenuData -> ( MenuData, Cmd Msg )
 update msg menuData =
     case msg of
         StartGameMsg ->
@@ -56,12 +65,12 @@ update msg menuData =
                     , hero = Nothing
                     }
             in
-            ( InGameLoader gameLoaderData
-            , Task.perform (always (ChatMsg States.InGameLoader.InitMsg)) (Task.succeed ())
+            ( menuData
+            , Task.perform (always (TransitionToInGameLoaderMsg gameLoaderData)) (Task.succeed ())
             )
 
         ResizeMsg ->
-            ( MainMenu menuData, Task.attempt ViewportMsg (getViewportOf "webgl-canvas") )
+            ( menuData, Task.attempt ViewportMsg (getViewportOf "webgl-canvas") )
 
         ViewportMsg returnValue ->
             let
@@ -79,11 +88,11 @@ update msg menuData =
                 newMenuData =
                     { menuData | canvasDimensions = newCanvasDimensions }
             in
-            ( MainMenu newMenuData
+            ( newMenuData
+            , Cmd.none
+            )
+        TransitionToInGameLoaderMsg _ ->
+            ( menuData
             , Cmd.none
             )
 
-        ChatMsg _ ->
-            ( MainMenu menuData
-            , Cmd.none
-            )

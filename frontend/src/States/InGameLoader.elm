@@ -1,5 +1,7 @@
-module States.InGameLoader exposing (Msg(..), subscriptions, update, view)
+module States.InGameLoader exposing (Msg(..), subscriptions, update, view, init)
 
+import World.Types exposing (Vertex, MeshList)
+import HUD.Controller exposing (DragState(..))
 import Browser.Dom exposing (getViewportOf)
 import Browser.Events exposing (onAnimationFrame, onResize)
 import Communication.Receiver as Receiver
@@ -7,16 +9,13 @@ import HUD.Page exposing (embedInCanvas)
 import Html exposing (Html, div, p, text)
 import Html.Attributes exposing (class)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
-import Model.Model
-    exposing
-        ( DragState(..)
-        , GameLoaderData
-        , Model(..)
-        )
 import Platform.Sub
 import Random
 import Task
 import Time
+import WebGL exposing (Mesh)
+import States.InGameLoaderTypes exposing (GameLoaderData)
+import States.InGameTypes exposing (GameData)
 
 
 type Msg
@@ -27,7 +26,14 @@ type Msg
     | RecvServerMsgError String
     | UpdateTimeMsg Time.Posix
     | RandomValueMsg RandomValues
-    | InitMsg
+    | TransitionToInGameMsg GameData
+
+
+init : GameLoaderData -> ( GameLoaderData, Cmd Msg )
+init gameLoaderData =
+    ( gameLoaderData
+    , Random.generate RandomValueMsg randomValues
+    )
 
 
 subscriptions : GameLoaderData -> Sub Msg
@@ -51,20 +57,16 @@ view gameLoaderData =
         []
 
 
-update : Msg -> GameLoaderData -> ( Model, Cmd Msg )
+update : Msg -> GameLoaderData -> ( GameLoaderData, Cmd Msg )
 update msg gameLoaderData =
     case msg of
-        InitMsg ->
-            ( InGameLoader gameLoaderData
-            , Random.generate RandomValueMsg randomValues
-            )
 
         RecvServerMsgError message ->
             let
                 newGameLoaderData =
                     { gameLoaderData | connectionData = Nothing }
             in
-            ( InGameLoader gameLoaderData, Cmd.none )
+            ( gameLoaderData, Cmd.none )
 
         RecvServerMsg message ->
             let
@@ -91,7 +93,7 @@ update msg gameLoaderData =
                         newGameLoaderData =
                             { gameLoaderData | connectionData = Just newConnectionData }
                     in
-                    ( InGameLoader newGameLoaderData
+                    ( newGameLoaderData
                     , Task.perform UpdateTimeMsg Time.now
                     )
 
@@ -109,7 +111,7 @@ update msg gameLoaderData =
                         newGameLoaderData =
                             { gameLoaderData | connectionData = Just newConnectionData }
                     in
-                    ( InGameLoader newGameLoaderData
+                    ( newGameLoaderData
                     , Task.perform UpdateTimeMsg Time.now
                     )
 
@@ -135,12 +137,12 @@ update msg gameLoaderData =
                         newGameLoaderData =
                             { gameLoaderData | connectionData = Just newConnectionData }
                     in
-                    ( InGameLoader newGameLoaderData
+                    ( newGameLoaderData
                     , Cmd.none
                     )
 
                 Nothing ->
-                    ( InGameLoader gameLoaderData, Cmd.none )
+                    ( gameLoaderData, Cmd.none )
 
         TimeElapsed dt ->
             let
@@ -180,8 +182,8 @@ update msg gameLoaderData =
                 ( Just previousMsgElapsed, ( Just msgElapsed, ( Just previousMsgEarth, ( Just msgEarth, ( Just renderData, Just hero ) ) ) ) ) ->
                     let
                         elapsed =
-                            toFloat (Time.posixToMillis dt)
-
+                           toFloat (Time.posixToMillis dt)
+                   
                         newConnectionData =
                             { earth =
                                 { msgEarth = msgEarth
@@ -192,7 +194,7 @@ update msg gameLoaderData =
                                 , previousMsgElapsed = previousMsgElapsed
                                 }
                             }
-
+                   
                         newGameData =
                             { earth = msgEarth
                             , camera =
@@ -219,8 +221,8 @@ update msg gameLoaderData =
                             , user = gameLoaderData.user
                             }
                     in
-                    ( InGame newGameData
-                    , Cmd.none
+                    ( gameLoaderData
+                    , Task.perform (always (TransitionToInGameMsg newGameData)) (Task.succeed ())
                     )
 
                 _ ->
@@ -240,12 +242,12 @@ update msg gameLoaderData =
                         newGameLoaderData =
                             { gameLoaderData | renderData = Just newRenderData }
                     in
-                    ( InGameLoader newGameLoaderData
+                    ( newGameLoaderData
                     , Cmd.none
                     )
 
         ResizeMsg ->
-            ( InGameLoader gameLoaderData, Task.attempt ViewportMsg (getViewportOf "webgl-canvas") )
+            ( gameLoaderData, Task.attempt ViewportMsg (getViewportOf "webgl-canvas") )
 
         -- This Msg is often induced by code also, as it refreshes the screen..
         ViewportMsg returnValue ->
@@ -264,7 +266,7 @@ update msg gameLoaderData =
                 newGameLoaderData =
                     { gameLoaderData | canvasDimensions = newCanvasDimensions }
             in
-            ( InGameLoader newGameLoaderData
+            ( newGameLoaderData
             , Cmd.none
             )
 
@@ -287,10 +289,13 @@ update msg gameLoaderData =
                 newGameLoaderData =
                     { gameLoaderData | hero = Just hero }
             in
-            ( InGameLoader newGameLoaderData
+            ( newGameLoaderData
             , Cmd.none
             )
-
+        TransitionToInGameMsg _ ->
+            ( gameLoaderData
+            , Cmd.none
+            )
 
 
 -- Random
@@ -343,6 +348,8 @@ randomValues =
         randomLocation
         randomEnvelope
 
+-- Others
+
 
 recvServerJson : String -> Msg
 recvServerJson value =
@@ -352,3 +359,5 @@ recvServerJson value =
 
         Err errorMessage ->
             RecvServerMsgError "Error while communicating with the server"
+
+

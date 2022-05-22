@@ -1,43 +1,24 @@
-module States.InGame exposing (Msg, subscriptions, update, view)
+module States.InGame exposing (Msg(..), init, subscriptions, update, view)
 
+import World.Types exposing (Vertex, MeshList)
 import Browser.Dom exposing (getViewportOf)
 import Browser.Events exposing (onAnimationFrame, onResize)
 import Communication.Flags
 import Communication.Receiver as Receiver
-import HUD.Controller as Controller
-    exposing
-        ( controllerMeshDown
-        , controllerMeshUp
-        , controllerUnif
-        , handleDown
-        , handleMove
-        , handleUp
-        )
+import HUD.Controller
 import HUD.Page exposing (embedInCanvas)
-import HUD.Widgets
-    exposing
-        ( Msg(..)
-        , debugOverlay
-        , fpsOverlay
-        , overviewToggleOverlay
-        )
-import Html exposing (Html)
-import Html.Attributes exposing (class)
+import Html exposing (Html, text, span, div)
+import Html.Attributes exposing (class, id)
+import Html.Events exposing (onMouseDown)
 import Html.Events.Extra.Mouse as Mouse
 import Html.Events.Extra.Touch as Touch
 import List
-import Model.Model
-    exposing
-        ( DragState(..)
-        , GameData
-        , Model(..)
-        )
 import Platform.Cmd
 import Platform.Sub
 import Task
 import Time
-import WebGL
-import World.Update exposing (updateGameData)
+import WebGL exposing (Mesh)
+import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import World.World as World
     exposing
         ( axisMesh
@@ -50,6 +31,8 @@ import World.World as World
         , sunMesh
         , sunUnif
         )
+import States.InGameTypes exposing (GameData, Earth, RenderData)
+import States.InGameLoaderTypes exposing (GameLoaderData)
 
 
 type Msg
@@ -60,7 +43,8 @@ type Msg
     | RecvServerMsg Receiver.RecvServerValue
     | RecvServerMsgError String
     | UpdateTimeMsg Time.Posix
-    | WidgetsMsg HUD.Widgets.Msg
+    | OverviewToggleMsg
+    | TransitionToInGameLoaderMsg GameLoaderData
 
 
 type PointerEvent
@@ -70,6 +54,11 @@ type PointerEvent
     | TouchMove Touch.Event
     | TouchDown Touch.Event
     | TouchUp Touch.Event
+
+
+init : GameData -> ( GameData, Cmd Msg )
+init gameData =
+    (gameData, Cmd.none)
 
 
 subscriptions : GameData -> Sub Msg
@@ -114,9 +103,9 @@ view gameData =
     in
     embedInCanvas
         containerAttrs
-        [ Html.map WidgetsMsg (fpsOverlay renderData)
-        , Html.map WidgetsMsg (overviewToggleOverlay gameData.overviewToggle)
-        , Html.map WidgetsMsg (debugOverlay gameData)
+        [ (fpsOverlay renderData)
+        , (overviewToggleOverlay gameData.overviewToggle)
+        , (debugOverlay gameData)
         ]
         [ Touch.onEnd (PointerEventMsg << TouchUp)
         , Touch.onStart (PointerEventMsg << TouchDown)
@@ -151,10 +140,10 @@ view gameData =
             sunMesh
             (sunUnif overviewToggle canvasDimensions earth hero camera)
         , WebGL.entity
-            Controller.vertexShader
-            Controller.fragmentShader
-            controllerMeshUp
-            (controllerUnif canvasDimensions
+            HUD.Controller.vertexShader
+            HUD.Controller.fragmentShader
+            HUD.Controller.controllerMeshUp
+            (HUD.Controller.controllerUnif canvasDimensions
                 (if gameData.controller.upButtonDown then
                     1.0
 
@@ -163,10 +152,10 @@ view gameData =
                 )
             )
         , WebGL.entity
-            Controller.vertexShader
-            Controller.fragmentShader
-            controllerMeshDown
-            (controllerUnif canvasDimensions
+            HUD.Controller.vertexShader
+            HUD.Controller.fragmentShader
+            HUD.Controller.controllerMeshDown
+            (HUD.Controller.controllerUnif canvasDimensions
                 (if gameData.controller.downButtonDown then
                     1.0
 
@@ -177,7 +166,7 @@ view gameData =
         ]
 
 
-update : Msg -> GameData -> ( Model, Cmd Msg )
+update : Msg -> GameData -> ( GameData, Cmd Msg )
 update msg gameData =
     case msg of
         RecvServerMsgError message ->
@@ -192,7 +181,9 @@ update msg gameData =
                     , hero = Nothing
                     }
             in
-            ( InGameLoader newGameLoaderData, Cmd.none )
+            ( gameData
+            , Task.perform (always (TransitionToInGameLoaderMsg newGameLoaderData)) (Task.succeed ())
+            )
 
         RecvServerMsg message ->
             let
@@ -216,7 +207,7 @@ update msg gameData =
                 newGameData =
                     { gameData | connectionData = newConnectionData }
             in
-            ( InGame newGameData
+            ( newGameData
             , Task.perform UpdateTimeMsg Time.now
             )
 
@@ -240,7 +231,7 @@ update msg gameData =
                 newGameData =
                     { gameData | connectionData = newConnectionData }
             in
-            ( InGame newGameData
+            ( newGameData
             , Cmd.none
             )
 
@@ -289,7 +280,7 @@ update msg gameData =
                         , refreshed = True
                     }
             in
-            ( InGame newGameData
+            ( newGameData
             , cmd
             )
 
@@ -298,17 +289,17 @@ update msg gameData =
                 MouseUp struct ->
                     let
                         newController =
-                            handleUp gameData.controller
+                            HUD.Controller.handleUp gameData.controller
 
                         newGameData =
                             { gameData | controller = newController }
                     in
-                    ( InGame newGameData, Cmd.none )
+                    ( newGameData, Cmd.none )
 
                 MouseDown struct ->
                     let
                         newController =
-                            handleDown
+                            HUD.Controller.handleDown
                                 gameData.controller
                                 struct.offsetPos
                                 gameData.canvasDimensions
@@ -316,12 +307,12 @@ update msg gameData =
                         newGameData =
                             { gameData | controller = newController }
                     in
-                    ( InGame newGameData, Cmd.none )
+                    ( newGameData, Cmd.none )
 
                 MouseMove struct ->
                     let
                         ( newController, newCamera ) =
-                            handleMove
+                            HUD.Controller.handleMove
                                 gameData.controller
                                 gameData.camera
                                 struct.offsetPos
@@ -332,7 +323,7 @@ update msg gameData =
                                 , camera = newCamera
                             }
                     in
-                    ( InGame newGameData
+                    ( newGameData
                     , Cmd.none
                     )
 
@@ -345,25 +336,25 @@ update msg gameData =
                             { controller
                                 | upButtonDown = False
                                 , downButtonDown = False
-                                , dragState = NoDrag
+                                , dragState = HUD.Controller.NoDrag
                             }
 
                         newGameData =
                             { gameData | controller = newController }
                     in
-                    ( InGame newGameData
+                    ( newGameData
                     , Cmd.none
                     )
 
                 TouchDown struct ->
                     case List.head struct.touches of
                         Nothing ->
-                            ( InGame gameData, Cmd.none )
+                            ( gameData, Cmd.none )
 
                         Just x ->
                             let
                                 newController =
-                                    handleDown
+                                    HUD.Controller.handleDown
                                         gameData.controller
                                         x.clientPos
                                         gameData.canvasDimensions
@@ -371,19 +362,19 @@ update msg gameData =
                                 newGameData =
                                     { gameData | controller = newController }
                             in
-                            ( InGame newGameData
+                            ( newGameData
                             , Cmd.none
                             )
 
                 TouchMove struct ->
                     case List.head struct.touches of
                         Nothing ->
-                            ( InGame gameData, Cmd.none )
+                            ( gameData, Cmd.none )
 
                         Just x ->
                             let
                                 ( newController, newCamera ) =
-                                    handleMove
+                                    HUD.Controller.handleMove
                                         gameData.controller
                                         gameData.camera
                                         x.clientPos
@@ -394,12 +385,12 @@ update msg gameData =
                                         , camera = newCamera
                                     }
                             in
-                            ( InGame newGameData
+                            ( newGameData
                             , Cmd.none
                             )
 
         ResizeMsg ->
-            ( InGame gameData, Task.attempt ViewportMsg (getViewportOf "webgl-canvas") )
+            ( gameData, Task.attempt ViewportMsg (getViewportOf "webgl-canvas") )
 
         ViewportMsg returnValue ->
             let
@@ -417,20 +408,22 @@ update msg gameData =
                 newGameData =
                     { gameData | canvasDimensions = newCanvasDimensions }
             in
-            ( InGame newGameData
+            ( newGameData
             , Cmd.none
             )
 
-        WidgetsMsg widgetsMsg ->
-            case widgetsMsg of
-                OverviewToggleMsg ->
-                    let
-                        newGameData =
-                            { gameData | overviewToggle = not gameData.overviewToggle }
-                    in
-                    ( InGame newGameData
-                    , Cmd.none
-                    )
+        OverviewToggleMsg ->
+            let
+                newGameData =
+                    { gameData | overviewToggle = not gameData.overviewToggle }
+            in
+            ( newGameData
+            , Cmd.none
+            )
+        TransitionToInGameLoaderMsg _ ->
+            ( gameData
+            , Cmd.none
+            )
 
 
 
@@ -445,3 +438,136 @@ recvServerJson value =
 
         Err errorMessage ->
             RecvServerMsgError "Error while communicating with the server"
+
+
+updateGameData : Float -> Float -> Float -> Float -> Earth -> Earth -> GameData -> GameData
+updateGameData elapsed previousElapsed msgElapsed previousMsgElapsed msgEarth previousMsgEarth gameData =
+    let
+        timeInBetween =
+            elapsed - previousElapsed
+
+        weight =
+            (elapsed - previousMsgElapsed)
+                / (msgElapsed - previousMsgElapsed)
+
+        weightedAve p1 p2 w =
+            p1 + w * (p2 - p1)
+
+        newEarth =
+            { rotationAroundAxis = weightedAve previousMsgEarth.rotationAroundAxis msgEarth.rotationAroundAxis weight
+            , rotationAroundSun = weightedAve previousMsgEarth.rotationAroundSun msgEarth.rotationAroundSun weight
+            }
+
+        newPowerChange =
+            if gameData.controller.upButtonDown then
+                0.0005
+
+            else if gameData.controller.downButtonDown then
+                -0.0005
+
+            else
+                0
+
+        newPower =
+            max 0
+                (min 2
+                    (gameData.hero.power
+                        + (timeInBetween * newPowerChange)
+                    )
+                )
+
+        newAltitudeChange =
+            (newPower - 1) / 50
+
+        newAltitude =
+            max 105
+                (min 500
+                    (gameData.hero.altitude
+                        + (timeInBetween * newAltitudeChange)
+                    )
+                )
+
+        newLongitude =
+            gameData.hero.longitude - timeInBetween * gameData.hero.lonSpeed
+
+        newLatitude =
+            gameData.hero.longitude - timeInBetween * gameData.hero.latSpeed
+
+        newRotationTheta =
+            sin (elapsed / 1000) / 20
+
+        hero =
+            gameData.hero
+
+        newHero =
+            { hero
+                | rotationTheta = newRotationTheta
+                , longitude = newLongitude
+                , latitude = newLatitude
+                , power = newPower
+                , altitude = newAltitude
+            }
+
+        newGameData =
+            { gameData
+                | hero = newHero
+                , earth = newEarth
+            }
+    in
+    newGameData
+
+
+fpsOverlay : RenderData -> Html Msg
+fpsOverlay renderData =
+    let
+        fps =
+            round (1000 / (renderData.elapsed - renderData.previousElapsed))
+                |> String.fromInt
+    in
+    div
+        [ id "fps-overlay" ]
+        [ span
+            []
+            [ text ("FPS: " ++ fps)
+            ]
+        ]
+
+
+overviewToggleOverlay : Bool -> Html Msg
+overviewToggleOverlay isOn =
+    let
+        className =
+            if isOn then
+                "overview-toggle-on"
+
+            else
+                "overview-toggle-off"
+    in
+    div
+        [ id "overview-toggle-overlay"
+        , class (String.append className " noselect")
+        , onMouseDown OverviewToggleMsg
+        ]
+        [ div
+            []
+            [ text "Overview" ]
+        ]
+
+
+debugOverlay : GameData -> Html Msg
+debugOverlay gameData =
+    let
+        message =
+            ""
+
+        -- (Debug.toString gameData.earth)
+        -- |> String.append (Debug.toString gameData.connectionData.earth)
+    in
+    div
+        [ id "debug-overlay"
+        , class "noselect"
+        ]
+        [ div
+            []
+            [ text message ]
+        ]

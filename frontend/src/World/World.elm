@@ -1,6 +1,5 @@
 module World.World exposing
-    ( Vertex
-    , axisMesh
+    ( axisMesh
     , axisUnif
     , earthUnif
     , fireMesh
@@ -13,16 +12,60 @@ module World.World exposing
     , vertexShader
     )
 
+import World.Types exposing (Vertex, MeshList)
 import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
-import Model.Model
-    exposing
-        ( Camera
-        , CanvasDimensions
-        , Earth
-        , Hero
-        )
 import WebGL exposing (Mesh, Shader)
+
+
+
+type alias CanvasDimensions =
+    { width : Int
+    , height : Int
+    }
+
+
+type alias Hero =
+    { altitude : Float
+    , latitude : Float
+    , longitude : Float
+    , latSpeed : Float
+    , lonSpeed : Float
+    , rotationTheta : Float
+    , power : Float
+    , envColor : Vec3
+    }
+
+
+type alias Earth =
+    { rotationAroundSun : Float
+    , rotationAroundAxis : Float
+    }
+
+
+type alias Camera =
+    { azimoth : Float
+    , elevation : Float
+    }
+
+
+type alias Uniforms =
+    { preScale : Mat4
+    , preRotation : Mat4
+    , preTranslation : Mat4
+    , scale : Mat4
+    , rotation : Mat4
+    , translation : Mat4
+    , postScale : Mat4
+    , postRotation : Mat4
+    , postTranslation : Mat4
+    , perspective : Mat4
+    , camera : Mat4
+    , shade : Float
+    }
+
+
+
 
 
 generalUnif : Bool -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
@@ -715,32 +758,6 @@ makeHeroCamera canvasDimensions earth hero camera =
         up
 
 
-type alias Uniforms =
-    { preScale : Mat4
-    , preRotation : Mat4
-    , preTranslation : Mat4
-    , scale : Mat4
-    , rotation : Mat4
-    , translation : Mat4
-    , postScale : Mat4
-    , postRotation : Mat4
-    , postTranslation : Mat4
-    , perspective : Mat4
-    , camera : Mat4
-    , shade : Float
-    }
-
-
-type alias Vertex =
-    { color : Vec3
-    , position : Vec3
-    }
-
-
-type alias MeshList =
-    List ( Vertex, Vertex, Vertex )
-
-
 vertexShader : Shader Vertex Uniforms { vcolor : Vec3 }
 vertexShader =
     [glsl|
@@ -792,3 +809,5 @@ meshPositionMap fun mesh =
             , { v3 | position = fun v3.position }
             )
                 :: meshPositionMap fun xs
+
+

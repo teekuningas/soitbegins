@@ -1,12 +1,16 @@
-module States.Termination exposing (Msg, subscriptions, update, view)
+module States.Termination exposing (Msg, subscriptions, update, view, init)
 
 import Html exposing (Html, div, text)
-import Model.Model exposing (Model(..))
 import Platform.Sub
 
 
 type Msg
     = EmptyMsg
+
+
+init : String -> ( String, Cmd Msg )
+init message =
+    ( message, Cmd.none )
 
 
 subscriptions : String -> Sub Msg
@@ -19,6 +23,7 @@ view message =
     div [] [ text message ]
 
 
-update : Msg -> String -> ( Model, Cmd Msg )
+update : Msg -> String -> ( String, Cmd Msg )
 update msg message =
-    ( Termination message, Cmd.none )
+    ( message, Cmd.none )
+
