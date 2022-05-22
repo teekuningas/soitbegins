@@ -23,10 +23,10 @@ updateGameData elapsed previousElapsed msgElapsed previousMsgElapsed msgEarth pr
 
         newPowerChange =
             if gameData.controller.upButtonDown then
-                0.0001
+                0.0005
 
             else if gameData.controller.downButtonDown then
-                -0.0001
+                -0.0005
 
             else
                 0
@@ -40,7 +40,7 @@ updateGameData elapsed previousElapsed msgElapsed previousMsgElapsed msgEarth pr
                 )
 
         newAltitudeChange =
-            (newPower - 1) / 20
+            (newPower - 1) / 50
 
         newAltitude =
             max 105

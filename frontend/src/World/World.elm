@@ -283,26 +283,6 @@ sunMesh =
         |> WebGL.triangles
 
 
-heroMesh : Mesh Vertex
-heroMesh =
-    let
-        balloonColor =
-            Vec3.scale (1 / 255) (vec3 237 212 0)
-
-        -- yellow
-    in
-    [ cubeMeshList
-    , meshPositionMap
-        (Vec3.add (vec3 0 4 0))
-        (meshPositionMap
-            (Vec3.scale 2)
-            (subdivideProject balloonColor (icosaMeshList balloonColor))
-        )
-    ]
-        |> List.concat
-        |> WebGL.triangles
-
-
 fireMesh : Mesh Vertex
 fireMesh =
     let
@@ -315,6 +295,127 @@ fireMesh =
     ]
         |> List.concat
         |> WebGL.triangles
+
+
+heroMesh : Vec3 -> Mesh Vertex
+heroMesh envelopeColor =
+    let
+        basketColor =
+            Vec3.scale (1 / 255) (vec3 133 87 35)
+
+        burnerColor =
+            Vec3.scale (1 / 255) (vec3 113 121 126)
+    in
+    [ basketMeshList basketColor
+    , envelopeMeshList envelopeColor
+    , burnerMeshList burnerColor
+    ]
+        |> List.concat
+        |> WebGL.triangles
+
+
+burnerMeshList : Vec3 -> MeshList
+burnerMeshList color =
+    let
+        rft =
+            vec3 1 1 1
+
+        lft =
+            vec3 -1 1 1
+
+        lbt =
+            vec3 -1 -1 1
+
+        rbt =
+            vec3 1 -1 1
+
+        rbb =
+            vec3 1 -1 -1
+
+        rfb =
+            vec3 1 1 -1
+
+        lfb =
+            vec3 -1 1 -1
+
+        lbb =
+            vec3 -1 -1 -1
+
+        meshList =
+            [ face color rft rfb rbb rbt
+            , face color rft rfb lfb lft
+            , face color rft lft lbt rbt
+            , face color rfb lfb lbb rbb
+            , face color lft lfb lbb lbt
+            , face color rbt rbb lbb lbt
+            ]
+    in
+    meshList
+        |> List.concat
+        |> meshPositionMap (Vec3.scale 0.5)
+        |> meshPositionMap (Vec3.add (vec3 0 0.7 0))
+
+
+envelopeMeshList : Vec3 -> MeshList
+envelopeMeshList envelopeColor =
+    meshPositionMap
+        (Vec3.add (vec3 0 7.5 0))
+        (meshPositionMap
+            (Vec3.scale 5)
+            (subdivideProject envelopeColor (icosaMeshList envelopeColor))
+        )
+
+
+basketMeshList : Vec3 -> MeshList
+basketMeshList color =
+    let
+        rft =
+            vec3 1 1 1
+
+        lft =
+            vec3 -1 1 1
+
+        lbt =
+            vec3 -1 -1 1
+
+        rbt =
+            vec3 1 -1 1
+
+        rbb =
+            vec3 1 -1 -1
+
+        rfb =
+            vec3 1 1 -1
+
+        lfb =
+            vec3 -1 1 -1
+
+        lbb =
+            vec3 -1 -1 -1
+
+        meshList =
+            [ face color rft rfb rbb rbt
+            , face color rft rfb lfb lft
+            , face color rft lft lbt rbt
+            , face color rfb lfb lbb rbb
+            , face color lft lfb lbb lbt
+            , face color rbt rbb lbb lbt
+            ]
+    in
+    meshList
+        |> List.concat
+        |> meshPositionMap (Vec3.add (vec3 0 -1.5 0))
+
+
+face : Vec3 -> Vec3 -> Vec3 -> Vec3 -> Vec3 -> MeshList
+face color a b c d =
+    let
+        vertex position =
+            Vertex color position
+    in
+    [ ( vertex a, vertex b, vertex c )
+    , ( vertex c, vertex d, vertex a )
+    ]
 
 
 icosaMeshList : Vec3 -> MeshList
@@ -385,54 +486,6 @@ icosaMeshList clr =
     , ( v8, v11, v7 )
     , ( v6, v12, v5 )
     , ( v11, v9, v5 )
-    ]
-
-
-cubeMeshList : MeshList
-cubeMeshList =
-    let
-        rft =
-            vec3 1 1 1
-
-        lft =
-            vec3 -1 1 1
-
-        lbt =
-            vec3 -1 -1 1
-
-        rbt =
-            vec3 1 -1 1
-
-        rbb =
-            vec3 1 -1 -1
-
-        rfb =
-            vec3 1 1 -1
-
-        lfb =
-            vec3 -1 1 -1
-
-        lbb =
-            vec3 -1 -1 -1
-    in
-    [ face (vec3 115 210 22) rft rfb rbb rbt -- green
-    , face (vec3 52 101 164) rft rfb lfb lft -- blue
-    , face (vec3 237 212 0) rft lft lbt rbt -- yellow
-    , face (vec3 204 0 0) rfb lfb lbb rbb -- red
-    , face (vec3 117 80 123) lft lfb lbb lbt -- purple
-    , face (vec3 245 121 0) rbt rbb lbb lbt -- orange
-    ]
-        |> List.concat
-
-
-face : Vec3 -> Vec3 -> Vec3 -> Vec3 -> Vec3 -> MeshList
-face color a b c d =
-    let
-        vertex position =
-            Vertex (Vec3.scale (1 / 255) color) position
-    in
-    [ ( vertex a, vertex b, vertex c )
-    , ( vertex c, vertex d, vertex a )
     ]
 
 

@@ -92,6 +92,7 @@ type alias Hero =
     , lonSpeed : Float
     , rotationTheta : Float
     , power : Float
+    , envColor : Vec3
     }
 
 

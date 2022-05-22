@@ -128,7 +128,7 @@ view gameData =
         [ WebGL.entity
             World.vertexShader
             World.fragmentShader
-            heroMesh
+            (heroMesh gameData.hero.envColor)
             (heroUnif overviewToggle canvasDimensions earth hero camera)
         , WebGL.entity
             World.vertexShader

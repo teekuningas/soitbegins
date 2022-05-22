@@ -6,6 +6,7 @@ import Communication.Receiver as Receiver
 import HUD.Page exposing (embedInCanvas)
 import Html exposing (Html, div, p, text)
 import Html.Attributes exposing (class)
+import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import Model.Model
     exposing
         ( DragState(..)
@@ -27,14 +28,6 @@ type Msg
     | UpdateTimeMsg Time.Posix
     | RandomValueMsg RandomValues
     | InitMsg
-
-
-type alias RandomValues =
-    { longitude : Float
-    , latitude : Float
-    , lonSpeed : Float
-    , latSpeed : Float
-    }
 
 
 subscriptions : GameLoaderData -> Sub Msg
@@ -277,14 +270,18 @@ update msg gameLoaderData =
 
         RandomValueMsg values ->
             let
+                envColor =
+                    vec3 values.envelope.envelopeR values.envelope.envelopeG values.envelope.envelopeB
+
                 hero =
                     { altitude = 110
-                    , latitude = values.latitude
-                    , longitude = values.longitude
-                    , latSpeed = values.latSpeed / 10000
-                    , lonSpeed = values.lonSpeed / 10000
+                    , latitude = values.location.latitude
+                    , longitude = values.location.longitude
+                    , latSpeed = values.location.latSpeed / 10000
+                    , lonSpeed = values.location.lonSpeed / 10000
                     , rotationTheta = 0
                     , power = 1
+                    , envColor = envColor
                     }
 
                 newGameLoaderData =
@@ -295,14 +292,56 @@ update msg gameLoaderData =
             )
 
 
+
+-- Random
+
+
+type alias RandomLocation =
+    { longitude : Float
+    , latitude : Float
+    , lonSpeed : Float
+    , latSpeed : Float
+    }
+
+
+type alias RandomEnvelope =
+    { envelopeR : Float
+    , envelopeG : Float
+    , envelopeB : Float
+    }
+
+
+type alias RandomValues =
+    { location : RandomLocation
+    , envelope : RandomEnvelope
+    }
+
+
+randomEnvelope : Random.Generator RandomEnvelope
+randomEnvelope =
+    Random.map3
+        RandomEnvelope
+        (Random.float 0 1)
+        (Random.float 0 1)
+        (Random.float 0 1)
+
+
+randomLocation : Random.Generator RandomLocation
+randomLocation =
+    Random.map4
+        RandomLocation
+        (Random.float 0 1)
+        (Random.float 0 1)
+        (Random.float 0 1)
+        (Random.float 0 1)
+
+
 randomValues : Random.Generator RandomValues
 randomValues =
-    Random.map4
+    Random.map2
         RandomValues
-        (Random.float 0 1)
-        (Random.float 0 1)
-        (Random.float 0 1)
-        (Random.float 0 1)
+        randomLocation
+        randomEnvelope
 
 
 recvServerJson : String -> Msg
