@@ -1,24 +1,26 @@
 module States.InGame exposing (Msg(..), init, subscriptions, update, view)
 
-import World.Types exposing (Vertex, MeshList)
 import Browser.Dom exposing (getViewportOf)
 import Browser.Events exposing (onAnimationFrame, onResize)
 import Communication.Flags
 import Communication.Receiver as Receiver
 import HUD.Controller
 import HUD.Page exposing (embedInCanvas)
-import Html exposing (Html, text, span, div)
+import Html exposing (Html, div, span, text)
 import Html.Attributes exposing (class, id)
 import Html.Events exposing (onMouseDown)
 import Html.Events.Extra.Mouse as Mouse
 import Html.Events.Extra.Touch as Touch
 import List
+import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import Platform.Cmd
 import Platform.Sub
+import States.InGameLoaderTypes exposing (GameLoaderData)
+import States.InGameTypes exposing (Earth, GameData, RenderData)
 import Task
 import Time
 import WebGL exposing (Mesh)
-import Math.Vector3 as Vec3 exposing (Vec3, vec3)
+import World.Types exposing (MeshList, Vertex)
 import World.World as World
     exposing
         ( axisMesh
@@ -31,8 +33,6 @@ import World.World as World
         , sunMesh
         , sunUnif
         )
-import States.InGameTypes exposing (GameData, Earth, RenderData)
-import States.InGameLoaderTypes exposing (GameLoaderData)
 
 
 type Msg
@@ -58,7 +58,7 @@ type PointerEvent
 
 init : GameData -> ( GameData, Cmd Msg )
 init gameData =
-    (gameData, Cmd.none)
+    ( gameData, Cmd.none )
 
 
 subscriptions : GameData -> Sub Msg
@@ -103,9 +103,9 @@ view gameData =
     in
     embedInCanvas
         containerAttrs
-        [ (fpsOverlay renderData)
-        , (overviewToggleOverlay gameData.overviewToggle)
-        , (debugOverlay gameData)
+        [ fpsOverlay renderData
+        , overviewToggleOverlay gameData.overviewToggle
+        , debugOverlay gameData
         ]
         [ Touch.onEnd (PointerEventMsg << TouchUp)
         , Touch.onStart (PointerEventMsg << TouchDown)
@@ -420,6 +420,7 @@ update msg gameData =
             ( newGameData
             , Cmd.none
             )
+
         TransitionToInGameLoaderMsg _ ->
             ( gameData
             , Cmd.none

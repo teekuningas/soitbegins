@@ -1,9 +1,9 @@
-module States.InGameTypes exposing (GameData, Earth, RenderData)
+module States.InGameTypes exposing (Earth, GameData, RenderData)
 
-import World.Types exposing (Vertex, MeshList)
-import WebGL exposing (Mesh)
-import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import HUD.Controller
+import Math.Vector3 as Vec3 exposing (Vec3, vec3)
+import WebGL exposing (Mesh)
+import World.Types exposing (MeshList, Vertex)
 
 
 type alias GameData =
@@ -72,4 +72,3 @@ type alias ConnectionData =
         , previousMsgElapsed : Float
         }
     }
-

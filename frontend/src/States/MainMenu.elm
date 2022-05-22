@@ -1,19 +1,19 @@
-module States.MainMenu exposing (Msg(..), subscriptions, update, view, init)
+module States.MainMenu exposing (Msg(..), init, subscriptions, update, view)
 
-import World.Types exposing (Vertex, MeshList)
-import States.InGameLoader
 import Browser.Dom exposing (getViewportOf)
 import Browser.Events exposing (onResize)
 import HUD.Page exposing (embedInCanvas)
 import Html exposing (Html, button, div, p, text)
 import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
+import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import Platform.Sub
+import States.InGameLoader
+import States.InGameLoaderTypes exposing (GameLoaderData)
+import States.MainMenuTypes exposing (MenuData)
 import Task
 import WebGL exposing (Mesh)
-import Math.Vector3 as Vec3 exposing (Vec3, vec3)
-import States.MainMenuTypes exposing (MenuData)
-import States.InGameLoaderTypes exposing (GameLoaderData)
+import World.Types exposing (MeshList, Vertex)
 
 
 type Msg
@@ -25,7 +25,7 @@ type Msg
 
 init : MenuData -> ( MenuData, Cmd Msg )
 init menuData =
-    (menuData, Cmd.none)
+    ( menuData, Cmd.none )
 
 
 subscriptions : MenuData -> Sub Msg
@@ -91,8 +91,8 @@ update msg menuData =
             ( newMenuData
             , Cmd.none
             )
+
         TransitionToInGameLoaderMsg _ ->
             ( menuData
             , Cmd.none
             )
-

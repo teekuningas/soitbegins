@@ -7,17 +7,16 @@ import Json.Decode
 import Platform.Cmd
 import Platform.Sub
 import States.GatherInfo as GatherInfo
+import States.GatherInfoTypes exposing (GatherInfoData)
 import States.InGame as InGame
 import States.InGameLoader as InGameLoader
-import States.Initialization as Initialization
-import States.MainMenu as MainMenu
-import States.Termination as Termination
-import States.InitializationTypes exposing (InitData)
-import States.GatherInfoTypes exposing (GatherInfoData)
-import States.MainMenuTypes exposing (MenuData)
 import States.InGameLoaderTypes exposing (GameLoaderData)
 import States.InGameTypes exposing (GameData)
-
+import States.Initialization as Initialization
+import States.InitializationTypes exposing (InitData)
+import States.MainMenu as MainMenu
+import States.MainMenuTypes exposing (MenuData)
+import States.Termination as Termination
 
 
 type Model
@@ -143,69 +142,60 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case ( msg, model ) of
         ( InitializationMsg stateMsg, Initialization initData ) ->
-            case stateMsg of 
-
+            case stateMsg of
                 Initialization.TransitionToGatherInfoMsg data ->
                     GatherInfo.init data
-                        |> Tuple.mapBoth GatherInfo (Platform.Cmd.map GatherInfoMsg) 
+                        |> Tuple.mapBoth GatherInfo (Platform.Cmd.map GatherInfoMsg)
 
                 Initialization.TransitionToTerminationMsg data ->
                     Termination.init data
-                        |> Tuple.mapBoth Termination (Platform.Cmd.map TerminationMsg) 
+                        |> Tuple.mapBoth Termination (Platform.Cmd.map TerminationMsg)
 
                 _ ->
                     Initialization.update stateMsg initData
                         |> Tuple.mapBoth Initialization (Platform.Cmd.map InitializationMsg)
 
         ( GatherInfoMsg stateMsg, GatherInfo gatherInfoData ) ->
-            case stateMsg of 
+            case stateMsg of
                 GatherInfo.TransitionToMainMenuMsg data ->
                     MainMenu.init data
-                        |> Tuple.mapBoth MainMenu (Platform.Cmd.map MainMenuMsg) 
+                        |> Tuple.mapBoth MainMenu (Platform.Cmd.map MainMenuMsg)
 
                 _ ->
                     GatherInfo.update stateMsg gatherInfoData
                         |> Tuple.mapBoth GatherInfo (Platform.Cmd.map GatherInfoMsg)
 
         ( MainMenuMsg stateMsg, MainMenu menuData ) ->
-
-            case stateMsg of 
+            case stateMsg of
                 MainMenu.TransitionToInGameLoaderMsg data ->
                     InGameLoader.init data
-                        |> Tuple.mapBoth InGameLoader (Platform.Cmd.map InGameLoaderMsg) 
+                        |> Tuple.mapBoth InGameLoader (Platform.Cmd.map InGameLoaderMsg)
 
                 _ ->
                     MainMenu.update stateMsg menuData
                         |> Tuple.mapBoth MainMenu (Platform.Cmd.map MainMenuMsg)
 
         ( InGameLoaderMsg stateMsg, InGameLoader gameLoaderData ) ->
-
-            case stateMsg of 
+            case stateMsg of
                 InGameLoader.TransitionToInGameMsg data ->
                     InGame.init data
-                        |> Tuple.mapBoth InGame (Platform.Cmd.map InGameMsg) 
+                        |> Tuple.mapBoth InGame (Platform.Cmd.map InGameMsg)
 
                 _ ->
                     InGameLoader.update stateMsg gameLoaderData
                         |> Tuple.mapBoth InGameLoader (Platform.Cmd.map InGameLoaderMsg)
 
-
         ( InGameMsg stateMsg, InGame gameData ) ->
-
-            case stateMsg of 
-
+            case stateMsg of
                 InGame.TransitionToInGameLoaderMsg data ->
                     InGameLoader.init data
-                        |> Tuple.mapBoth InGameLoader (Platform.Cmd.map InGameLoaderMsg) 
+                        |> Tuple.mapBoth InGameLoader (Platform.Cmd.map InGameLoaderMsg)
 
                 _ ->
                     InGame.update stateMsg gameData
                         |> Tuple.mapBoth InGame (Platform.Cmd.map InGameMsg)
 
-
-
         ( TerminationMsg stateMsg, Termination message ) ->
-
             Termination.update stateMsg message
                 |> Tuple.mapBoth Termination (Platform.Cmd.map TerminationMsg)
 

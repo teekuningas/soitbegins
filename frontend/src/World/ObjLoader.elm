@@ -8,7 +8,7 @@ import Quantity exposing (Unitless)
 import TriangularMesh exposing (TriangularMesh)
 import Vector3d exposing (Vector3d)
 import WebGL exposing (Mesh)
-import World.Types exposing (Vertex, MeshList)
+import World.Types exposing (MeshList, Vertex)
 
 
 triangularEarthToMeshVertex :

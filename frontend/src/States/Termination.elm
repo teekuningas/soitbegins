@@ -1,4 +1,4 @@
-module States.Termination exposing (Msg, subscriptions, update, view, init)
+module States.Termination exposing (Msg, init, subscriptions, update, view)
 
 import Html exposing (Html, div, text)
 import Platform.Sub
@@ -26,4 +26,3 @@ view message =
 update : Msg -> String -> ( String, Cmd Msg )
 update msg message =
     ( message, Cmd.none )
-

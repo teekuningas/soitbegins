@@ -1,21 +1,21 @@
-module States.InGameLoader exposing (Msg(..), subscriptions, update, view, init)
+module States.InGameLoader exposing (Msg(..), init, subscriptions, update, view)
 
-import World.Types exposing (Vertex, MeshList)
-import HUD.Controller exposing (DragState(..))
 import Browser.Dom exposing (getViewportOf)
 import Browser.Events exposing (onAnimationFrame, onResize)
 import Communication.Receiver as Receiver
+import HUD.Controller exposing (DragState(..))
 import HUD.Page exposing (embedInCanvas)
 import Html exposing (Html, div, p, text)
 import Html.Attributes exposing (class)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import Platform.Sub
 import Random
+import States.InGameLoaderTypes exposing (GameLoaderData)
+import States.InGameTypes exposing (GameData)
 import Task
 import Time
 import WebGL exposing (Mesh)
-import States.InGameLoaderTypes exposing (GameLoaderData)
-import States.InGameTypes exposing (GameData)
+import World.Types exposing (MeshList, Vertex)
 
 
 type Msg
@@ -60,7 +60,6 @@ view gameLoaderData =
 update : Msg -> GameLoaderData -> ( GameLoaderData, Cmd Msg )
 update msg gameLoaderData =
     case msg of
-
         RecvServerMsgError message ->
             let
                 newGameLoaderData =
@@ -182,8 +181,8 @@ update msg gameLoaderData =
                 ( Just previousMsgElapsed, ( Just msgElapsed, ( Just previousMsgEarth, ( Just msgEarth, ( Just renderData, Just hero ) ) ) ) ) ->
                     let
                         elapsed =
-                           toFloat (Time.posixToMillis dt)
-                   
+                            toFloat (Time.posixToMillis dt)
+
                         newConnectionData =
                             { earth =
                                 { msgEarth = msgEarth
@@ -194,7 +193,7 @@ update msg gameLoaderData =
                                 , previousMsgElapsed = previousMsgElapsed
                                 }
                             }
-                   
+
                         newGameData =
                             { earth = msgEarth
                             , camera =
@@ -292,10 +291,12 @@ update msg gameLoaderData =
             ( newGameLoaderData
             , Cmd.none
             )
+
         TransitionToInGameMsg _ ->
             ( gameLoaderData
             , Cmd.none
             )
+
 
 
 -- Random
@@ -348,6 +349,8 @@ randomValues =
         randomLocation
         randomEnvelope
 
+
+
 -- Others
 
 
@@ -359,5 +362,3 @@ recvServerJson value =
 
         Err errorMessage ->
             RecvServerMsgError "Error while communicating with the server"
-
-

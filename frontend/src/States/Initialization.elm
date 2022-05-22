@@ -1,6 +1,5 @@
 module States.Initialization exposing (Msg(..), init, subscriptions, update, view)
 
-import World.Types exposing (Vertex, MeshList)
 import Browser.Dom exposing (getViewportOf)
 import Browser.Events exposing (onResize)
 import Communication.Flags exposing (FlagsValue)
@@ -19,15 +18,16 @@ import Html
 import Html.Attributes exposing (class)
 import Http
 import Length exposing (Meters, meters)
+import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import Obj.Decode exposing (expectObj)
 import Platform.Cmd
 import Platform.Sub
+import States.GatherInfoTypes exposing (GatherInfoData)
+import States.InitializationTypes exposing (InitData)
 import Task
 import WebGL exposing (Mesh)
 import World.ObjLoader as ObjLoader
-import Math.Vector3 as Vec3 exposing (Vec3, vec3)
-import States.InitializationTypes exposing (InitData)
-import States.GatherInfoTypes exposing (GatherInfoData)
+import World.Types exposing (MeshList, Vertex)
 
 
 type Msg
@@ -121,13 +121,13 @@ update msg initData =
                     ( initData
                     , Task.perform (always (TransitionToGatherInfoMsg newGatherInfoData)) (Task.succeed ())
                     )
-           
+
                 Err _ ->
                     ( initData
                     , Task.perform (always (TransitionToTerminationMsg "Could not download assets")) (Task.succeed ())
                     )
 
-        _ -> 
+        _ ->
             ( initData, Cmd.none )
 
 
@@ -136,6 +136,3 @@ subscriptions initData =
     Platform.Sub.batch
         [ onResize (\width height -> ResizeMsg)
         ]
-
-
-

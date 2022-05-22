@@ -12,11 +12,10 @@ module World.World exposing
     , vertexShader
     )
 
-import World.Types exposing (Vertex, MeshList)
 import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import WebGL exposing (Mesh, Shader)
-
+import World.Types exposing (MeshList, Vertex)
 
 
 type alias CanvasDimensions =
@@ -63,9 +62,6 @@ type alias Uniforms =
     , camera : Mat4
     , shade : Float
     }
-
-
-
 
 
 generalUnif : Bool -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
@@ -809,5 +805,3 @@ meshPositionMap fun mesh =
             , { v3 | position = fun v3.position }
             )
                 :: meshPositionMap fun xs
-
-

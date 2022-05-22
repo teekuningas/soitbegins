@@ -1,19 +1,18 @@
-module States.GatherInfo exposing (Msg(..), subscriptions, update, view, init)
+module States.GatherInfo exposing (Msg(..), init, subscriptions, update, view)
 
-import World.Types exposing (Vertex, MeshList)
 import Browser.Dom exposing (getViewportOf)
 import Browser.Events exposing (onResize)
 import HUD.Page exposing (embedInCanvas)
 import Html exposing (Html, button, div, input, p, text)
 import Html.Attributes exposing (class, placeholder, value)
 import Html.Events exposing (onClick, onInput)
-import Platform.Sub
-import Task
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
-import WebGL exposing (Mesh)
-
+import Platform.Sub
 import States.GatherInfoTypes exposing (GatherInfoData)
 import States.MainMenuTypes exposing (MenuData)
+import Task
+import WebGL exposing (Mesh)
+import World.Types exposing (MeshList, Vertex)
 
 
 type Msg
@@ -25,8 +24,8 @@ type Msg
 
 
 init : GatherInfoData -> ( GatherInfoData, Cmd Msg )
-init gatherInfoData = 
-    (gatherInfoData, Cmd.none)
+init gatherInfoData =
+    ( gatherInfoData, Cmd.none )
 
 
 subscriptions : GatherInfoData -> Sub Msg
@@ -108,9 +107,8 @@ update msg gatherInfoData =
             ( newGatherInfoData
             , Cmd.none
             )
+
         TransitionToMainMenuMsg _ ->
             ( gatherInfoData
-            , Cmd.none 
+            , Cmd.none
             )
-
-

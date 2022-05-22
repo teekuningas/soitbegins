@@ -1,5 +1,7 @@
 module HUD.Controller exposing
-    ( controllerMeshDown
+    ( Controller
+    , DragState(..)
+    , controllerMeshDown
     , controllerMeshUp
     , controllerUnif
     , fragmentShader
@@ -7,16 +9,13 @@ module HUD.Controller exposing
     , handleMove
     , handleUp
     , vertexShader
-    , Controller
-    , DragState(..)
     )
 
-import World.Types exposing (Vertex, MeshList)
 import HUD.Page exposing (viewportSize)
 import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import WebGL exposing (Mesh, Shader)
-
+import World.Types exposing (MeshList, Vertex)
 
 
 type alias CanvasDimensions =
@@ -362,5 +361,3 @@ meshPositionMap fun mesh =
             , { v3 | position = fun v3.position }
             )
                 :: meshPositionMap fun xs
-
-
