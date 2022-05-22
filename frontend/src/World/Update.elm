@@ -56,7 +56,6 @@ updateGameData elapsed previousElapsed msgElapsed previousMsgElapsed msgEarth pr
         newLatitude =
             gameData.hero.longitude - timeInBetween * gameData.hero.latSpeed
 
-
         newRotationTheta =
             sin (elapsed / 1000) / 20
 

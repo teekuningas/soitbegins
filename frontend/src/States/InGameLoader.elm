@@ -1,4 +1,4 @@
-module States.InGameLoader exposing (Msg, subscriptions, update, view)
+module States.InGameLoader exposing (Msg(..), subscriptions, update, view)
 
 import Browser.Dom exposing (getViewportOf)
 import Browser.Events exposing (onAnimationFrame, onResize)
@@ -26,7 +26,7 @@ type Msg
     | RecvServerMsgError String
     | UpdateTimeMsg Time.Posix
     | RandomValueMsg RandomValues
-    | TickMsg Time.Posix
+    | InitMsg
 
 
 type alias RandomValues =
@@ -43,7 +43,6 @@ subscriptions gameLoaderData =
         [ onAnimationFrame (\x -> TimeElapsed x)
         , onResize (\width height -> ResizeMsg)
         , Receiver.messageReceiver recvServerJson
-        , Time.every 1000 TickMsg
         ]
 
 
@@ -62,7 +61,7 @@ view gameLoaderData =
 update : Msg -> GameLoaderData -> ( Model, Cmd Msg )
 update msg gameLoaderData =
     case msg of
-        TickMsg time ->
+        InitMsg ->
             ( InGameLoader gameLoaderData
             , Random.generate RandomValueMsg randomValues
             )
@@ -158,29 +157,34 @@ update msg gameLoaderData =
                         |> Maybe.withDefault Nothing
                         |> Maybe.map .previousMsgElapsed
                         |> Maybe.withDefault Nothing
+
                 mMsgElapsed =
                     gameLoaderData.connectionData
                         |> Maybe.map .elapsed
                         |> Maybe.withDefault Nothing
                         |> Maybe.map .msgElapsed
+
                 mPreviousMsgEarth =
                     gameLoaderData.connectionData
                         |> Maybe.map .earth
                         |> Maybe.withDefault Nothing
                         |> Maybe.map .previousMsgEarth
                         |> Maybe.withDefault Nothing
+
                 mMsgEarth =
                     gameLoaderData.connectionData
                         |> Maybe.map .earth
                         |> Maybe.withDefault Nothing
                         |> Maybe.map .msgEarth
+
                 mRenderData =
                     gameLoaderData.renderData
+
                 mHero =
                     gameLoaderData.hero
             in
-            case (mPreviousMsgElapsed, (mMsgElapsed, (mPreviousMsgEarth, (mMsgEarth, (mRenderData, mHero))))) of
-                (Just previousMsgElapsed, (Just msgElapsed, (Just previousMsgEarth, (Just msgEarth, (Just renderData, (Just hero)))))) ->
+            case ( mPreviousMsgElapsed, ( mMsgElapsed, ( mPreviousMsgEarth, ( mMsgEarth, ( mRenderData, mHero ) ) ) ) ) of
+                ( Just previousMsgElapsed, ( Just msgElapsed, ( Just previousMsgEarth, ( Just msgEarth, ( Just renderData, Just hero ) ) ) ) ) ->
                     let
                         elapsed =
                             toFloat (Time.posixToMillis dt)
@@ -309,4 +313,3 @@ recvServerJson value =
 
         Err errorMessage ->
             RecvServerMsgError "Error while communicating with the server"
-

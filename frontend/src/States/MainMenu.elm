@@ -1,4 +1,4 @@
-module States.MainMenu exposing (Msg, subscriptions, update, view)
+module States.MainMenu exposing (Msg(..), subscriptions, update, view)
 
 import Browser.Dom exposing (getViewportOf)
 import Browser.Events exposing (onResize)
@@ -8,6 +8,7 @@ import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
 import Model.Model exposing (MenuData, Model(..))
 import Platform.Sub
+import States.InGameLoader exposing (Msg)
 import Task
 
 
@@ -15,6 +16,7 @@ type Msg
     = ResizeMsg
     | ViewportMsg (Result Browser.Dom.Error Browser.Dom.Viewport)
     | StartGameMsg
+    | ChatMsg States.InGameLoader.Msg
 
 
 subscriptions : MenuData -> Sub Msg
@@ -55,7 +57,7 @@ update msg menuData =
                     }
             in
             ( InGameLoader gameLoaderData
-            , Cmd.none
+            , Task.perform (always (ChatMsg States.InGameLoader.InitMsg)) (Task.succeed ())
             )
 
         ResizeMsg ->
@@ -78,5 +80,10 @@ update msg menuData =
                     { menuData | canvasDimensions = newCanvasDimensions }
             in
             ( MainMenu newMenuData
+            , Cmd.none
+            )
+
+        ChatMsg _ ->
+            ( MainMenu menuData
             , Cmd.none
             )

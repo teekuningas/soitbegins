@@ -33,7 +33,7 @@ view gatherInfoData =
             [ class "gather-info-container" ]
             [ p [] [ text "So it begins (the grand hot air balloon adventure)" ]
             , input
-                [ placeholder "Please write your name here first.."
+                [ placeholder "Please write your name here.."
                 , value gatherInfoData.user.name
                 , onInput NameUpdatedMsg
                 ]

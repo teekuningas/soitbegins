@@ -14,7 +14,7 @@ import States.GatherInfo
 import States.InGame
 import States.InGameLoader
 import States.Initialization
-import States.MainMenu
+import States.MainMenu exposing (Msg(..))
 import States.Termination
 
 
@@ -154,6 +154,15 @@ update msg model =
         ( TerminationMsg stateMsg, Termination message ) ->
             States.Termination.update stateMsg message
                 |> Tuple.mapSecond (Platform.Cmd.map TerminationMsg)
+
+        ( MainMenuMsg stateMsg, InGameLoader gameLoaderData ) ->
+            case stateMsg of
+                States.MainMenu.ChatMsg chatMsg ->
+                    States.InGameLoader.update chatMsg gameLoaderData
+                        |> Tuple.mapSecond (Platform.Cmd.map InGameLoaderMsg)
+
+                _ ->
+                    ( model, Cmd.none )
 
         _ ->
             ( model, Cmd.none )
