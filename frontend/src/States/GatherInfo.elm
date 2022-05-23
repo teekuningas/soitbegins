@@ -2,17 +2,15 @@ module States.GatherInfo exposing (Msg(..), init, subscriptions, update, view)
 
 import Browser.Dom exposing (getViewportOf)
 import Browser.Events exposing (onResize)
+import Communication.Types exposing (User)
 import HUD.Page exposing (embedInCanvas)
 import Html exposing (Html, button, div, input, p, text)
 import Html.Attributes exposing (class, placeholder, value)
 import Html.Events exposing (onClick, onInput)
-import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import Platform.Sub
-import States.GatherInfoTypes exposing (GatherInfoData)
-import States.MainMenuTypes exposing (MenuData)
 import Task
 import WebGL exposing (Mesh)
-import World.Types exposing (MeshList, Vertex)
+import World.Types exposing (Data, MeshList, Vertex)
 
 
 type Msg
@@ -20,23 +18,34 @@ type Msg
     | ViewportMsg (Result Browser.Dom.Error Browser.Dom.Viewport)
     | ContinueMsg
     | NameUpdatedMsg String
-    | TransitionToMainMenuMsg MenuData
+    | TransitionToMainMenuMsg
 
 
-init : GatherInfoData -> ( GatherInfoData, Cmd Msg )
-init gatherInfoData =
-    ( gatherInfoData, Cmd.none )
+init : { earthMesh : Mesh Vertex } -> ( { data : Data, user : User }, Cmd Msg )
+init transitionData =
+    let
+        data =
+            { earthMesh = transitionData.earthMesh
+            }
+
+        user =
+            { name = ""
+            }
+    in
+    ( { data = data, user = user }
+    , Cmd.none
+    )
 
 
-subscriptions : GatherInfoData -> Sub Msg
-subscriptions gatherInfoData =
+subscriptions : Sub Msg
+subscriptions =
     Platform.Sub.batch
         [ onResize (\width height -> ResizeMsg)
         ]
 
 
-view : GatherInfoData -> Html Msg
-view gatherInfoData =
+view : { user : User } -> Html Msg
+view values =
     embedInCanvas
         []
         [ div
@@ -44,7 +53,7 @@ view gatherInfoData =
             [ p [] [ text "So it begins (the grand hot air balloon adventure)" ]
             , input
                 [ placeholder "Please write your name here.."
-                , value gatherInfoData.user.name
+                , value values.user.name
                 , onInput NameUpdatedMsg
                 ]
                 []
@@ -55,60 +64,32 @@ view gatherInfoData =
         []
 
 
-update : Msg -> GatherInfoData -> ( GatherInfoData, Cmd Msg )
-update msg gatherInfoData =
+update : Msg -> { user : User } -> ( { user : User }, Cmd Msg )
+update msg values =
     case msg of
         ContinueMsg ->
-            if gatherInfoData.user.name /= "" then
-                let
-                    menuData =
-                        { earthMesh = gatherInfoData.earthMesh
-                        , canvasDimensions = gatherInfoData.canvasDimensions
-                        , user = gatherInfoData.user
-                        }
-                in
-                ( gatherInfoData
-                , Task.perform (always (TransitionToMainMenuMsg menuData)) (Task.succeed ())
-                )
+            ( values
+            , if values.user.name /= "" then
+                Task.perform (always TransitionToMainMenuMsg) (Task.succeed ())
 
-            else
-                ( gatherInfoData
-                , Cmd.none
-                )
+              else
+                Cmd.none
+            )
 
         NameUpdatedMsg newName ->
             let
                 user =
                     { name = newName }
             in
-            ( { gatherInfoData | user = user }
+            ( { values | user = user }
             , Cmd.none
             )
 
+        -- Refresh canvas
         ResizeMsg ->
-            ( gatherInfoData, Task.attempt ViewportMsg (getViewportOf "webgl-canvas") )
+            ( values, Task.attempt ViewportMsg (getViewportOf "webgl-canvas") )
 
-        ViewportMsg returnValue ->
-            let
-                newCanvasDimensions =
-                    returnValue
-                        |> Result.map .viewport
-                        |> Result.map
-                            (\v ->
-                                { width = round v.width
-                                , height = round v.height
-                                }
-                            )
-                        |> Result.withDefault gatherInfoData.canvasDimensions
-
-                newGatherInfoData =
-                    { gatherInfoData | canvasDimensions = newCanvasDimensions }
-            in
-            ( newGatherInfoData
-            , Cmd.none
-            )
-
-        TransitionToMainMenuMsg _ ->
-            ( gatherInfoData
+        _ ->
+            ( values
             , Cmd.none
             )

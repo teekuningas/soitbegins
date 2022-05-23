@@ -1,16 +1,14 @@
-module States.MainMenu exposing (Msg(..), init, subscriptions, update, view)
+module States.MainMenu exposing (Msg(..), subscriptions, update, view)
 
 import Browser.Dom exposing (getViewportOf)
 import Browser.Events exposing (onResize)
+import Communication.Types exposing (User)
 import HUD.Page exposing (embedInCanvas)
 import Html exposing (Html, button, div, p, text)
 import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import Platform.Sub
-import States.InGameLoader
-import States.InGameLoaderTypes exposing (GameLoaderData)
-import States.MainMenuTypes exposing (MenuData)
 import Task
 import WebGL exposing (Mesh)
 import World.Types exposing (MeshList, Vertex)
@@ -20,29 +18,24 @@ type Msg
     = ResizeMsg
     | ViewportMsg (Result Browser.Dom.Error Browser.Dom.Viewport)
     | StartGameMsg
-    | TransitionToInGameLoaderMsg GameLoaderData
+    | TransitionToInGameLoaderMsg
 
 
-init : MenuData -> ( MenuData, Cmd Msg )
-init menuData =
-    ( menuData, Cmd.none )
-
-
-subscriptions : MenuData -> Sub Msg
-subscriptions menuData =
+subscriptions : Sub Msg
+subscriptions =
     Platform.Sub.batch
         [ onResize (\width height -> ResizeMsg)
         ]
 
 
-view : MenuData -> Html Msg
-view menuData =
+view : { user : User } -> Html Msg
+view values =
     embedInCanvas
         []
         [ div
             [ class "main-menu-container" ]
             [ p [] [ text "So it begins (the grand hot air balloon adventure)" ]
-            , p [] [ text (String.append "Welcome " menuData.user.name) ]
+            , p [] [ text (String.append "Welcome " values.user.name) ]
             , button [ onClick StartGameMsg ] [ text "Start here" ]
             ]
         ]
@@ -50,49 +43,20 @@ view menuData =
         []
 
 
-update : Msg -> MenuData -> ( MenuData, Cmd Msg )
-update msg menuData =
+update : Msg -> ( (), Cmd Msg )
+update msg =
     case msg of
         StartGameMsg ->
-            let
-                gameLoaderData =
-                    { earthMesh = menuData.earthMesh
-                    , renderData = Nothing
-                    , connectionData = Nothing
-                    , earth = Nothing
-                    , canvasDimensions = menuData.canvasDimensions
-                    , user = menuData.user
-                    , hero = Nothing
-                    }
-            in
-            ( menuData
-            , Task.perform (always (TransitionToInGameLoaderMsg gameLoaderData)) (Task.succeed ())
+            ( ()
+            , Task.perform (always TransitionToInGameLoaderMsg) (Task.succeed ())
             )
 
         ResizeMsg ->
-            ( menuData, Task.attempt ViewportMsg (getViewportOf "webgl-canvas") )
-
-        ViewportMsg returnValue ->
-            let
-                newCanvasDimensions =
-                    returnValue
-                        |> Result.map .viewport
-                        |> Result.map
-                            (\v ->
-                                { width = round v.width
-                                , height = round v.height
-                                }
-                            )
-                        |> Result.withDefault menuData.canvasDimensions
-
-                newMenuData =
-                    { menuData | canvasDimensions = newCanvasDimensions }
-            in
-            ( newMenuData
-            , Cmd.none
+            ( ()
+            , Task.attempt ViewportMsg (getViewportOf "webgl-canvas")
             )
 
-        TransitionToInGameLoaderMsg _ ->
-            ( menuData
+        _ ->
+            ( ()
             , Cmd.none
             )

@@ -2,39 +2,36 @@ module Main exposing (main)
 
 import Browser
 import Communication.Flags as Flags
+import Communication.Types exposing (Connection, User)
+import HUD.Types exposing (Canvas)
 import Html exposing (Html)
 import Json.Decode
 import Platform.Cmd
 import Platform.Sub
 import States.GatherInfo as GatherInfo
-import States.GatherInfoTypes exposing (GatherInfoData)
 import States.InGame as InGame
-import States.InGameLoader as InGameLoader
-import States.InGameLoaderTypes exposing (GameLoaderData)
-import States.InGameTypes exposing (GameData)
+import States.InGameLoader as InGameLoader exposing (Preparing)
 import States.Initialization as Initialization
-import States.InitializationTypes exposing (InitData)
 import States.MainMenu as MainMenu
-import States.MainMenuTypes exposing (MenuData)
 import States.Termination as Termination
+import World.Types exposing (Data, World)
 
 
 type Model
-    = Initialization InitData
-    | GatherInfo GatherInfoData
-    | MainMenu MenuData
-    | InGameLoader GameLoaderData
-    | InGame GameData
+    = Initialization
+    | GatherInfo Data User
+    | MainMenu Data User
+    | InGameLoader Data User Preparing
+    | InGame Data User Connection Canvas World
     | Termination String
 
 
 type Msg
     = InitializationMsg Initialization.Msg
-    | MainMenuMsg MainMenu.Msg
     | GatherInfoMsg GatherInfo.Msg
+    | MainMenuMsg MainMenu.Msg
     | InGameLoaderMsg InGameLoader.Msg
     | InGameMsg InGame.Msg
-    | TerminationMsg Termination.Msg
 
 
 
@@ -54,8 +51,11 @@ init flagsMsg =
             )
 
         Ok value ->
-            Initialization.init value
-                |> Tuple.mapBoth Initialization (Platform.Cmd.map InitializationMsg)
+            case Initialization.init value of
+                ( values, cmd ) ->
+                    ( Initialization
+                    , Platform.Cmd.map InitializationMsg cmd
+                    )
 
 
 
@@ -66,34 +66,32 @@ view : Model -> Html Msg
 view model =
     case model of
         Termination message ->
-            Html.map
-                TerminationMsg
-                (Termination.view message)
+            Termination.view { message = message }
 
-        Initialization initData ->
+        Initialization ->
             Html.map
                 InitializationMsg
-                (Initialization.view initData)
+                Initialization.view
 
-        MainMenu menuData ->
+        MainMenu data user ->
             Html.map
                 MainMenuMsg
-                (MainMenu.view menuData)
+                (MainMenu.view { user = user })
 
-        GatherInfo gatherInfoData ->
+        GatherInfo data user ->
             Html.map
                 GatherInfoMsg
-                (GatherInfo.view gatherInfoData)
+                (GatherInfo.view { user = user })
 
-        InGameLoader gameLoaderData ->
+        InGameLoader data user preparing ->
             Html.map
                 InGameLoaderMsg
-                (InGameLoader.view gameLoaderData)
+                InGameLoader.view
 
-        InGame gameData ->
+        InGame data user connection canvas world ->
             Html.map
                 InGameMsg
-                (InGame.view gameData)
+                (InGame.view { data = data, user = user, canvas = canvas, world = world })
 
 
 
@@ -103,35 +101,33 @@ view model =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     case model of
-        Initialization initData ->
+        Initialization ->
             Platform.Sub.map
                 InitializationMsg
-                (Initialization.subscriptions initData)
+                Initialization.subscriptions
 
-        MainMenu menuData ->
+        MainMenu data user ->
             Platform.Sub.map
                 MainMenuMsg
-                (MainMenu.subscriptions menuData)
+                MainMenu.subscriptions
 
-        GatherInfo gatherInfoData ->
+        GatherInfo data user ->
             Platform.Sub.map
                 GatherInfoMsg
-                (GatherInfo.subscriptions gatherInfoData)
+                GatherInfo.subscriptions
 
-        InGameLoader gameLoaderData ->
+        InGameLoader data user preparing ->
             Platform.Sub.map
                 InGameLoaderMsg
-                (InGameLoader.subscriptions gameLoaderData)
+                InGameLoader.subscriptions
 
-        InGame gameData ->
+        InGame data user connection canvas world ->
             Platform.Sub.map
                 InGameMsg
-                (InGame.subscriptions gameData)
+                InGame.subscriptions
 
-        Termination message ->
-            Platform.Sub.map
-                TerminationMsg
-                (Termination.subscriptions message)
+        _ ->
+            Sub.none
 
 
 
@@ -141,63 +137,90 @@ subscriptions model =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case ( msg, model ) of
-        ( InitializationMsg stateMsg, Initialization initData ) ->
+        ( InitializationMsg stateMsg, Initialization ) ->
             case stateMsg of
-                Initialization.TransitionToGatherInfoMsg data ->
-                    GatherInfo.init data
-                        |> Tuple.mapBoth GatherInfo (Platform.Cmd.map GatherInfoMsg)
+                Initialization.TransitionToGatherInfoMsg transitionData ->
+                    case GatherInfo.init transitionData of
+                        ( values, cmd ) ->
+                            ( GatherInfo values.data values.user
+                            , Platform.Cmd.map GatherInfoMsg cmd
+                            )
 
-                Initialization.TransitionToTerminationMsg data ->
-                    Termination.init data
-                        |> Tuple.mapBoth Termination (Platform.Cmd.map TerminationMsg)
+                Initialization.TransitionToTerminationMsg message ->
+                    case Termination.init message of
+                        ( values, () ) ->
+                            ( Termination values.message
+                            , Cmd.none
+                            )
 
                 _ ->
-                    Initialization.update stateMsg initData
-                        |> Tuple.mapBoth Initialization (Platform.Cmd.map InitializationMsg)
+                    case Initialization.update stateMsg of
+                        ( _, cmd ) ->
+                            ( Initialization
+                            , Platform.Cmd.map InitializationMsg cmd
+                            )
 
-        ( GatherInfoMsg stateMsg, GatherInfo gatherInfoData ) ->
+        ( GatherInfoMsg stateMsg, GatherInfo data user ) ->
             case stateMsg of
-                GatherInfo.TransitionToMainMenuMsg data ->
-                    MainMenu.init data
-                        |> Tuple.mapBoth MainMenu (Platform.Cmd.map MainMenuMsg)
+                GatherInfo.TransitionToMainMenuMsg ->
+                    ( MainMenu data user
+                    , Cmd.none
+                    )
 
                 _ ->
-                    GatherInfo.update stateMsg gatherInfoData
-                        |> Tuple.mapBoth GatherInfo (Platform.Cmd.map GatherInfoMsg)
+                    case GatherInfo.update stateMsg { user = user } of
+                        ( values, cmd ) ->
+                            ( GatherInfo data values.user
+                            , Platform.Cmd.map GatherInfoMsg cmd
+                            )
 
-        ( MainMenuMsg stateMsg, MainMenu menuData ) ->
+        ( MainMenuMsg stateMsg, MainMenu data user ) ->
             case stateMsg of
-                MainMenu.TransitionToInGameLoaderMsg data ->
-                    InGameLoader.init data
-                        |> Tuple.mapBoth InGameLoader (Platform.Cmd.map InGameLoaderMsg)
+                MainMenu.TransitionToInGameLoaderMsg ->
+                    case InGameLoader.init of
+                        ( values, cmd ) ->
+                            ( InGameLoader data user values.preparing
+                            , Platform.Cmd.map InGameLoaderMsg cmd
+                            )
 
                 _ ->
-                    MainMenu.update stateMsg menuData
-                        |> Tuple.mapBoth MainMenu (Platform.Cmd.map MainMenuMsg)
+                    case MainMenu.update stateMsg of
+                        ( _, cmd ) ->
+                            ( MainMenu data user
+                            , Platform.Cmd.map MainMenuMsg cmd
+                            )
 
-        ( InGameLoaderMsg stateMsg, InGameLoader gameLoaderData ) ->
+        ( InGameLoaderMsg stateMsg, InGameLoader data user preparing ) ->
             case stateMsg of
-                InGameLoader.TransitionToInGameMsg data ->
-                    InGame.init data
-                        |> Tuple.mapBoth InGame (Platform.Cmd.map InGameMsg)
+                InGameLoader.TransitionToInGameMsg transitionData ->
+                    case InGame.init transitionData of
+                        ( values, cmd ) ->
+                            ( InGame data user values.connection values.canvas values.world
+                            , Platform.Cmd.map InGameMsg cmd
+                            )
 
                 _ ->
-                    InGameLoader.update stateMsg gameLoaderData
-                        |> Tuple.mapBoth InGameLoader (Platform.Cmd.map InGameLoaderMsg)
+                    case InGameLoader.update stateMsg { preparing = preparing } of
+                        ( values, cmd ) ->
+                            ( InGameLoader data user values.preparing
+                            , Platform.Cmd.map InGameLoaderMsg cmd
+                            )
 
-        ( InGameMsg stateMsg, InGame gameData ) ->
+        ( InGameMsg stateMsg, InGame data user connection canvas world ) ->
             case stateMsg of
-                InGame.TransitionToInGameLoaderMsg data ->
-                    InGameLoader.init data
-                        |> Tuple.mapBoth InGameLoader (Platform.Cmd.map InGameLoaderMsg)
+                InGame.TransitionToInGameLoaderMsg ->
+                    case InGameLoader.init of
+                        ( values, cmd ) ->
+                            ( InGameLoader data user values.preparing
+                            , Platform.Cmd.map InGameLoaderMsg cmd
+                            )
 
                 _ ->
-                    InGame.update stateMsg gameData
-                        |> Tuple.mapBoth InGame (Platform.Cmd.map InGameMsg)
-
-        ( TerminationMsg stateMsg, Termination message ) ->
-            Termination.update stateMsg message
-                |> Tuple.mapBoth Termination (Platform.Cmd.map TerminationMsg)
+                    case InGame.update stateMsg { connection = connection, canvas = canvas, world = world } of
+                        ( values, cmd ) ->
+                            ( InGame data user values.connection values.canvas values.world
+                            , Platform.Cmd.map InGameMsg cmd
+                            )
 
         _ ->
             ( model, Cmd.none )

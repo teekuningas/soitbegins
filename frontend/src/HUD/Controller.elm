@@ -1,7 +1,5 @@
 module HUD.Controller exposing
-    ( Controller
-    , DragState(..)
-    , controllerMeshDown
+    ( controllerMeshDown
     , controllerMeshUp
     , controllerUnif
     , fragmentShader
@@ -12,36 +10,11 @@ module HUD.Controller exposing
     )
 
 import HUD.Page exposing (viewportSize)
+import HUD.Types exposing (CanvasDimensions)
 import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import WebGL exposing (Mesh, Shader)
-import World.Types exposing (MeshList, Vertex)
-
-
-type alias CanvasDimensions =
-    { width : Int
-    , height : Int
-    }
-
-
-type alias Camera =
-    { azimoth : Float
-    , elevation : Float
-    }
-
-
-type DragState
-    = Drag
-    | NoDrag
-
-
-type alias Controller =
-    { dragState : DragState
-    , pointerOffset : { x : Int, y : Int }
-    , previousOffset : { x : Int, y : Int }
-    , downButtonDown : Bool
-    , upButtonDown : Bool
-    }
+import World.Types exposing (Camera, Controller, DragState(..), MeshList, Uniforms, Vertex)
 
 
 controllerParams : { x : Float, y : Float, size : Float, trans : Float }
@@ -54,14 +27,14 @@ controllerParams =
 
 
 controllerUnif : CanvasDimensions -> Float -> Uniforms
-controllerUnif canvasDimensions shade =
+controllerUnif canvasDim shade =
     let
         xscale =
-            toFloat canvasDimensions.width
+            toFloat canvasDim.width
                 / toFloat (Tuple.first viewportSize)
 
         yscale =
-            toFloat canvasDimensions.height
+            toFloat canvasDim.height
                 / toFloat (Tuple.second viewportSize)
 
         x =
@@ -133,24 +106,24 @@ controllerMeshUp =
 
 
 coordinatesWithinUpButton : CanvasDimensions -> ( Float, Float ) -> Bool
-coordinatesWithinUpButton canvasDimensions offset =
-    coordinatesWithinButton canvasDimensions offset (controllerParams.trans + 0.5)
+coordinatesWithinUpButton canvasDim offset =
+    coordinatesWithinButton canvasDim offset (controllerParams.trans + 0.5)
 
 
 coordinatesWithinDownButton : CanvasDimensions -> ( Float, Float ) -> Bool
-coordinatesWithinDownButton canvasDimensions offset =
-    coordinatesWithinButton canvasDimensions offset (-controllerParams.trans - 0.5)
+coordinatesWithinDownButton canvasDim offset =
+    coordinatesWithinButton canvasDim offset (-controllerParams.trans - 0.5)
 
 
 coordinatesWithinButton : CanvasDimensions -> ( Float, Float ) -> Float -> Bool
-coordinatesWithinButton canvasDimensions pointerOffset trans =
+coordinatesWithinButton canvasDim pointerOffset trans =
     let
         yscale =
-            toFloat canvasDimensions.height
+            toFloat canvasDim.height
                 / toFloat (Tuple.second viewportSize)
 
         xscale =
-            toFloat canvasDimensions.width
+            toFloat canvasDim.width
                 / toFloat (Tuple.first viewportSize)
 
         size =
@@ -160,10 +133,10 @@ coordinatesWithinButton canvasDimensions pointerOffset trans =
             (trans * size) / yscale
 
         middlepointX =
-            (1 + controllerParams.x) * (toFloat canvasDimensions.width / 2)
+            (1 + controllerParams.x) * (toFloat canvasDim.width / 2)
 
         middlepointY =
-            (1 - controllerParams.y - fixedTrans) * (toFloat canvasDimensions.height / 2)
+            (1 - controllerParams.y - fixedTrans) * (toFloat canvasDim.height / 2)
 
         sizeLimitX =
             size * toFloat (Tuple.first viewportSize) / 2
@@ -191,13 +164,13 @@ handleUp controller =
 
 
 handleDown : Controller -> ( Float, Float ) -> CanvasDimensions -> Controller
-handleDown controller offsetPos canvasDimensions =
+handleDown controller offsetPos canvasDim =
     let
         coordsInUp =
-            coordinatesWithinUpButton canvasDimensions offsetPos
+            coordinatesWithinUpButton canvasDim offsetPos
 
         coordsInDown =
-            coordinatesWithinDownButton canvasDimensions offsetPos
+            coordinatesWithinDownButton canvasDim offsetPos
 
         upButtonDown =
             if coordsInUp then
@@ -284,22 +257,6 @@ handleMove controller camera offsetPos =
             }
     in
     ( newController, newCamera )
-
-
-type alias Uniforms =
-    { preScale : Mat4
-    , preRotation : Mat4
-    , preTranslation : Mat4
-    , scale : Mat4
-    , rotation : Mat4
-    , translation : Mat4
-    , postScale : Mat4
-    , postRotation : Mat4
-    , postTranslation : Mat4
-    , perspective : Mat4
-    , camera : Mat4
-    , shade : Float
-    }
 
 
 vertexShader : Shader Vertex Uniforms { vcolor : Vec3 }

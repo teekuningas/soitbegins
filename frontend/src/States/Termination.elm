@@ -1,28 +1,13 @@
-module States.Termination exposing (Msg, init, subscriptions, update, view)
+module States.Termination exposing (init, view)
 
 import Html exposing (Html, div, text)
-import Platform.Sub
 
 
-type Msg
-    = EmptyMsg
-
-
-init : String -> ( String, Cmd Msg )
+init : String -> ( { message : String }, () )
 init message =
-    ( message, Cmd.none )
+    ( { message = message }, () )
 
 
-subscriptions : String -> Sub Msg
-subscriptions message =
-    Platform.Sub.none
-
-
-view : String -> Html Msg
-view message =
-    div [] [ text message ]
-
-
-update : Msg -> String -> ( String, Cmd Msg )
-update msg message =
-    ( message, Cmd.none )
+view : { message : String } -> Html msg
+view values =
+    div [] [ text values.message ]

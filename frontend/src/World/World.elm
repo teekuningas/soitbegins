@@ -12,71 +12,26 @@ module World.World exposing
     , vertexShader
     )
 
+import HUD.Types exposing (CanvasDimensions)
 import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import WebGL exposing (Mesh, Shader)
-import World.Types exposing (MeshList, Vertex)
-
-
-type alias CanvasDimensions =
-    { width : Int
-    , height : Int
-    }
-
-
-type alias Hero =
-    { altitude : Float
-    , latitude : Float
-    , longitude : Float
-    , latSpeed : Float
-    , lonSpeed : Float
-    , rotationTheta : Float
-    , power : Float
-    , envColor : Vec3
-    }
-
-
-type alias Earth =
-    { rotationAroundSun : Float
-    , rotationAroundAxis : Float
-    }
-
-
-type alias Camera =
-    { azimoth : Float
-    , elevation : Float
-    }
-
-
-type alias Uniforms =
-    { preScale : Mat4
-    , preRotation : Mat4
-    , preTranslation : Mat4
-    , scale : Mat4
-    , rotation : Mat4
-    , translation : Mat4
-    , postScale : Mat4
-    , postRotation : Mat4
-    , postTranslation : Mat4
-    , perspective : Mat4
-    , camera : Mat4
-    , shade : Float
-    }
+import World.Types exposing (Camera, Earth, Hero, MeshList, Uniforms, Vertex)
 
 
 generalUnif : Bool -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
-generalUnif overviewToggle canvasDimensions earth hero camera =
+generalUnif overviewToggle canvasDim earth hero camera =
     let
         aspect =
-            toFloat canvasDimensions.width
-                / toFloat canvasDimensions.height
+            toFloat canvasDim.width
+                / toFloat canvasDim.height
 
         cameraMat =
             if overviewToggle == True then
-                makeOverviewCamera canvasDimensions earth hero
+                makeOverviewCamera canvasDim earth hero
 
             else
-                makeHeroCamera canvasDimensions earth hero camera
+                makeHeroCamera canvasDim earth hero camera
     in
     { preScale =
         Mat4.identity
@@ -105,10 +60,10 @@ generalUnif overviewToggle canvasDimensions earth hero camera =
 
 
 sunUnif : Bool -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
-sunUnif overviewToggle canvasDimensions earth hero camera =
+sunUnif overviewToggle canvasDim earth hero camera =
     let
         unif =
-            generalUnif overviewToggle canvasDimensions earth hero camera
+            generalUnif overviewToggle canvasDim earth hero camera
 
         -- Sun lies at the origin but is scaled
         scale =
@@ -118,10 +73,10 @@ sunUnif overviewToggle canvasDimensions earth hero camera =
 
 
 earthUnif : Bool -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
-earthUnif overviewToggle canvasDimensions earth hero camera =
+earthUnif overviewToggle canvasDim earth hero camera =
     let
         unif =
-            generalUnif overviewToggle canvasDimensions earth hero camera
+            generalUnif overviewToggle canvasDim earth hero camera
 
         -- The earth mesh comes in wrong position so fix here..
         preScale =
@@ -167,19 +122,19 @@ earthUnif overviewToggle canvasDimensions earth hero camera =
 
 
 axisUnif : Bool -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
-axisUnif overviewToggle canvasDimensions earth hero camera =
+axisUnif overviewToggle canvasDim earth hero camera =
     let
         unif =
-            earthUnif overviewToggle canvasDimensions earth hero camera
+            earthUnif overviewToggle canvasDim earth hero camera
     in
     { unif | preScale = Mat4.identity }
 
 
 heroUnif : Bool -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
-heroUnif overviewToggle canvasDimensions earth hero camera =
+heroUnif overviewToggle canvasDim earth hero camera =
     let
         unif =
-            generalUnif overviewToggle canvasDimensions earth hero camera
+            generalUnif overviewToggle canvasDim earth hero camera
 
         -- Hero size
         scale =
@@ -254,10 +209,10 @@ heroUnif overviewToggle canvasDimensions earth hero camera =
 
 
 fireUnif : Bool -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
-fireUnif overviewToggle canvasDimensions earth hero camera =
+fireUnif overviewToggle canvasDim earth hero camera =
     let
         unif =
-            heroUnif overviewToggle canvasDimensions earth hero camera
+            heroUnif overviewToggle canvasDim earth hero camera
 
         -- The power source fire is approximately where the hero origin is
         -- but we move and scale it in the hero space to the exact
@@ -630,7 +585,7 @@ subdivideProject clr mesh =
 
 
 makeOverviewCamera : CanvasDimensions -> Earth -> Hero -> Mat4
-makeOverviewCamera canvasDimensions earth hero =
+makeOverviewCamera canvasDim earth hero =
     let
         sunLocationX =
             0
@@ -650,7 +605,7 @@ makeOverviewCamera canvasDimensions earth hero =
 
 
 makeHeroCamera : CanvasDimensions -> Earth -> Hero -> Camera -> Mat4
-makeHeroCamera canvasDimensions earth hero camera =
+makeHeroCamera canvasDim earth hero camera =
     let
         azimoth =
             camera.azimoth

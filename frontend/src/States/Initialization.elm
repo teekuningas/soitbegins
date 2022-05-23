@@ -8,6 +8,7 @@ import HUD.Page
         ( embedInCanvas
         , viewportSize
         )
+import HUD.Types exposing (Canvas)
 import Html
     exposing
         ( Html
@@ -18,36 +19,26 @@ import Html
 import Html.Attributes exposing (class)
 import Http
 import Length exposing (Meters, meters)
-import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import Obj.Decode exposing (expectObj)
 import Platform.Cmd
 import Platform.Sub
-import States.GatherInfoTypes exposing (GatherInfoData)
-import States.InitializationTypes exposing (InitData)
 import Task
 import WebGL exposing (Mesh)
 import World.ObjLoader as ObjLoader
-import World.Types exposing (MeshList, Vertex)
+import World.Types exposing (Vertex)
 
 
 type Msg
     = ResizeMsg
     | ViewportMsg (Result Browser.Dom.Error Browser.Dom.Viewport)
     | EarthMeshLoaded (Result Http.Error (Mesh Vertex))
-    | TransitionToGatherInfoMsg GatherInfoData
+    | TransitionToGatherInfoMsg { earthMesh : Mesh Vertex }
     | TransitionToTerminationMsg String
 
 
-init : FlagsValue -> ( InitData, Cmd Msg )
+init : FlagsValue -> ( (), Cmd Msg )
 init flags =
     let
-        initData =
-            { canvasDimensions =
-                { width = Tuple.first viewportSize
-                , height = Tuple.second viewportSize
-                }
-            }
-
         modelEarthUrl =
             flags.modelEarth
 
@@ -64,13 +55,13 @@ init flags =
                 , Task.attempt ViewportMsg (getViewportOf "webgl-canvas")
                 ]
     in
-    ( initData
+    ( ()
     , cmd
     )
 
 
-view : InitData -> Html Msg
-view data =
+view : Html Msg
+view =
     embedInCanvas
         []
         [ div
@@ -81,58 +72,39 @@ view data =
         []
 
 
-update : Msg -> InitData -> ( InitData, Cmd Msg )
-update msg initData =
+update : Msg -> ( (), Cmd Msg )
+update msg =
     case msg of
+        -- Refresh canvas
         ResizeMsg ->
-            ( initData, Task.attempt ViewportMsg (getViewportOf "webgl-canvas") )
+            ( (), Task.attempt ViewportMsg (getViewportOf "webgl-canvas") )
 
         ViewportMsg returnValue ->
-            let
-                newCanvasDimensions =
-                    returnValue
-                        |> Result.map .viewport
-                        |> Result.map
-                            (\v ->
-                                { width = round v.width
-                                , height = round v.height
-                                }
-                            )
-                        |> Result.withDefault initData.canvasDimensions
-
-                newInitData =
-                    { initData | canvasDimensions = newCanvasDimensions }
-            in
-            ( newInitData
-            , Cmd.none
-            )
+            ( (), Cmd.none )
 
         EarthMeshLoaded result ->
             case result of
                 Ok mesh ->
                     let
-                        newGatherInfoData =
+                        transitionData =
                             { earthMesh = mesh
-                            , canvasDimensions = initData.canvasDimensions
-                            , user =
-                                { name = "" }
                             }
                     in
-                    ( initData
-                    , Task.perform (always (TransitionToGatherInfoMsg newGatherInfoData)) (Task.succeed ())
+                    ( ()
+                    , Task.perform (always (TransitionToGatherInfoMsg transitionData)) (Task.succeed ())
                     )
 
                 Err _ ->
-                    ( initData
+                    ( ()
                     , Task.perform (always (TransitionToTerminationMsg "Could not download assets")) (Task.succeed ())
                     )
 
         _ ->
-            ( initData, Cmd.none )
+            ( (), Cmd.none )
 
 
-subscriptions : InitData -> Sub Msg
-subscriptions initData =
+subscriptions : Sub Msg
+subscriptions =
     Platform.Sub.batch
         [ onResize (\width height -> ResizeMsg)
         ]
