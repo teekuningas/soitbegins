@@ -1,7 +1,6 @@
 module Main exposing (main)
 
 import Browser
-import Communication.Flags as Flags
 import Communication.Types exposing (Connection, User)
 import HUD.Types exposing (Canvas)
 import Html exposing (Html)
@@ -40,23 +39,11 @@ type Msg
 
 init : Json.Decode.Value -> ( Model, Cmd Msg )
 init flagsMsg =
-    let
-        flags =
-            Json.Decode.decodeValue Flags.flagsDecoder flagsMsg
-    in
-    case flags of
-        Err _ ->
-            ( Termination "Could not read environment variables"
-            , Cmd.none
+    case Initialization.init of
+        ( values, cmd ) ->
+            ( Initialization
+            , Platform.Cmd.map InitializationMsg cmd
             )
-
-        Ok value ->
-            case Initialization.init value of
-                ( values, cmd ) ->
-                    ( Initialization
-                    , Platform.Cmd.map InitializationMsg cmd
-                    )
-
 
 
 -- The view function

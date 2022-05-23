@@ -2,7 +2,7 @@ module States.InGameLoader exposing (Msg(..), Preparing, init, subscriptions, up
 
 import Browser.Dom exposing (getViewportOf)
 import Browser.Events exposing (onAnimationFrame, onResize)
-import Communication.Receiver as Receiver
+import Communication.Messenger as Messenger
 import Communication.Types exposing (Connection)
 import HUD.Page exposing (embedInCanvas)
 import HUD.Types exposing (CanvasDimensions, RenderData)
@@ -49,7 +49,7 @@ type Msg
     = TimeElapsed Time.Posix
     | ResizeMsg
     | ViewportMsg (Result Browser.Dom.Error Browser.Dom.Viewport)
-    | RecvServerMsg Receiver.RecvServerValue
+    | RecvServerMsg Messenger.RecvServerValue
     | RecvServerMsgError String
     | UpdateTimeMsg Time.Posix
     | RandomValueMsg RandomValues
@@ -84,7 +84,7 @@ subscriptions =
     Platform.Sub.batch
         [ onAnimationFrame (\x -> TimeElapsed x)
         , onResize (\width height -> ResizeMsg)
-        , Receiver.messageReceiver recvServerJson
+        , Messenger.messageReceiver recvServerJson
         ]
 
 
@@ -411,7 +411,7 @@ randomValues =
 
 recvServerJson : String -> Msg
 recvServerJson value =
-    case Receiver.decodeJson value of
+    case Messenger.decodeJson value of
         Ok result ->
             RecvServerMsg result
 

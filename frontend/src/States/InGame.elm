@@ -2,8 +2,7 @@ module States.InGame exposing (Msg(..), init, subscriptions, update, view)
 
 import Browser.Dom exposing (getViewportOf)
 import Browser.Events exposing (onAnimationFrame, onResize)
-import Communication.Flags
-import Communication.Receiver as Receiver
+import Communication.Messenger as Messenger
 import Communication.Types exposing (Connection, User)
 import HUD.Controller
 import HUD.Page exposing (embedInCanvas)
@@ -29,7 +28,7 @@ type Msg
     | ResizeMsg
     | PointerEventMsg PointerEvent
     | ViewportMsg (Result Browser.Dom.Error Browser.Dom.Viewport)
-    | RecvServerMsg Receiver.RecvServerValue
+    | RecvServerMsg Messenger.RecvServerValue
     | RecvServerMsgError String
     | UpdateTimeMsg Time.Posix
     | OverviewToggleMsg
@@ -83,7 +82,7 @@ subscriptions =
     Platform.Sub.batch
         [ onAnimationFrame (\x -> TimeElapsed x)
         , onResize (\width height -> ResizeMsg)
-        , Receiver.messageReceiver recvServerJson
+        , Messenger.messageReceiver recvServerJson
         ]
 
 
@@ -471,7 +470,7 @@ update msg values =
 
 recvServerJson : String -> Msg
 recvServerJson value =
-    case Receiver.decodeJson value of
+    case Messenger.decodeJson value of
         Ok result ->
             RecvServerMsg result
 

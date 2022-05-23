@@ -2,7 +2,6 @@ module States.Initialization exposing (Msg(..), init, subscriptions, update, vie
 
 import Browser.Dom exposing (getViewportOf)
 import Browser.Events exposing (onResize)
-import Communication.Flags exposing (FlagsValue)
 import HUD.Page
     exposing
         ( embedInCanvas
@@ -26,37 +25,23 @@ import Task
 import WebGL exposing (Mesh)
 import World.ObjLoader as ObjLoader
 import World.Types exposing (Vertex)
+import Communication.ObjReceiver as ObjReceiver
 
 
 type Msg
     = ResizeMsg
     | ViewportMsg (Result Browser.Dom.Error Browser.Dom.Viewport)
-    | EarthMeshLoaded (Result Http.Error (Mesh Vertex))
+    | ObjReceived (Mesh Vertex)
+    | EarthMeshLoaded (Mesh Vertex)
+    | EarthMeshLoadFailed String
     | TransitionToGatherInfoMsg { earthMesh : Mesh Vertex }
     | TransitionToTerminationMsg String
 
 
-init : FlagsValue -> ( (), Cmd Msg )
-init flags =
-    let
-        modelEarthUrl =
-            flags.modelEarth
-
-        cmd =
-            Platform.Cmd.batch
-                [ Http.get
-                    { url = modelEarthUrl
-                    , expect =
-                        expectObj
-                            EarthMeshLoaded
-                            meters
-                            ObjLoader.earthMeshDecoder
-                    }
-                , Task.attempt ViewportMsg (getViewportOf "webgl-canvas")
-                ]
-    in
+init : ( (), Cmd Msg )
+init =
     ( ()
-    , cmd
+    , Task.attempt ViewportMsg (getViewportOf "webgl-canvas")
     )
 
 
@@ -82,22 +67,20 @@ update msg =
         ViewportMsg returnValue ->
             ( (), Cmd.none )
 
-        EarthMeshLoaded result ->
-            case result of
-                Ok mesh ->
-                    let
-                        transitionData =
-                            { earthMesh = mesh
-                            }
-                    in
-                    ( ()
-                    , Task.perform (always (TransitionToGatherInfoMsg transitionData)) (Task.succeed ())
-                    )
+        EarthMeshLoaded mesh ->
+            let
+                transitionData =
+                    { earthMesh = mesh
+                    }
+            in
+            ( ()
+            , Task.perform (always (TransitionToGatherInfoMsg transitionData)) (Task.succeed ())
+            )
 
-                Err _ ->
-                    ( ()
-                    , Task.perform (always (TransitionToTerminationMsg "Could not download assets")) (Task.succeed ())
-                    )
+        EarthMeshLoadFailed err ->
+            ( ()
+            , Task.perform (always (TransitionToTerminationMsg "Could not download assets")) (Task.succeed ())
+            )
 
         _ ->
             ( (), Cmd.none )
@@ -107,4 +90,25 @@ subscriptions : Sub Msg
 subscriptions =
     Platform.Sub.batch
         [ onResize (\width height -> ResizeMsg)
+        , ObjReceiver.objReceiver meshFromString
         ]
+
+
+-- Helpers
+
+
+meshFromString : String -> Msg
+meshFromString value =
+    let
+        objData = (Obj.Decode.decodeString
+                    meters
+                    ObjLoader.earthMeshDecoder
+                    value
+                  )
+    in
+        case objData of
+            Ok data ->
+                EarthMeshLoaded data
+            Err errorMessage ->
+                EarthMeshLoadFailed errorMessage
+                

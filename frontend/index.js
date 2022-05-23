@@ -1,4 +1,5 @@
 import { Elm } from './src/Main.elm'
+import * as zip from "@zip.js/zip.js";
 import './styles/main.css'
 
 
@@ -6,14 +7,30 @@ const serverUpdateInterval = parseInt(process.env.SERVER_UPDATE_INTERVAL);
 const serverApi = process.env.SERVER_API;
 const modelEarth = process.env.MODEL_EARTH;
 
-var flags = {
-  "modelEarth": modelEarth
-}
-
 // Start the Elm application.
 var app = Elm.Main.init({
   node: document.getElementById('root'),
-  flags: flags
+});
+
+// Download and unzip earth heightmap
+async function unzipObjFile() {
+  const reader = new zip.ZipReader(
+    new zip.HttpReader(modelEarth));
+
+  const entries = await reader.getEntries();
+
+  var text;
+  if (entries.length) {
+    text = await entries[0].getData(
+      new zip.TextWriter()
+    );
+    await reader.close();
+    return text;
+  }
+}
+const objFile = unzipObjFile();
+objFile.then(obj => {
+  app.ports.objReceiver.send(obj);
 });
 
 // To decouple player logic from world logic,
