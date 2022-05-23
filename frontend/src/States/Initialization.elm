@@ -2,6 +2,7 @@ module States.Initialization exposing (Msg(..), init, subscriptions, update, vie
 
 import Browser.Dom exposing (getViewportOf)
 import Browser.Events exposing (onResize)
+import Process
 import HUD.Page
     exposing
         ( embedInCanvas
@@ -26,89 +27,104 @@ import WebGL exposing (Mesh)
 import World.ObjLoader as ObjLoader
 import World.Types exposing (Vertex)
 import Communication.ObjReceiver as ObjReceiver
+import Time
 
 
 type Msg
     = ResizeMsg
     | ViewportMsg (Result Browser.Dom.Error Browser.Dom.Viewport)
-    | ObjReceived (Mesh Vertex)
-    | EarthMeshLoaded (Mesh Vertex)
-    | EarthMeshLoadFailed String
+    | ObjReceived String
+    | EarthMeshLoaded (Maybe (Mesh Vertex))
     | TransitionToGatherInfoMsg { earthMesh : Mesh Vertex }
     | TransitionToTerminationMsg String
+    | Tick Time.Posix
 
 
-init : ( (), Cmd Msg )
-init =
-    ( ()
+init : Int -> ( Int , Cmd Msg )
+init num =
+    ( num
     , Task.attempt ViewportMsg (getViewportOf "webgl-canvas")
     )
 
 
-view : Html Msg
-view =
+view : Int -> Html Msg
+view num =
     embedInCanvas
         []
         [ div
             [ class "initialization-container" ]
-            [ p [] [ text "Loading assets.." ] ]
+            [ p [] [ text (String.append "Loading assets.. " (String.fromInt num)) ] ]
         ]
         []
         []
 
 
-update : Msg -> ( (), Cmd Msg )
-update msg =
+update : Msg -> Int -> ( Int, Cmd Msg )
+update msg num =
     case msg of
+
         -- Refresh canvas
         ResizeMsg ->
-            ( (), Task.attempt ViewportMsg (getViewportOf "webgl-canvas") )
+            ( num, Task.attempt ViewportMsg (getViewportOf "webgl-canvas") )
 
         ViewportMsg returnValue ->
-            ( (), Cmd.none )
+            ( num, Cmd.none )
 
-        EarthMeshLoaded mesh ->
-            let
-                transitionData =
-                    { earthMesh = mesh
-                    }
-            in
-            ( ()
-            , Task.perform (always (TransitionToGatherInfoMsg transitionData)) (Task.succeed ())
+        EarthMeshLoaded maybeMesh ->
+            case maybeMesh of
+                Just mesh ->
+                    let
+                        transitionData =
+                            { earthMesh = mesh
+                            }
+                    in
+                    ( num
+                    , Task.perform (always (TransitionToGatherInfoMsg transitionData)) (Task.succeed ())
+                    )
+                Nothing ->
+                    (num
+                    , Task.perform (always (TransitionToTerminationMsg "Could not download assets")) (Task.succeed ())
+                    )
+
+        Tick newTime ->
+            ( num + 1
+            , Cmd.none
             )
 
-        EarthMeshLoadFailed err ->
-            ( ()
-            , Task.perform (always (TransitionToTerminationMsg "Could not download assets")) (Task.succeed ())
+        ObjReceived value ->
+            ( num
+            , Task.perform EarthMeshLoaded (Task.succeed (mesher value))
             )
 
         _ ->
-            ( (), Cmd.none )
+            ( num, Cmd.none )
 
+    
 
 subscriptions : Sub Msg
 subscriptions =
     Platform.Sub.batch
         [ onResize (\width height -> ResizeMsg)
-        , ObjReceiver.objReceiver meshFromString
+        , ObjReceiver.objReceiver ObjReceived
+        , Time.every 1000 Tick
         ]
 
 
 -- Helpers
 
 
-meshFromString : String -> Msg
-meshFromString value =
+mesher : String -> Maybe (Mesh Vertex)
+mesher str = 
     let
-        objData = (Obj.Decode.decodeString
-                    meters
-                    ObjLoader.earthMeshDecoder
-                    value
-                  )
+        res = (Obj.Decode.decodeString
+                meters
+                ObjLoader.earthMeshDecoder
+                str
+               )
     in
-        case objData of
+        case res of
             Ok data ->
-                EarthMeshLoaded data
+                Just data
             Err errorMessage ->
-                EarthMeshLoadFailed errorMessage
-                
+                Nothing
+

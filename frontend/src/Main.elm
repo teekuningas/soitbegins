@@ -17,7 +17,7 @@ import World.Types exposing (Data, World)
 
 
 type Model
-    = Initialization
+    = Initialization Int
     | GatherInfo Data User
     | MainMenu Data User
     | InGameLoader Data User Preparing
@@ -39,9 +39,9 @@ type Msg
 
 init : Json.Decode.Value -> ( Model, Cmd Msg )
 init flagsMsg =
-    case Initialization.init of
+    case Initialization.init 0 of
         ( values, cmd ) ->
-            ( Initialization
+            ( Initialization values
             , Platform.Cmd.map InitializationMsg cmd
             )
 
@@ -55,10 +55,10 @@ view model =
         Termination message ->
             Termination.view { message = message }
 
-        Initialization ->
+        Initialization num ->
             Html.map
                 InitializationMsg
-                Initialization.view
+                (Initialization.view num)
 
         MainMenu data user ->
             Html.map
@@ -88,7 +88,7 @@ view model =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     case model of
-        Initialization ->
+        Initialization num ->
             Platform.Sub.map
                 InitializationMsg
                 Initialization.subscriptions
@@ -124,7 +124,7 @@ subscriptions model =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case ( msg, model ) of
-        ( InitializationMsg stateMsg, Initialization ) ->
+        ( InitializationMsg stateMsg, Initialization num ) ->
             case stateMsg of
                 Initialization.TransitionToGatherInfoMsg transitionData ->
                     case GatherInfo.init transitionData of
@@ -141,9 +141,9 @@ update msg model =
                             )
 
                 _ ->
-                    case Initialization.update stateMsg of
-                        ( _, cmd ) ->
-                            ( Initialization
+                    case Initialization.update stateMsg num of
+                        ( val , cmd ) ->
+                            ( Initialization val
                             , Platform.Cmd.map InitializationMsg cmd
                             )
 

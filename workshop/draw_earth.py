@@ -174,6 +174,7 @@ positions, indices = subdivide_project(positions, indices)
 positions, indices = subdivide_project(positions, indices)
 positions, indices = subdivide_project(positions, indices)
 positions, indices = subdivide_project(positions, indices)
+positions, indices = subdivide_project(positions, indices)
 
 # compute normals
 normals, normal_indices = compute_normals(positions, indices)
