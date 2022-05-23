@@ -18,6 +18,7 @@ import WebGL exposing (Mesh)
 
 type alias Data =
     { earthMesh : Mesh Vertex
+    , serverUpdateInterval : Int
     }
 
 

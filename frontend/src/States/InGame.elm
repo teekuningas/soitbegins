@@ -185,7 +185,7 @@ view values =
         ]
 
 
-update : Msg -> { connection : Connection, canvas : Canvas, world : World } -> ( { connection : Connection, canvas : Canvas, world : World }, Cmd Msg )
+update : Msg -> { connection : Connection, canvas : Canvas, world : World, data : Data } -> ( { connection : Connection, canvas : Canvas, world : World, data : Data }, Cmd Msg )
 update msg values =
     case msg of
         RecvServerMsgError message ->
@@ -273,6 +273,7 @@ update msg values =
 
                 newWorld =
                     updateWorld
+                        values.data.serverUpdateInterval
                         elapsed
                         previousElapsed
                         elapsedData.msgElapsed
@@ -478,8 +479,8 @@ recvServerJson value =
             RecvServerMsgError "Error while communicating with the server"
 
 
-updateWorld : Float -> Float -> Float -> Float -> Earth -> Earth -> World -> World
-updateWorld elapsed previousElapsed msgElapsed previousMsgElapsed msgEarth previousMsgEarth world =
+updateWorld : Int -> Float -> Float -> Float -> Float -> Earth -> Earth -> World -> World
+updateWorld serverUpdateInterval elapsed previousElapsed msgElapsed previousMsgElapsed msgEarth previousMsgEarth world =
     let
         hero =
             world.hero
@@ -494,8 +495,8 @@ updateWorld elapsed previousElapsed msgElapsed previousMsgElapsed msgEarth previ
             elapsed - previousElapsed
 
         weight =
-            (elapsed - previousMsgElapsed)
-                / (msgElapsed - previousMsgElapsed)
+            (elapsed - msgElapsed)
+                / toFloat serverUpdateInterval
 
         weightedAve p1 p2 w =
             p1 + w * (p2 - p1)

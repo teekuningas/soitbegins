@@ -1,6 +1,7 @@
 module Main exposing (main)
 
 import Browser
+import Communication.Flags
 import Communication.Types exposing (Connection, User)
 import HUD.Types exposing (Canvas)
 import Html exposing (Html)
@@ -10,14 +11,14 @@ import Platform.Sub
 import States.GatherInfo as GatherInfo
 import States.InGame as InGame
 import States.InGameLoader as InGameLoader exposing (Preparing)
-import States.Initialization as Initialization
+import States.Initialization as Initialization exposing (Initializing)
 import States.MainMenu as MainMenu
 import States.Termination as Termination
 import World.Types exposing (Data, World)
 
 
 type Model
-    = Initialization Int
+    = Initialization Initializing
     | GatherInfo Data User
     | MainMenu Data User
     | InGameLoader Data User Preparing
@@ -39,11 +40,23 @@ type Msg
 
 init : Json.Decode.Value -> ( Model, Cmd Msg )
 init flagsMsg =
-    case Initialization.init 0 of
-        ( values, cmd ) ->
-            ( Initialization values
-            , Platform.Cmd.map InitializationMsg cmd
+    let
+        flags =
+            Json.Decode.decodeValue Communication.Flags.flagsDecoder flagsMsg
+    in
+    case flags of
+        Err _ ->
+            ( Termination "Could not read environment variables"
+            , Cmd.none
             )
+
+        Ok value ->
+            case Initialization.init value of
+                ( values, cmd ) ->
+                    ( Initialization values.initializing
+                    , Platform.Cmd.map InitializationMsg cmd
+                    )
+
 
 
 -- The view function
@@ -55,10 +68,10 @@ view model =
         Termination message ->
             Termination.view { message = message }
 
-        Initialization num ->
+        Initialization initializing ->
             Html.map
                 InitializationMsg
-                (Initialization.view num)
+                (Initialization.view { initializing = initializing })
 
         MainMenu data user ->
             Html.map
@@ -88,7 +101,7 @@ view model =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     case model of
-        Initialization num ->
+        Initialization initializing ->
             Platform.Sub.map
                 InitializationMsg
                 Initialization.subscriptions
@@ -124,7 +137,7 @@ subscriptions model =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case ( msg, model ) of
-        ( InitializationMsg stateMsg, Initialization num ) ->
+        ( InitializationMsg stateMsg, Initialization initializing ) ->
             case stateMsg of
                 Initialization.TransitionToGatherInfoMsg transitionData ->
                     case GatherInfo.init transitionData of
@@ -141,9 +154,9 @@ update msg model =
                             )
 
                 _ ->
-                    case Initialization.update stateMsg num of
-                        ( val , cmd ) ->
-                            ( Initialization val
+                    case Initialization.update stateMsg { initializing = initializing } of
+                        ( values, cmd ) ->
+                            ( Initialization values.initializing
                             , Platform.Cmd.map InitializationMsg cmd
                             )
 
@@ -203,7 +216,7 @@ update msg model =
                             )
 
                 _ ->
-                    case InGame.update stateMsg { connection = connection, canvas = canvas, world = world } of
+                    case InGame.update stateMsg { data = data, connection = connection, canvas = canvas, world = world } of
                         ( values, cmd ) ->
                             ( InGame data user values.connection values.canvas values.world
                             , Platform.Cmd.map InGameMsg cmd

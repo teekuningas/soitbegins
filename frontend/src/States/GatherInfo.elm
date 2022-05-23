@@ -21,11 +21,12 @@ type Msg
     | TransitionToMainMenuMsg
 
 
-init : { earthMesh : Mesh Vertex } -> ( { data : Data, user : User }, Cmd Msg )
+init : { earthMesh : Mesh Vertex, serverUpdateInterval : Int } -> ( { data : Data, user : User }, Cmd Msg )
 init transitionData =
     let
         data =
             { earthMesh = transitionData.earthMesh
+            , serverUpdateInterval = transitionData.serverUpdateInterval
             }
 
         user =

@@ -1,8 +1,9 @@
-module States.Initialization exposing (Msg(..), init, subscriptions, update, view)
+module States.Initialization exposing (Initializing, Msg(..), init, subscriptions, update, view)
 
 import Browser.Dom exposing (getViewportOf)
 import Browser.Events exposing (onResize)
-import Process
+import Communication.Flags exposing (FlagsValue)
+import Communication.ObjReceiver as ObjReceiver
 import HUD.Page
     exposing
         ( embedInCanvas
@@ -22,12 +23,18 @@ import Length exposing (Meters, meters)
 import Obj.Decode exposing (expectObj)
 import Platform.Cmd
 import Platform.Sub
+import Process
 import Task
+import Time
 import WebGL exposing (Mesh)
 import World.ObjLoader as ObjLoader
 import World.Types exposing (Vertex)
-import Communication.ObjReceiver as ObjReceiver
-import Time
+
+
+type alias Initializing =
+    { num : Int
+    , serverUpdateInterval : Int
+    }
 
 
 type Msg
@@ -35,40 +42,42 @@ type Msg
     | ViewportMsg (Result Browser.Dom.Error Browser.Dom.Viewport)
     | ObjReceived String
     | EarthMeshLoaded (Maybe (Mesh Vertex))
-    | TransitionToGatherInfoMsg { earthMesh : Mesh Vertex }
+    | TransitionToGatherInfoMsg { earthMesh : Mesh Vertex, serverUpdateInterval : Int }
     | TransitionToTerminationMsg String
     | Tick Time.Posix
 
 
-init : Int -> ( Int , Cmd Msg )
-init num =
-    ( num
+init : FlagsValue -> ( { initializing : Initializing }, Cmd Msg )
+init flags =
+    let
+        initializing =
+            { serverUpdateInterval = flags.serverUpdateInterval
+            , num = 0
+            }
+    in
+    ( { initializing = initializing }
     , Task.attempt ViewportMsg (getViewportOf "webgl-canvas")
     )
 
 
-view : Int -> Html Msg
-view num =
+view : { initializing : Initializing } -> Html Msg
+view values =
     embedInCanvas
         []
         [ div
             [ class "initialization-container" ]
-            [ p [] [ text (String.append "Loading assets.. " (String.fromInt num)) ] ]
+            [ p [] [ text (String.append "Loading assets.. " (String.fromInt values.initializing.num)) ] ]
         ]
         []
         []
 
 
-update : Msg -> Int -> ( Int, Cmd Msg )
-update msg num =
+update : Msg -> { initializing : Initializing } -> ( { initializing : Initializing }, Cmd Msg )
+update msg values =
     case msg of
-
         -- Refresh canvas
         ResizeMsg ->
-            ( num, Task.attempt ViewportMsg (getViewportOf "webgl-canvas") )
-
-        ViewportMsg returnValue ->
-            ( num, Cmd.none )
+            ( values, Task.attempt ViewportMsg (getViewportOf "webgl-canvas") )
 
         EarthMeshLoaded maybeMesh ->
             case maybeMesh of
@@ -76,30 +85,38 @@ update msg num =
                     let
                         transitionData =
                             { earthMesh = mesh
+                            , serverUpdateInterval = values.initializing.serverUpdateInterval
                             }
                     in
-                    ( num
+                    ( values
                     , Task.perform (always (TransitionToGatherInfoMsg transitionData)) (Task.succeed ())
                     )
+
                 Nothing ->
-                    (num
+                    ( values
                     , Task.perform (always (TransitionToTerminationMsg "Could not download assets")) (Task.succeed ())
                     )
 
         Tick newTime ->
-            ( num + 1
+            let
+                initializing =
+                    values.initializing
+
+                newInitializing =
+                    { initializing | num = initializing.num + 1 }
+            in
+            ( { values | initializing = newInitializing }
             , Cmd.none
             )
 
         ObjReceived value ->
-            ( num
+            ( values
             , Task.perform EarthMeshLoaded (Task.succeed (mesher value))
             )
 
         _ ->
-            ( num, Cmd.none )
+            ( values, Cmd.none )
 
-    
 
 subscriptions : Sub Msg
 subscriptions =
@@ -110,21 +127,22 @@ subscriptions =
         ]
 
 
+
 -- Helpers
 
 
 mesher : String -> Maybe (Mesh Vertex)
-mesher str = 
+mesher str =
     let
-        res = (Obj.Decode.decodeString
+        res =
+            Obj.Decode.decodeString
                 meters
                 ObjLoader.earthMeshDecoder
                 str
-               )
     in
-        case res of
-            Ok data ->
-                Just data
-            Err errorMessage ->
-                Nothing
+    case res of
+        Ok data ->
+            Just data
 
+        Err errorMessage ->
+            Nothing
