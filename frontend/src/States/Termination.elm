@@ -8,6 +8,6 @@ init message =
     ( { message = message }, () )
 
 
-view : { message : String } -> Html msg
-view values =
-    div [] [ text values.message ]
+view : String -> Html msg
+view message =
+    div [] [ text message ]

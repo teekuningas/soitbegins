@@ -86,32 +86,32 @@ subscriptions =
         ]
 
 
-view : { data : Data, user : User, canvas : Canvas, world : World } -> Html Msg
-view values =
+view : Data -> User -> Canvas -> World -> Html Msg
+view data user canvas world =
     let
         earth =
-            values.world.earth
+            world.earth
 
         controller =
-            values.world.controller
+            world.controller
 
         renderData =
-            values.canvas.renderData
+            canvas.renderData
 
         canvasDim =
-            values.canvas.canvasDim
+            canvas.canvasDim
 
         camera =
-            values.world.camera
+            world.camera
 
         hero =
-            values.world.hero
+            world.hero
 
         earthMesh =
-            values.data.earthMesh
+            data.earthMesh
 
         overviewToggle =
-            values.canvas.overviewToggle
+            canvas.overviewToggle
 
         containerAttrs =
             if overviewToggle then
@@ -124,7 +124,7 @@ view values =
         containerAttrs
         [ fpsOverlay renderData
         , overviewToggleOverlay overviewToggle
-        , debugOverlay values
+        , debugOverlay ""
         ]
         [ Touch.onEnd (PointerEventMsg << TouchUp)
         , Touch.onStart (PointerEventMsg << TouchDown)
@@ -593,11 +593,7 @@ overviewToggleOverlay isOn =
         ]
 
 
-debugOverlay values =
-    let
-        message =
-            ""
-    in
+debugOverlay message =
     div
         [ id "debug-overlay"
         , class "noselect"

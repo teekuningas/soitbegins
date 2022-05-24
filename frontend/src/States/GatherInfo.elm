@@ -45,8 +45,8 @@ subscriptions =
         ]
 
 
-view : { user : User } -> Html Msg
-view values =
+view : User -> Html Msg
+view user =
     embedInCanvas
         []
         [ div
@@ -54,7 +54,7 @@ view values =
             [ p [] [ text "So it begins (the grand hot air balloon adventure)" ]
             , input
                 [ placeholder "Please write your name here.."
-                , value values.user.name
+                , value user.name
                 , onInput NameUpdatedMsg
                 ]
                 []

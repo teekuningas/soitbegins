@@ -66,22 +66,22 @@ view : Model -> Html Msg
 view model =
     case model of
         Termination message ->
-            Termination.view { message = message }
+            Termination.view message
 
         Initialization initializing ->
             Html.map
                 InitializationMsg
-                (Initialization.view { initializing = initializing })
+                (Initialization.view initializing)
 
         MainMenu data user ->
             Html.map
                 MainMenuMsg
-                (MainMenu.view { user = user })
+                (MainMenu.view user)
 
         GatherInfo data user ->
             Html.map
                 GatherInfoMsg
-                (GatherInfo.view { user = user })
+                (GatherInfo.view user)
 
         InGameLoader data user preparing ->
             Html.map
@@ -91,7 +91,7 @@ view model =
         InGame data user connection canvas world ->
             Html.map
                 InGameMsg
-                (InGame.view { data = data, user = user, canvas = canvas, world = world })
+                (InGame.view data user canvas world)
 
 
 

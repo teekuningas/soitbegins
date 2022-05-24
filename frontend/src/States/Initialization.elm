@@ -60,13 +60,13 @@ init flags =
     )
 
 
-view : { initializing : Initializing } -> Html Msg
-view values =
+view : Initializing -> Html Msg
+view initializing =
     embedInCanvas
         []
         [ div
             [ class "initialization-container" ]
-            [ p [] [ text (String.append "Loading assets.. " (String.fromInt values.initializing.num)) ] ]
+            [ p [] [ text (String.append "Loading assets.. " (String.fromInt initializing.num)) ] ]
         ]
         []
         []

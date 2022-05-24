@@ -28,14 +28,14 @@ subscriptions =
         ]
 
 
-view : { user : User } -> Html Msg
-view values =
+view : User -> Html Msg
+view user =
     embedInCanvas
         []
         [ div
             [ class "main-menu-container" ]
             [ p [] [ text "So it begins (the grand hot air balloon adventure)" ]
-            , p [] [ text (String.append "Welcome " values.user.name) ]
+            , p [] [ text (String.append "Welcome " user.name) ]
             , button [ onClick StartGameMsg ] [ text "Start here" ]
             ]
         ]
