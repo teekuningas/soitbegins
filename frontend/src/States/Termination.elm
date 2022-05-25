@@ -3,7 +3,11 @@ module States.Termination exposing (init, view)
 import Html exposing (Html, div, text)
 
 
-init : String -> ( { message : String }, () )
+type alias InitData =
+    { message : String }
+
+
+init : String -> ( InitData, () )
 init message =
     ( { message = message }, () )
 

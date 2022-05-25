@@ -44,20 +44,24 @@ type PointerEvent
     | TouchUp Touch.Event
 
 
-init : { renderData : RenderData, connection : Connection, canvasDim : CanvasDimensions, hero : Hero } -> ( { connection : Connection, canvas : Canvas, world : World }, Cmd Msg )
-init transitionData =
-    let
-        connection =
-            transitionData.connection
+type alias InitData =
+    { connection : Connection
+    , canvas : Canvas
+    , world : World
+    }
 
+
+init : RenderData -> Connection -> CanvasDimensions -> Hero -> ( InitData, Cmd Msg )
+init renderData connection canvasDim hero =
+    let
         canvas =
-            { canvasDim = transitionData.canvasDim
-            , renderData = transitionData.renderData
+            { canvasDim = canvasDim
+            , renderData = renderData
             , overviewToggle = False
             }
 
         world =
-            { earth = transitionData.connection.earth.msgEarth
+            { earth = connection.earth.msgEarth
             , camera =
                 { azimoth = 0
                 , elevation = 0
@@ -69,7 +73,7 @@ init transitionData =
                 , upButtonDown = False
                 , downButtonDown = False
                 }
-            , hero = transitionData.hero
+            , hero = hero
             }
     in
     ( { connection = connection, canvas = canvas, world = world }
@@ -185,7 +189,15 @@ view data user canvas world =
         ]
 
 
-update : Msg -> { connection : Connection, canvas : Canvas, world : World, data : Data } -> ( { connection : Connection, canvas : Canvas, world : World, data : Data }, Cmd Msg )
+type alias UpdateData =
+    { connection : Connection
+    , canvas : Canvas
+    , world : World
+    , data : Data
+    }
+
+
+update : Msg -> UpdateData -> ( UpdateData, Cmd Msg )
 update msg values =
     case msg of
         RecvServerMsgError message ->

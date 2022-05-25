@@ -47,7 +47,12 @@ type Msg
     | Tick Time.Posix
 
 
-init : FlagsValue -> ( { initializing : Initializing }, Cmd Msg )
+type alias InitData =
+    { initializing : Initializing
+    }
+
+
+init : FlagsValue -> ( InitData, Cmd Msg )
 init flags =
     let
         initializing =
@@ -72,7 +77,12 @@ view initializing =
         []
 
 
-update : Msg -> { initializing : Initializing } -> ( { initializing : Initializing }, Cmd Msg )
+type alias UpdateData =
+    { initializing : Initializing
+    }
+
+
+update : Msg -> UpdateData -> ( UpdateData, Cmd Msg )
 update msg values =
     case msg of
         -- Refresh canvas

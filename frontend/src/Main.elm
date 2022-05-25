@@ -139,8 +139,8 @@ update msg model =
     case ( msg, model ) of
         ( InitializationMsg stateMsg, Initialization initializing ) ->
             case stateMsg of
-                Initialization.TransitionToGatherInfoMsg transitionData ->
-                    case GatherInfo.init transitionData of
+                Initialization.TransitionToGatherInfoMsg tData ->
+                    case GatherInfo.init tData.earthMesh tData.serverUpdateInterval of
                         ( values, cmd ) ->
                             ( GatherInfo values.data values.user
                             , Platform.Cmd.map GatherInfoMsg cmd
@@ -192,8 +192,8 @@ update msg model =
 
         ( InGameLoaderMsg stateMsg, InGameLoader data user preparing ) ->
             case stateMsg of
-                InGameLoader.TransitionToInGameMsg transitionData ->
-                    case InGame.init transitionData of
+                InGameLoader.TransitionToInGameMsg tData ->
+                    case InGame.init tData.renderData tData.connection tData.canvasDim tData.hero of
                         ( values, cmd ) ->
                             ( InGame data user values.connection values.canvas values.world
                             , Platform.Cmd.map InGameMsg cmd

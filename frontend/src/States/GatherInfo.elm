@@ -21,12 +21,18 @@ type Msg
     | TransitionToMainMenuMsg
 
 
-init : { earthMesh : Mesh Vertex, serverUpdateInterval : Int } -> ( { data : Data, user : User }, Cmd Msg )
-init transitionData =
+type alias InitData =
+    { data : Data
+    , user : User
+    }
+
+
+init : Mesh Vertex -> Int -> ( InitData, Cmd Msg )
+init earthMesh serverUpdateInterval =
     let
         data =
-            { earthMesh = transitionData.earthMesh
-            , serverUpdateInterval = transitionData.serverUpdateInterval
+            { earthMesh = earthMesh
+            , serverUpdateInterval = serverUpdateInterval
             }
 
         user =
@@ -65,7 +71,12 @@ view user =
         []
 
 
-update : Msg -> { user : User } -> ( { user : User }, Cmd Msg )
+type alias UpdateData =
+    { user : User
+    }
+
+
+update : Msg -> UpdateData -> ( UpdateData, Cmd Msg )
 update msg values =
     case msg of
         ContinueMsg ->

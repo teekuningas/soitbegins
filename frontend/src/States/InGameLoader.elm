@@ -61,7 +61,12 @@ type Msg
         }
 
 
-init : ( { preparing : Preparing }, Cmd Msg )
+type alias InitData =
+    { preparing : Preparing
+    }
+
+
+init : ( InitData, Cmd Msg )
 init =
     let
         preparing =
@@ -100,7 +105,12 @@ view =
         []
 
 
-update : Msg -> { preparing : Preparing } -> ( { preparing : Preparing }, Cmd Msg )
+type alias UpdateData =
+    { preparing : Preparing
+    }
+
+
+update : Msg -> UpdateData -> ( UpdateData, Cmd Msg )
 update msg values =
     case msg of
         RecvServerMsgError message ->
