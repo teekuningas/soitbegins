@@ -19,8 +19,10 @@ import Html
         )
 import Html.Attributes exposing (class)
 import Http
+import Json.Decode
+import Json.Encode
 import Length exposing (Meters, meters)
-import Obj.Decode exposing (expectObj)
+import Math.Vector3 exposing (Vec3, vec3)
 import Platform.Cmd
 import Platform.Sub
 import Process
@@ -28,7 +30,7 @@ import Task
 import Time
 import WebGL exposing (Mesh)
 import World.ObjLoader as ObjLoader
-import World.Types exposing (Vertex)
+import World.Types exposing (MeshList, Vertex)
 
 
 type alias Initializing =
@@ -40,8 +42,7 @@ type alias Initializing =
 type Msg
     = ResizeMsg
     | ViewportMsg (Result Browser.Dom.Error Browser.Dom.Viewport)
-    | ObjReceived String
-    | EarthMeshLoaded (Maybe (Mesh Vertex))
+    | ObjReceived Json.Decode.Value
     | TransitionToGatherInfoMsg { earthMesh : Mesh Vertex, serverUpdateInterval : Int }
     | TransitionToTerminationMsg String
     | Tick Time.Posix
@@ -89,12 +90,16 @@ update msg values =
         ResizeMsg ->
             ( values, Task.attempt ViewportMsg (getViewportOf "webgl-canvas") )
 
-        EarthMeshLoaded maybeMesh ->
-            case maybeMesh of
-                Just mesh ->
+        ObjReceived value ->
+            let
+                meshResult =
+                    Json.Decode.decodeValue meshDecoder value
+            in
+            case meshResult of
+                Ok mesh ->
                     let
                         transitionData =
-                            { earthMesh = mesh
+                            { earthMesh = WebGL.triangles mesh
                             , serverUpdateInterval = values.initializing.serverUpdateInterval
                             }
                     in
@@ -102,9 +107,9 @@ update msg values =
                     , Task.perform (always (TransitionToGatherInfoMsg transitionData)) (Task.succeed ())
                     )
 
-                Nothing ->
+                Err errMessage ->
                     ( values
-                    , Task.perform (always (TransitionToTerminationMsg "Could not download assets")) (Task.succeed ())
+                    , Task.perform (always (TransitionToTerminationMsg "Could not download the assets")) (Task.succeed ())
                     )
 
         Tick newTime ->
@@ -117,11 +122,6 @@ update msg values =
             in
             ( { values | initializing = newInitializing }
             , Cmd.none
-            )
-
-        ObjReceived value ->
-            ( values
-            , Task.perform EarthMeshLoaded (Task.succeed (mesher value))
             )
 
         _ ->
@@ -141,18 +141,37 @@ subscriptions =
 -- Helpers
 
 
-mesher : String -> Maybe (Mesh Vertex)
-mesher str =
+vec3Decoder : Json.Decode.Decoder Vec3
+vec3Decoder =
     let
-        res =
-            Obj.Decode.decodeString
-                meters
-                ObjLoader.earthMeshDecoder
-                str
+        toVec3 =
+            \x -> \y -> \z -> vec3 x y z
     in
-    case res of
-        Ok data ->
-            Just data
+    Json.Decode.map3 toVec3
+        (Json.Decode.index 0 Json.Decode.float)
+        (Json.Decode.index 1 Json.Decode.float)
+        (Json.Decode.index 2 Json.Decode.float)
 
-        Err errorMessage ->
-            Nothing
+
+vertexDecoder : Json.Decode.Decoder Vertex
+vertexDecoder =
+    Json.Decode.map2 Vertex
+        (Json.Decode.field "color" vec3Decoder)
+        (Json.Decode.field "position" vec3Decoder)
+
+
+faceDecoder : Json.Decode.Decoder ( Vertex, Vertex, Vertex )
+faceDecoder =
+    let
+        toTriple =
+            \x -> \y -> \z -> ( x, y, z )
+    in
+    Json.Decode.map3 toTriple
+        (Json.Decode.index 0 vertexDecoder)
+        (Json.Decode.index 1 vertexDecoder)
+        (Json.Decode.index 2 vertexDecoder)
+
+
+meshDecoder : Json.Decode.Decoder MeshList
+meshDecoder =
+    Json.Decode.list faceDecoder

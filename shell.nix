@@ -10,6 +10,7 @@
     freetype
     gcc
     glib
+    zip
     nodejs
     zlib
     xorg.libX11

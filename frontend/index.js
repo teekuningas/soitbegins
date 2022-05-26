@@ -34,8 +34,23 @@ async function unzipObjFile() {
   }
 }
 const objFile = unzipObjFile();
+
+console.log("Unzipping done")
+
+var webWorker = 
+  new Worker(
+    new URL("./js/parseObj.js", import.meta.url),
+    {type: 'module'}
+  );
+
+
 objFile.then(obj => {
-  app.ports.objReceiver.send(obj);
+  webWorker.postMessage(obj);
+
+  webWorker.addEventListener("message", function(event) {
+    console.log("Got the message from worker");
+    app.ports.objReceiver.send(event.data);
+  });
 });
 
 // To decouple player logic from world logic,

@@ -1,4 +1,6 @@
 port module Communication.ObjReceiver exposing (objReceiver)
 
+import Json.Decode
 
-port objReceiver : (String -> msg) -> Sub msg
+
+port objReceiver : (Json.Decode.Value -> msg) -> Sub msg
