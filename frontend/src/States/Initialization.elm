@@ -34,6 +34,7 @@ import World.Types exposing (MeshList, Vertex)
 type alias Initializing =
     { num : Int
     , serverUpdateInterval : Int
+    , parts : List (Int, MeshList)
     }
 
 
@@ -57,6 +58,7 @@ init flags =
         initializing =
             { serverUpdateInterval = flags.serverUpdateInterval
             , num = 0
+            , parts = []
             }
     in
     ( { initializing = initializing }
@@ -91,19 +93,48 @@ update msg values =
         ObjReceived value ->
             let
                 meshResult =
-                    Json.Decode.decodeValue meshDecoder value
+                    Json.Decode.decodeValue partDecoder value
             in
             case meshResult of
-                Ok mesh ->
+                Ok meshPart ->
                     let
-                        transitionData =
-                            { earthMesh = WebGL.triangles mesh
-                            , serverUpdateInterval = values.initializing.serverUpdateInterval
-                            }
+                        nParts = 
+                            meshPart.totalAmount
+
+                        data = 
+                            meshPart.data
+
+                        index = 
+                            meshPart.index
+
+                        initializing = 
+                            values.initializing
+
+                        parts = List.append initializing.parts [(index, data)]
+
+                        newInitializing = { initializing | parts = parts }
+
+                        newValues = { values | initializing = newInitializing }
+
                     in
-                    ( values
-                    , Task.perform (always (TransitionToGatherInfoMsg transitionData)) (Task.succeed ())
-                    )
+                    if List.length parts == nParts then
+                        let
+                            sortFun a b =
+                                compare (Tuple.first a) (Tuple.first b)
+
+                            meshConcat = List.concat (List.map Tuple.second (List.sortWith sortFun parts))
+
+                            transitionData =
+                                { earthMesh = WebGL.triangles meshConcat
+                                , serverUpdateInterval = values.initializing.serverUpdateInterval
+                                }
+                        in
+                        ( newValues
+                        , Task.perform (always (TransitionToGatherInfoMsg transitionData)) (Task.succeed ())
+                        )
+                    else 
+                        ( newValues
+                        , Cmd.none )
 
                 Err errMessage ->
                     ( values
@@ -173,3 +204,12 @@ faceDecoder =
 meshDecoder : Json.Decode.Decoder MeshList
 meshDecoder =
     Json.Decode.list faceDecoder
+
+type alias Part = { data : MeshList, totalAmount: Int, index: Int }
+
+partDecoder : Json.Decode.Decoder Part
+partDecoder =
+    Json.Decode.map3 Part
+        (Json.Decode.field "data" meshDecoder)
+        (Json.Decode.field "totalAmount" Json.Decode.int)
+        (Json.Decode.field "index" Json.Decode.int)

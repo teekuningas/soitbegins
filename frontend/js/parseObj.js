@@ -61,7 +61,7 @@ function parseObj(obj) {
 }
 
 self.addEventListener("message", function (event) {
-  console.log("Got message from main");
+  console.log("Worker: Got message from main!");
   var data = event.data;
   var triangles = parseObj(data);
   self.postMessage(triangles);
