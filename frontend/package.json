@@ -4,7 +4,8 @@
     "start": "parcel index.html"
   },
   "dependencies": {
-    "@zip.js/zip.js": "*"
+    "@zip.js/zip.js": "*",
+    "elm-json": "^0.2.12"
   },
   "devDependencies": {
     "@parcel/transformer-elm": "^2.5.0",

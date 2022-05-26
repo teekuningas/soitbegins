@@ -21,7 +21,6 @@ import Html.Attributes exposing (class)
 import Http
 import Json.Decode
 import Json.Encode
-import Length exposing (Meters, meters)
 import Math.Vector3 exposing (Vec3, vec3)
 import Platform.Cmd
 import Platform.Sub
@@ -29,7 +28,6 @@ import Process
 import Task
 import Time
 import WebGL exposing (Mesh)
-import World.ObjLoader as ObjLoader
 import World.Types exposing (MeshList, Vertex)
 
 
