@@ -34,7 +34,7 @@ import World.Types exposing (MeshList, Vertex)
 type alias Initializing =
     { num : Int
     , serverUpdateInterval : Int
-    , parts : List (Int, MeshList)
+    , parts : List ( Int, MeshList )
     }
 
 
@@ -98,31 +98,34 @@ update msg values =
             case meshResult of
                 Ok meshPart ->
                     let
-                        nParts = 
+                        nParts =
                             meshPart.totalAmount
 
-                        data = 
+                        data =
                             meshPart.data
 
-                        index = 
+                        index =
                             meshPart.index
 
-                        initializing = 
+                        initializing =
                             values.initializing
 
-                        parts = List.append initializing.parts [(index, data)]
+                        parts =
+                            List.append initializing.parts [ ( index, data ) ]
 
-                        newInitializing = { initializing | parts = parts }
+                        newInitializing =
+                            { initializing | parts = parts }
 
-                        newValues = { values | initializing = newInitializing }
-
+                        newValues =
+                            { values | initializing = newInitializing }
                     in
                     if List.length parts == nParts then
                         let
                             sortFun a b =
                                 compare (Tuple.first a) (Tuple.first b)
 
-                            meshConcat = List.concat (List.map Tuple.second (List.sortWith sortFun parts))
+                            meshConcat =
+                                List.concat (List.map Tuple.second (List.sortWith sortFun parts))
 
                             transitionData =
                                 { earthMesh = WebGL.triangles meshConcat
@@ -132,9 +135,11 @@ update msg values =
                         ( newValues
                         , Task.perform (always (TransitionToGatherInfoMsg transitionData)) (Task.succeed ())
                         )
-                    else 
+
+                    else
                         ( newValues
-                        , Cmd.none )
+                        , Cmd.none
+                        )
 
                 Err errMessage ->
                     ( values
@@ -205,7 +210,10 @@ meshDecoder : Json.Decode.Decoder MeshList
 meshDecoder =
     Json.Decode.list faceDecoder
 
-type alias Part = { data : MeshList, totalAmount: Int, index: Int }
+
+type alias Part =
+    { data : MeshList, totalAmount : Int, index : Int }
+
 
 partDecoder : Json.Decode.Decoder Part
 partDecoder =
