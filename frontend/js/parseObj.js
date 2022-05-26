@@ -3,7 +3,7 @@ function parseObj(obj) {
   var lines = obj.split('\n');
   var ff = [];
   var vv = [];
-  for (i = 0; i < lines.length; i++) {
+  for (let i = 0; i < lines.length; i++) {
     if (lines[i].startsWith('f ')) {
       ff.push(lines[i]);
     }
@@ -12,7 +12,7 @@ function parseObj(obj) {
     }
   }
   var vertices = [];
-  for (i = 0; i < ff.length; i++) {
+  for (let i = 0; i < ff.length; i++) {
     var face = ff[i].split(" ").slice(1, 4).map(x => parseInt(x.split("/")[0]) - 1);  
     var triangle = face.map(idx => vv[idx].split(" ").slice(1, 4).map(x => parseFloat(x)));
     vertices.push(triangle);
@@ -38,7 +38,7 @@ function parseObj(obj) {
   }
 
   var meshTriangles = []
-  for (i = 0; i < vertices.length; i++) {
+  for (let i = 0; i < vertices.length; i++) {
  
     var vert1 = {
       "position": vertices[i][0],

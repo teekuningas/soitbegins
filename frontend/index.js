@@ -65,7 +65,7 @@ objFile.then(obj => {
     console.log("Splitting done.");
 
     async function sendData() {
-      for (i = 0; i < nParts; i++) {
+      for (let i = 0; i < nParts; i++) {
         const data = {
           "data": chunks[i],
           "totalAmount": nParts,
