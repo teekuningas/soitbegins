@@ -62,7 +62,19 @@ function parseObj(obj) {
 
 self.addEventListener("message", function (event) {
   console.log("Worker: Got message from main!");
-  var data = event.data;
+
+  var data = event.data["data"];
   var triangles = parseObj(data);
-  self.postMessage(triangles);
+
+  console.log("Worker: Splitting data to chunks.. ");
+
+  function splitToChunks(array, parts) {
+    let result = [];
+    for (let i = parts; i > 0; i--) {
+      result.push(array.splice(0, Math.ceil(array.length / i)));
+    }
+    return result;
+  }
+
+  self.postMessage(splitToChunks(triangles, event.data["nParts"]));
 });

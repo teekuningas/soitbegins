@@ -45,29 +45,19 @@ const webWorker =
 
 
 objFile.then(obj => {
-  webWorker.postMessage(obj);
+
+  const nParts = 4;
+
+  webWorker.postMessage({"data": obj, "nParts": nParts});
 
   webWorker.addEventListener("message", function(event) {
+
     console.log("Main: Got message from the worker!");
-
-    console.log("Splitting data to chunks.. ");
-    function splitToChunks(array, parts) {
-      let result = [];
-      for (let i = parts; i > 0; i--) {
-        result.push(array.splice(0, Math.ceil(array.length / i)));
-      }
-      return result;
-    }
-
-    const nParts = 4;
-    const chunks = splitToChunks(event.data, nParts);
-
-    console.log("Splitting done.");
 
     async function sendData() {
       for (let i = 0; i < nParts; i++) {
         const data = {
-          "data": chunks[i],
+          "data": event.data[i],
           "totalAmount": nParts,
           "index": i
         }
@@ -75,7 +65,7 @@ objFile.then(obj => {
         app.ports.objReceiver.send(data);
 
         console.log("Sleeping for a while..");
-        await new Promise(r => setTimeout(r, 2000));
+        await new Promise(r => setTimeout(r, 1000));
       }
     } 
     sendData(); 
