@@ -91,7 +91,7 @@ view model =
         InGame data user connection canvas world ->
             Html.map
                 InGameMsg
-                (InGame.view data user canvas world)
+                (InGame.view data user canvas world connection)
 
 
 

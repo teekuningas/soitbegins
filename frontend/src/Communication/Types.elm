@@ -7,6 +7,7 @@ type alias Connection =
     { earth :
         { msgEarth : Earth
         , previousMsgEarth : Earth
+        , previousEarthAtMsg : Earth
         }
     , elapsed :
         { msgElapsed : Float

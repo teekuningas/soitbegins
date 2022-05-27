@@ -90,8 +90,8 @@ subscriptions =
         ]
 
 
-view : Data -> User -> Canvas -> World -> Html Msg
-view data user canvas world =
+view : Data -> User -> Canvas -> World -> Connection -> Html Msg
+view data user canvas world connection =
     let
         earth =
             world.earth
@@ -219,6 +219,8 @@ update msg values =
                     { msgEarth = msgEarth
                     , previousMsgEarth =
                         connection.earth.msgEarth
+                    , previousEarthAtMsg =
+                        values.world.earth
                     }
 
                 newConnection =
@@ -288,10 +290,8 @@ update msg values =
                         values.data.serverUpdateInterval
                         elapsed
                         previousElapsed
-                        elapsedData.msgElapsed
-                        elapsedData.previousMsgElapsed
                         earthData.msgEarth
-                        earthData.previousMsgEarth
+                        earthData.previousEarthAtMsg
                         world
             in
             ( { values | world = newWorld, canvas = newCanvas }
@@ -491,8 +491,27 @@ recvServerJson value =
             RecvServerMsgError "Error while communicating with the server"
 
 
-updateWorld : Int -> Float -> Float -> Float -> Float -> Earth -> Earth -> World -> World
-updateWorld serverUpdateInterval elapsed previousElapsed msgElapsed previousMsgElapsed msgEarth previousMsgEarth world =
+interpolate : Float -> Float -> Float -> Float -> Float
+interpolate from current to stepFraction =
+    let
+        direction =
+            if to - current /= 0 then
+                (to - current) / abs (to - current)
+
+            else
+                0
+
+        distance =
+            abs (to - from)
+
+        step =
+            stepFraction * direction * distance
+    in
+    current + step
+
+
+updateWorld : Int -> Float -> Float -> Earth -> Earth -> World -> World
+updateWorld serverUpdateInterval elapsed previousElapsed msgEarth previousEarthAtMsg world =
     let
         hero =
             world.hero
@@ -506,16 +525,26 @@ updateWorld serverUpdateInterval elapsed previousElapsed msgElapsed previousMsgE
         timeInBetween =
             elapsed - previousElapsed
 
-        weight =
-            (elapsed - msgElapsed)
-                / toFloat serverUpdateInterval
+        stepFraction =
+            timeInBetween / toFloat serverUpdateInterval
 
-        weightedAve p1 p2 w =
-            p1 + w * (p2 - p1)
+        newRotationAroundAxis =
+            interpolate
+                previousEarthAtMsg.rotationAroundAxis
+                earth.rotationAroundAxis
+                msgEarth.rotationAroundAxis
+                stepFraction
+
+        newRotationAroundSun =
+            interpolate
+                previousEarthAtMsg.rotationAroundSun
+                earth.rotationAroundSun
+                msgEarth.rotationAroundSun
+                stepFraction
 
         newEarth =
-            { rotationAroundAxis = weightedAve previousMsgEarth.rotationAroundAxis msgEarth.rotationAroundAxis weight
-            , rotationAroundSun = weightedAve previousMsgEarth.rotationAroundSun msgEarth.rotationAroundSun weight
+            { rotationAroundAxis = newRotationAroundAxis
+            , rotationAroundSun = newRotationAroundSun
             }
 
         newPowerChange =

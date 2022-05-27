@@ -258,6 +258,7 @@ update msg values =
                             { earth =
                                 { msgEarth = msgEarth
                                 , previousMsgEarth = previousMsgEarth
+                                , previousEarthAtMsg = msgEarth
                                 }
                             , elapsed =
                                 { msgElapsed = msgElapsed
