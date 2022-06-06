@@ -226,7 +226,7 @@ fireUnif overviewToggle canvasDim earth hero camera =
                 Mat4.identity
 
         preTranslation =
-            Mat4.translate (vec3 0 1.6 0) Mat4.identity
+            Mat4.translate (vec3 0 1.7 0) Mat4.identity
     in
     { unif
         | preScale = preScale
@@ -318,29 +318,29 @@ burnerMeshList color =
             vec3 -1 1 1
 
         lbt =
-            vec3 -1 -1 1
+            vec3 -1 1 -1
 
         rbt =
-            vec3 1 -1 1
+            vec3 1 1 -1
 
         rbb =
             vec3 1 -1 -1
 
         rfb =
-            vec3 1 1 -1
+            vec3 1 -1 1
 
         lfb =
-            vec3 -1 1 -1
+            vec3 -1 -1 1
 
         lbb =
             vec3 -1 -1 -1
 
         meshList =
             [ face color rft rfb rbb rbt
-            , face color rft rfb lfb lft
-            , face color rft lft lbt rbt
+            , face color lft lfb rfb rft
+            , face color rbt lbt lft rft
             , face color rfb lfb lbb rbb
-            , face color lft lfb lbb lbt
+            , face color lbt lbb lfb lft
             , face color rbt rbb lbb lbt
             ]
     in
@@ -370,29 +370,29 @@ basketMeshList color =
             vec3 -1 1 1
 
         lbt =
-            vec3 -1 -1 1
+            vec3 -1 1 -1
 
         rbt =
-            vec3 1 -1 1
+            vec3 1 1 -1
 
         rbb =
             vec3 1 -1 -1
 
         rfb =
-            vec3 1 1 -1
+            vec3 1 -1 1
 
         lfb =
-            vec3 -1 1 -1
+            vec3 -1 -1 1
 
         lbb =
             vec3 -1 -1 -1
 
         meshList =
             [ face color rft rfb rbb rbt
-            , face color rft rfb lfb lft
-            , face color rft lft lbt rbt
+            , face color lft lfb rfb rft
+            , face color rbt lbt lft rft
             , face color rfb lfb lbb rbb
-            , face color lft lfb lbb lbt
+            , face color lbt lbb lfb lft
             , face color rbt rbb lbb lbt
             ]
     in

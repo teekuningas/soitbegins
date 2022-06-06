@@ -19,6 +19,8 @@ import Platform.Sub
 import Task
 import Time
 import WebGL exposing (Mesh)
+import WebGL.Settings
+import WebGL.Settings.DepthTest
 import World.Types exposing (Data, DragState(..), Earth, Hero, MeshList, Vertex, World)
 import World.World as World
 
@@ -123,6 +125,13 @@ view data user canvas world connection =
 
             else
                 []
+
+        entity = 
+            WebGL.entityWith 
+                [ WebGL.Settings.DepthTest.default
+                , WebGL.Settings.cullFace WebGL.Settings.back
+                ]
+           
     in
     embedInCanvas
         containerAttrs
@@ -137,32 +146,32 @@ view data user canvas world connection =
         , Mouse.onDown (PointerEventMsg << MouseDown)
         , Mouse.onMove (PointerEventMsg << MouseMove)
         ]
-        [ WebGL.entity
+        [ entity
             World.vertexShader
             World.fragmentShader
             (World.heroMesh hero.envColor)
             (World.heroUnif overviewToggle canvasDim earth hero camera)
-        , WebGL.entity
+        , entity
             World.vertexShader
             World.fragmentShader
             World.fireMesh
             (World.fireUnif overviewToggle canvasDim earth hero camera)
-        , WebGL.entity
+        , entity
             World.vertexShader
             World.fragmentShader
             earthMesh
             (World.earthUnif overviewToggle canvasDim earth hero camera)
-        , WebGL.entity
+        , entity
             World.vertexShader
             World.fragmentShader
             World.axisMesh
             (World.axisUnif overviewToggle canvasDim earth hero camera)
-        , WebGL.entity
+        , entity
             World.vertexShader
             World.fragmentShader
             World.sunMesh
             (World.sunUnif overviewToggle canvasDim earth hero camera)
-        , WebGL.entity
+        , entity
             HUD.Controller.vertexShader
             HUD.Controller.fragmentShader
             HUD.Controller.controllerMeshUp
@@ -174,7 +183,7 @@ view data user canvas world connection =
                     0.5
                 )
             )
-        , WebGL.entity
+        , entity
             HUD.Controller.vertexShader
             HUD.Controller.fragmentShader
             HUD.Controller.controllerMeshDown

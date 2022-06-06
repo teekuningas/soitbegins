@@ -77,9 +77,9 @@ controllerMeshDown =
     in
     [ meshPositionMap
         (Vec3.add (vec3 0 -trans 0))
-        [ ( Vertex (vec3 0 0 1) (vec3 1 0 0)
+        [ ( Vertex (vec3 0 0 1) (vec3 -1 0 0)
           , Vertex (vec3 1 0 0) (vec3 0 -1 0)
-          , Vertex (vec3 0 0 1) (vec3 -1 0 0)
+          , Vertex (vec3 0 0 1) (vec3 1 0 0)
           )
         ]
     ]
@@ -95,9 +95,9 @@ controllerMeshUp =
     in
     [ meshPositionMap
         (Vec3.add (vec3 0 trans 0))
-        [ ( Vertex (vec3 0 0 1) (vec3 -1 0 0)
+        [ ( Vertex (vec3 0 0 1) (vec3 1 0 0)
           , Vertex (vec3 0 1 0) (vec3 0 1 0)
-          , Vertex (vec3 0 0 1) (vec3 1 0 0)
+          , Vertex (vec3 0 0 1) (vec3 -1 0 0)
           )
         ]
     ]
