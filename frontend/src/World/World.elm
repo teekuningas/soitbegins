@@ -26,6 +26,13 @@ generalUnif overviewToggle canvasDim earth hero camera =
             toFloat canvasDim.width
                 / toFloat canvasDim.height
 
+        perspective = 
+            if overviewToggle == True then
+                Mat4.makePerspective 45 aspect 0.1 10000
+            else
+                Mat4.makePerspective 20 aspect 0.1 100
+
+
         cameraMat =
             if overviewToggle == True then
                 makeOverviewCamera canvasDim earth hero
@@ -52,7 +59,7 @@ generalUnif overviewToggle canvasDim earth hero camera =
     , postTranslation =
         Mat4.identity
     , perspective =
-        Mat4.makePerspective 45 aspect 1 10000
+        perspective
     , camera =
         cameraMat
     , shade = 0.75
@@ -138,7 +145,7 @@ heroUnif overviewToggle canvasDim earth hero camera =
 
         -- Hero size
         scale =
-            Mat4.scale (vec3 0.1 0.1 0.1) Mat4.identity
+            Mat4.scale (vec3 0.01 0.01 0.01) Mat4.identity
 
         -- Hero wiggling
         rotation =
@@ -676,7 +683,7 @@ makeHeroCamera canvasDim earth hero camera =
         -- Sits behind the hero.
         -- Also apply the user controlled parameters azimoth and elevation.
         locStart =
-            vec3 0 0 3.0
+            vec3 0 0 1.0
 
         locAz =
             Mat4.transform (Mat4.makeRotate azimoth (vec3 0 1 0)) locStart

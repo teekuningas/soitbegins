@@ -341,11 +341,11 @@ update msg values =
                     vec3 results.envelope.envelopeR results.envelope.envelopeG results.envelope.envelopeB
 
                 hero =
-                    { altitude = 110
+                    { altitude = 102
                     , latitude = results.location.latitude
                     , longitude = results.location.longitude
-                    , latSpeed = results.location.latSpeed / 10000
-                    , lonSpeed = results.location.lonSpeed / 10000
+                    , latSpeed = results.location.latSpeed / 50000
+                    , lonSpeed = results.location.lonSpeed / 50000
                     , rotationTheta = 0
                     , power = 1
                     , envColor = envColor
