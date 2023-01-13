@@ -1,4 +1,4 @@
 { pkgs ? import <nixpkgs> {} }:
   pkgs.mkShell {
-    packages = [ pkgs.nodejs ];
+    packages = [ pkgs.nodejs pkgs.elmPackages.elm ];
   }
