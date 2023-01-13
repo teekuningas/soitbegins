@@ -11,3 +11,6 @@ prettier:
 node_modules:
 	npm ci
 	touch node_modules
+
+shell:
+	nix develop
