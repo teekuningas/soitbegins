@@ -11,7 +11,6 @@
     gcc
     glib
     zip
-    nodejs
     zlib
     xorg.libX11
     xorg.libXrender
