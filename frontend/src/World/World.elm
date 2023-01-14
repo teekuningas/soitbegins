@@ -4,6 +4,8 @@ module World.World exposing
     , earthUnif
     , fireMesh
     , fireUnif
+    , localCoordinateMesh
+    , localCoordinateUnif
     , fragmentShader
     , heroMesh
     , heroUnif
@@ -215,6 +217,18 @@ heroUnif overviewToggle canvasDim earth hero camera =
     }
 
 
+localCoordinateUnif : Bool -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
+localCoordinateUnif overviewToggle canvasDim earth hero camera =
+    let
+        unif =
+            heroUnif overviewToggle canvasDim earth hero camera
+
+    in
+    { unif
+        | rotation = Mat4.identity
+    }
+
+
 fireUnif : Bool -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
 fireUnif overviewToggle canvasDim earth hero camera =
     let
@@ -313,6 +327,48 @@ heroMesh envelopeColor =
     ]
         |> List.concat
         |> WebGL.triangles
+
+
+localCoordinateMesh : Mesh Vertex
+localCoordinateMesh =
+    [ localCoordinateSystem ]
+        |> List.concat
+        |> WebGL.triangles
+
+
+localCoordinateSystem : MeshList
+localCoordinateSystem =
+    let
+        bgColor =
+            Vec3.scale (1 / 255) (vec3 70 87 35)
+
+        fgColor = 
+            Vec3.scale (1 / 255) (vec3 255 0 0)
+
+        rbb =
+            vec3 1 -1 -1
+
+        rfb =
+            vec3 1 -1 1
+
+        lfb =
+            vec3 -1 -1 1
+
+        lbb =
+            vec3 -1 -1 -1
+
+        bgMeshList = face bgColor rbb lbb lfb rfb
+            |> meshPositionMap (Vec3.scale 5.0)
+            |> meshPositionMap (Vec3.add (vec3 0 -1.0 0))
+
+        fgMeshList = face fgColor rbb lbb lfb rfb
+            |> meshPositionMap (Mat4.transform (Mat4.makeScale (vec3 0.25 1 2.5)))
+            |> meshPositionMap (Vec3.add (vec3 0 -4.9 -2.5))
+
+    in
+    [ bgMeshList, fgMeshList ] |> List.concat
+
+
 
 
 burnerMeshList : Vec3 -> MeshList

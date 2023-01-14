@@ -7,6 +7,8 @@ import Communication.Types exposing (Connection, User)
 import HUD.Controller
 import HUD.Page exposing (embedInCanvas)
 import HUD.Types exposing (Canvas, CanvasDimensions, RenderData)
+import Math.Matrix4 as Mat4 exposing (Mat4)
+import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import Html exposing (Html, div, span, text)
 import Html.Attributes exposing (class, id)
 import Html.Events exposing (onMouseDown)
@@ -156,6 +158,11 @@ view data user canvas world connection =
             World.fragmentShader
             World.fireMesh
             (World.fireUnif overviewToggle canvasDim earth hero camera)
+        , entity
+            World.vertexShader
+            World.fragmentShader
+            World.localCoordinateMesh
+            (World.localCoordinateUnif overviewToggle canvasDim earth hero camera)
         , entity
             World.vertexShader
             World.fragmentShader
@@ -585,11 +592,69 @@ updateWorld serverUpdateInterval elapsed previousElapsed msgEarth previousEarthA
                     )
                 )
 
+        -- Compute movement
+
+        latitudeRotation =
+            Mat4.makeRotate -(pi / 2 - hero.latitude) (Vec3.k)
+
+        longitudeRotation =
+            Mat4.makeRotate -hero.longitude (Vec3.j)
+
+        latlonRotation =
+            List.foldl
+                Mat4.mul
+                Mat4.identity
+                [ latitudeRotation
+                , longitudeRotation
+                ]
+
+        direction = 
+            Vec3.scale (0.00001) hero.direction
+ 
+        targetXYZ = 
+            Mat4.transform 
+                latlonRotation 
+                (Vec3.normalize 
+                    (Vec3.add (vec3 0 1 0) direction))
+
+        targetLat = 
+            asin (Vec3.getY targetXYZ)
+
+        targetLon = 
+            atan2 (Vec3.getZ targetXYZ) ((Vec3.getX targetXYZ))
+
+        -- helper to handle very small and very large hero longitudes
+        computeLonDiff : Float -> Float -> Float
+        computeLonDiff prev next =
+            let 
+                removeUntilClose val =
+                    if (abs (val - next)) < pi/2 then
+                        val
+                    else
+                        removeUntilClose (val - pi)
+
+                addUntilClose val =
+                    if (abs (val - next)) < pi/2 then
+                        val
+                    else
+                        addUntilClose (val + pi)
+            in
+                if prev > next then
+                    next - (removeUntilClose prev) 
+                else
+                    next - (addUntilClose prev)
+ 
+        lonSpeed = 
+            (computeLonDiff hero.longitude targetLon) * hero.speed
+
+        latSpeed = 
+            (targetLat - hero.latitude) * hero.speed
+
         newLongitude =
-            hero.longitude - timeInBetween * hero.lonSpeed
+            hero.longitude + timeInBetween * lonSpeed
 
         newLatitude =
-            hero.longitude - timeInBetween * hero.latSpeed
+            hero.latitude + timeInBetween * latSpeed
 
         newRotationTheta =
             sin (elapsed / 1000) / 20

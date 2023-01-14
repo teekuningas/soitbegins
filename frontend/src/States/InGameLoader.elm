@@ -342,10 +342,12 @@ update msg values =
 
                 hero =
                     { altitude = 102
-                    , latitude = results.location.latitude
-                    , longitude = results.location.longitude
-                    , latSpeed = results.location.latSpeed / 50000
-                    , lonSpeed = results.location.lonSpeed / 50000
+                    , speed = 5.0
+                    , direction = (vec3 1 0 0)
+                    -- , latitude = results.location.latitude
+                    -- , longitude = results.location.longitude
+                    , latitude = 0
+                    , longitude = 0
                     , rotationTheta = 0
                     , power = 1
                     , envColor = envColor
@@ -371,8 +373,7 @@ update msg values =
 type alias RandomLocation =
     { longitude : Float
     , latitude : Float
-    , lonSpeed : Float
-    , latSpeed : Float
+    , speed : Float
     }
 
 
@@ -400,9 +401,8 @@ randomEnvelope =
 
 randomLocation : Random.Generator RandomLocation
 randomLocation =
-    Random.map4
+    Random.map3
         RandomLocation
-        (Random.float 0 1)
         (Random.float 0 1)
         (Random.float 0 1)
         (Random.float 0 1)
