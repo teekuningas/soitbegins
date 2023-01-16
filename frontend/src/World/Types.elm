@@ -74,8 +74,10 @@ type alias Hero =
     { altitude : Float
     , latitude : Float
     , longitude : Float
-    , speed : Float
-    , direction : Vec3
+    , moveSpeed : Float
+    , moveDirection : Vec3
+    , orientation : Vec3
+    , location : Vec3 
     , rotationTheta : Float
     , power : Float
     , envColor : Vec3

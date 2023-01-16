@@ -342,8 +342,10 @@ update msg values =
 
                 hero =
                     { altitude = 102
-                    , speed = 5.0
-                    , direction = (vec3 1 0 0)
+                    , moveSpeed = 0.0
+                    , moveDirection = (vec3 0 0 1)
+                    , orientation = (vec3 0 1 0)
+                    , location = (vec3 -1 0 0)
                     -- , latitude = results.location.latitude
                     -- , longitude = results.location.longitude
                     , latitude = 0

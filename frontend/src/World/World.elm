@@ -19,6 +19,7 @@ import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import WebGL exposing (Mesh, Shader)
 import World.Types exposing (Camera, Earth, Hero, MeshList, Uniforms, Vertex)
+import World.Quaternion as Quaternion exposing (Quaternion(..))
 
 
 generalUnif : Bool -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
@@ -88,7 +89,7 @@ earthUnif overviewToggle canvasDim earth hero camera =
             generalUnif overviewToggle canvasDim earth hero camera
 
         -- The earth mesh comes in wrong position so fix here..
-        preScale =
+        preRotation =
             Mat4.makeRotate (pi / 2) (vec3 1 0 0)
 
         -- Scale the earth.
@@ -123,7 +124,7 @@ earthUnif overviewToggle canvasDim earth hero camera =
                 Mat4.identity
     in
     { unif
-        | preScale = preScale
+        | preRotation = preRotation
         , rotation = rotation
         , translation = translation
         , scale = scale
@@ -136,7 +137,7 @@ axisUnif overviewToggle canvasDim earth hero camera =
         unif =
             earthUnif overviewToggle canvasDim earth hero camera
     in
-    { unif | preScale = Mat4.identity }
+    { unif | preRotation = Mat4.identity }
 
 
 heroUnif : Bool -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
@@ -149,33 +150,26 @@ heroUnif overviewToggle canvasDim earth hero camera =
         scale =
             Mat4.scale (vec3 0.01 0.01 0.01) Mat4.identity
 
-        -- Hero wiggling
+        orientation =
+            Mat4.identity
+
         rotation =
-            Mat4.mul (Mat4.makeRotate (3 * hero.rotationTheta) (vec3 0 1 0))
-                (Mat4.makeRotate (2 * hero.rotationTheta) (vec3 1 0 0))
+            List.foldl
+                Mat4.mul
+                Mat4.identity
+                [ (Mat4.makeRotate (2 * hero.rotationTheta) (vec3 1 0 0))
+                , (Mat4.makeRotate (3 * hero.rotationTheta) (vec3 0 1 0))
+                , orientation
+                ]
 
         -- Hero moved directly up from hero origin
         translation =
             Mat4.translate (Vec3.scale hero.altitude Vec3.j) Mat4.identity
 
-        -- Hero rotated along different axis in the origin, effectively
-        -- translating hero to correct position in a correct orientation
         earthAxis =
             Mat4.transform
                 (Mat4.makeRotate ((23.5 / 180) * pi) (vec3 0 0 1))
                 Vec3.j
-
-        latitudeAxis =
-            Vec3.cross earthAxis (vec3 1 0 0)
-
-        alignRotation =
-            Mat4.makeRotate ((23.5 / 180) * pi) (vec3 0 0 1)
-
-        latitudeRotation =
-            Mat4.makeRotate (pi / 2 - hero.latitude) latitudeAxis
-
-        longitudeRotation =
-            Mat4.makeRotate hero.longitude earthAxis
 
         earthRotationRotation =
             Mat4.makeRotate earth.rotationAroundAxis earthAxis
@@ -184,9 +178,12 @@ heroUnif overviewToggle canvasDim earth hero camera =
             List.foldl
                 Mat4.mul
                 Mat4.identity
-                [ alignRotation
-                , latitudeRotation
-                , longitudeRotation
+                -- [ alignRotation
+                -- , latitudeRotation
+                -- , longitudeRotation
+                [ (Mat4.makeRotate (hero.latitude - pi / 2) (vec3 0 0 1)) 
+                , (Mat4.makeRotate hero.longitude (vec3 0 1 0))
+                , (Mat4.makeRotate ((23.5 / 180) * pi) (vec3 0 0 1))
                 , earthRotationRotation
                 ]
 
@@ -331,13 +328,13 @@ heroMesh envelopeColor =
 
 localCoordinateMesh : Mesh Vertex
 localCoordinateMesh =
-    [ localCoordinateSystem ]
+    [ localCoordinateMeshList ]
         |> List.concat
         |> WebGL.triangles
 
 
-localCoordinateSystem : MeshList
-localCoordinateSystem =
+localCoordinateMeshList : MeshList
+localCoordinateMeshList =
     let
         bgColor =
             Vec3.scale (1 / 255) (vec3 70 87 35)
@@ -772,6 +769,20 @@ makeHeroCamera canvasDim earth hero camera =
         up
 
 
+meshPositionMap : (Vec3 -> Vec3) -> MeshList -> MeshList
+meshPositionMap fun mesh =
+    case mesh of
+        [] ->
+            []
+
+        ( v1, v2, v3 ) :: xs ->
+            ( { v1 | position = fun v1.position }
+            , { v2 | position = fun v2.position }
+            , { v3 | position = fun v3.position }
+            )
+                :: meshPositionMap fun xs
+
+
 vertexShader : Shader Vertex Uniforms { vcolor : Vec3 }
 vertexShader =
     [glsl|
@@ -810,16 +821,3 @@ fragmentShader =
     }
   |]
 
-
-meshPositionMap : (Vec3 -> Vec3) -> MeshList -> MeshList
-meshPositionMap fun mesh =
-    case mesh of
-        [] ->
-            []
-
-        ( v1, v2, v3 ) :: xs ->
-            ( { v1 | position = fun v1.position }
-            , { v2 | position = fun v2.position }
-            , { v3 | position = fun v3.position }
-            )
-                :: meshPositionMap fun xs
