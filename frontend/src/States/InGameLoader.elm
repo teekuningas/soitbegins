@@ -131,9 +131,12 @@ update msg values =
                     values.preparing
 
                 msgEarth =
-                    { rotationAroundSun = message.earth.rotationAroundSun
-                    , rotationAroundAxis = message.earth.rotationAroundAxis
-                    }
+                       { rotationAroundSun = 0
+                       , rotationAroundAxis = 0
+                       }
+                    -- { rotationAroundSun = message.earth.rotationAroundSun
+                    -- , rotationAroundAxis = message.earth.rotationAroundAxis
+                    -- }
             in
             case preparing.connection of
                 Just preparingConnection ->
@@ -342,14 +345,10 @@ update msg values =
 
                 hero =
                     { altitude = 102
-                    , moveSpeed = 0.0
-                    , moveDirection = (vec3 0 0 1)
-                    , orientation = (vec3 0 1 0)
-                    , location = (vec3 -1 0 0)
-                    -- , latitude = results.location.latitude
-                    -- , longitude = results.location.longitude
-                    , latitude = 0
-                    , longitude = 0
+                    , moveSpeed = 0.05
+                    , moveDirection = (vec3 0 0 -0.001)
+                    , orientation = Vec3.normalize (Vec3.cross (vec3 -1 0 0) (vec3 0 -1 0))
+                    , location = Vec3.normalize (vec3 1 0 0)
                     , rotationTheta = 0
                     , power = 1
                     , envColor = envColor
@@ -372,13 +371,6 @@ update msg values =
 -- Random
 
 
-type alias RandomLocation =
-    { longitude : Float
-    , latitude : Float
-    , speed : Float
-    }
-
-
 type alias RandomEnvelope =
     { envelopeR : Float
     , envelopeG : Float
@@ -387,8 +379,7 @@ type alias RandomEnvelope =
 
 
 type alias RandomValues =
-    { location : RandomLocation
-    , envelope : RandomEnvelope
+    { envelope : RandomEnvelope
     }
 
 
@@ -401,20 +392,10 @@ randomEnvelope =
         (Random.float 0 1)
 
 
-randomLocation : Random.Generator RandomLocation
-randomLocation =
-    Random.map3
-        RandomLocation
-        (Random.float 0 1)
-        (Random.float 0 1)
-        (Random.float 0 1)
-
-
 randomValues : Random.Generator RandomValues
 randomValues =
-    Random.map2
+    Random.map
         RandomValues
-        randomLocation
         randomEnvelope
 
 

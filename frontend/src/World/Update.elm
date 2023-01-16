@@ -4,6 +4,8 @@ import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 
 import World.Types exposing (Earth, World)
+import World.Quaternion as Quaternion exposing (Quaternion(..))
+import World.LinearAlgebra as LinearAlgebra
 
 
 interpolate : Float -> Float -> Float -> Float -> Float
@@ -93,43 +95,49 @@ updateWorld serverUpdateInterval elapsed previousElapsed msgEarth previousEarthA
 
         -- Compute movement
 
-        latitudeRotation =
-            Mat4.makeRotate -(pi / 2 - hero.latitude) (Vec3.k)
+        tiltQuat =
+            (Quaternion.vecToVec
+             (vec3 0 1 0)
+             (hero.location)
+            )
 
-        longitudeRotation =
-            Mat4.makeRotate -hero.longitude (Vec3.j)
+        aroundQuat =
+             (Quaternion.vecToVec
+              (Quaternion.transform tiltQuat (vec3 0 0 1))
+              (hero.orientation)
+             )
 
-        latlonRotation =
-            List.foldl
-                Mat4.mul
-                Mat4.identity
-                [ latitudeRotation
-                , longitudeRotation
-                ]
+        orientationQuat = Quaternion.product aroundQuat tiltQuat
 
-        direction = 
-            Vec3.scale (0.00001) hero.moveDirection
- 
-        targetXYZ = 
-            Mat4.transform 
-                latlonRotation 
-                (Vec3.normalize 
-                    (Vec3.add (vec3 0 1 0) direction))
+        heroLoc =
+            (vec3 0 0 0) |>
+            Quaternion.transform orientationQuat |>
+            Vec3.add hero.location
 
-        heroXYZ = 
-            Mat4.transform latlonRotation (vec3 0 1 0)
+        targetLoc =
+            hero.moveDirection |>
+            Quaternion.transform orientationQuat |>
+            Vec3.add hero.location
 
-        newXYZ = 
-            (Vec3.sub targetXYZ heroXYZ) |>
-            (\x -> Vec3.scale (hero.moveSpeed * timeInBetween) x) |>
-            Vec3.add heroXYZ |>
-            Vec3.normalize
+        distance = 
+            Vec3.scale (timeInBetween * hero.moveSpeed) (Vec3.sub targetLoc heroLoc)
 
-        newLatitude = 
-            asin (Vec3.getY newXYZ)
+        newLocation =
+            Vec3.normalize (Vec3.add heroLoc distance)
 
-        newLongitude = 
-            atan2 (Vec3.getZ newXYZ) ((Vec3.getX newXYZ))
+        (span1, span2) = 
+            LinearAlgebra.findOrthogonalSpan newLocation
+
+        newOrientation =
+            hero.orientation |>
+            -- Vec3.add hero.location |>
+            Quaternion.transform (Quaternion.vecToVec hero.location newLocation) |>
+            -- (\x -> Vec3.sub x newLocation) |>
+            Vec3.normalize |>
+            LinearAlgebra.projOntoPlane span1 span2 
+            
+        test2 = Debug.log ("newLocation: " ++ (Debug.toString newLocation)) 0
+        test4 = Debug.log ("newOrientation: " ++ (Debug.toString newOrientation)) 0
 
         newRotationTheta =
             sin (elapsed / 1000) / 20
@@ -137,8 +145,8 @@ updateWorld serverUpdateInterval elapsed previousElapsed msgEarth previousEarthA
         newHero =
             { hero
                 | rotationTheta = newRotationTheta
-                , longitude = newLongitude
-                , latitude = newLatitude
+                , location = newLocation
+                , orientation = newOrientation
                 , power = newPower
                 , altitude = newAltitude
             }

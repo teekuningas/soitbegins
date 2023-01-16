@@ -72,8 +72,6 @@ type alias Controller =
 
 type alias Hero =
     { altitude : Float
-    , latitude : Float
-    , longitude : Float
     , moveSpeed : Float
     , moveDirection : Vec3
     , orientation : Vec3

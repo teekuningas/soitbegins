@@ -1,4 +1,4 @@
-module World.Quaternion exposing (Quaternion(..), product, identity)
+module World.Quaternion exposing (Quaternion(..), product, identity, vecToVec, transform, toMatrix)
 
 import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
@@ -70,12 +70,12 @@ getScalar q =
 
 vecToVec : Vec3 -> Vec3 -> Quaternion
 vecToVec v1 v2 =
-    if (Vec3.dot v1 v2) >= 0.9999 then
+    if (Vec3.dot v1 v2) >= 0.999999 then
         identity
-    else if (Vec3.dot v1 v2) <= -0.9999 then
+    else if (Vec3.dot v1 v2) <= -0.999999 then
         let
             helperVec =
-                (vec3 0 0 1)
+                (vec3 0.3 0.7 0.1)
         in
             rotate (Vec3.cross v1 helperVec) pi 
     else
@@ -104,4 +104,27 @@ vecToVec v1 v2 =
              (y / length)
              (z / length)
             )
-            
+          
+toMatrix : Quaternion -> Mat4  
+toMatrix q =
+    case q of 
+        (Quat q0 q1 q2 q3) ->
+            Mat4.fromRecord 
+                { m11 = 2 * (q0*q0 + q1*q1) - 1
+                , m21 = 2 * (q1*q2 + q0*q3)
+                , m31 = 2 * (q1*q3 - q0*q2)
+                , m41 = 0
+                , m12 = 2 * (q1*q2 - q0*q3)
+                , m22 = 2 * (q0*q0 + q2*q2) - 1
+                , m32 = 2 * (q2*q3 + q0*q1)
+                , m42 = 0
+                , m13 = 2 * (q1*q3 + q0*q2)
+                , m23 = 2 * (q2*q3 - q0*q1)
+                , m33 = 2 * (q0*q0 + q3*q3) - 1
+                , m43 = 0
+                , m14 = 0
+                , m24 = 0
+                , m34 = 0
+                , m44 = 1
+            }
+

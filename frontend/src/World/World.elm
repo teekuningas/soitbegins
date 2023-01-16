@@ -22,6 +22,10 @@ import World.Types exposing (Camera, Earth, Hero, MeshList, Uniforms, Vertex)
 import World.Quaternion as Quaternion exposing (Quaternion(..))
 
 
+earthTiltAngle : Float
+earthTiltAngle = 0
+
+
 generalUnif : Bool -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
 generalUnif overviewToggle canvasDim earth hero camera =
     let
@@ -76,6 +80,7 @@ sunUnif overviewToggle canvasDim earth hero camera =
             generalUnif overviewToggle canvasDim earth hero camera
 
         -- Sun lies at the origin but is scaled
+
         scale =
             Mat4.scale (vec3 200 200 200) Mat4.identity
     in
@@ -89,6 +94,7 @@ earthUnif overviewToggle canvasDim earth hero camera =
             generalUnif overviewToggle canvasDim earth hero camera
 
         -- The earth mesh comes in wrong position so fix here..
+
         preRotation =
             Mat4.makeRotate (pi / 2) (vec3 1 0 0)
 
@@ -96,14 +102,18 @@ earthUnif overviewToggle canvasDim earth hero camera =
         -- I first tried to keep earth as size 1 and decrease
         -- size of the balloon. However, that leads to inaccuracies
         -- in rendering the balloon.
+
         scale =
             Mat4.scale (vec3 100 100 100) Mat4.identity
 
         -- Tilt and rotate along the correct axis
+
         rotation =
             Mat4.mul
-                (Mat4.makeRotate ((23.5 / 180) * pi) (vec3 0 0 1))
+                (Mat4.makeRotate ((earthTiltAngle / 180) * pi) (vec3 0 0 1))
                 (Mat4.makeRotate earth.rotationAroundAxis (vec3 0 1 0))
+
+        -- Move to the correct location
 
         earthLocationX =
             1000 * (cos earth.rotationAroundSun + sin earth.rotationAroundSun)
@@ -114,7 +124,6 @@ earthUnif overviewToggle canvasDim earth hero camera =
         earthLocationZ =
             1000 * (cos earth.rotationAroundSun - sin earth.rotationAroundSun)
 
-        -- Move to the correct location
         translation =
             Mat4.translate
                 (vec3 earthLocationX
@@ -147,28 +156,49 @@ heroUnif overviewToggle canvasDim earth hero camera =
             generalUnif overviewToggle canvasDim earth hero camera
 
         -- Hero size
-        scale =
+
+        preScale =
             Mat4.scale (vec3 0.01 0.01 0.01) Mat4.identity
 
-        orientation =
-            Mat4.identity
+        -- Hero wiggling
 
-        rotation =
+        preRotation =
             List.foldl
                 Mat4.mul
                 Mat4.identity
                 [ (Mat4.makeRotate (2 * hero.rotationTheta) (vec3 1 0 0))
                 , (Mat4.makeRotate (3 * hero.rotationTheta) (vec3 0 1 0))
-                , orientation
                 ]
 
-        -- Hero moved directly up from hero origin
+        -- Use quaternions to figure out orientation
+
+        tiltQuat = 
+            (Quaternion.vecToVec
+             (vec3 0 1 0)
+             (hero.location)
+            )
+
+        aroundQuat = 
+             (Quaternion.vecToVec
+              (Quaternion.transform tiltQuat (vec3 0 0 1))
+              (hero.orientation)
+             )
+
+        orientationQuat = Quaternion.product aroundQuat tiltQuat
+
+        rotation =
+            Quaternion.toMatrix orientationQuat
+
+        -- Translate hero to correct position in the earth space
+
         translation =
-            Mat4.translate (Vec3.scale hero.altitude Vec3.j) Mat4.identity
+            Mat4.translate (Vec3.scale hero.altitude hero.location) Mat4.identity
+
+        -- Rotate to match earth tilt and earth around-axis orientation.
 
         earthAxis =
             Mat4.transform
-                (Mat4.makeRotate ((23.5 / 180) * pi) (vec3 0 0 1))
+                (Mat4.makeRotate ((earthTiltAngle / 180) * pi) (vec3 0 0 1))
                 Vec3.j
 
         earthRotationRotation =
@@ -178,14 +208,11 @@ heroUnif overviewToggle canvasDim earth hero camera =
             List.foldl
                 Mat4.mul
                 Mat4.identity
-                -- [ alignRotation
-                -- , latitudeRotation
-                -- , longitudeRotation
-                [ (Mat4.makeRotate (hero.latitude - pi / 2) (vec3 0 0 1)) 
-                , (Mat4.makeRotate hero.longitude (vec3 0 1 0))
-                , (Mat4.makeRotate ((23.5 / 180) * pi) (vec3 0 0 1))
+                [ (Mat4.makeRotate ((earthTiltAngle / 180) * pi) (vec3 0 0 1))
                 , earthRotationRotation
                 ]
+
+        -- And move where the earth is
 
         earthLocationX =
             1000 * (cos earth.rotationAroundSun + sin earth.rotationAroundSun)
@@ -196,7 +223,6 @@ heroUnif overviewToggle canvasDim earth hero camera =
         earthLocationZ =
             1000 * (cos earth.rotationAroundSun - sin earth.rotationAroundSun)
 
-        -- And finally moved to the earth
         postTranslation =
             Mat4.translate
                 (vec3 earthLocationX
@@ -206,7 +232,8 @@ heroUnif overviewToggle canvasDim earth hero camera =
                 Mat4.identity
     in
     { unif
-        | scale = scale
+        | preScale = preScale
+        , preRotation = preRotation
         , rotation = rotation
         , translation = translation
         , postRotation = postRotation
@@ -222,7 +249,7 @@ localCoordinateUnif overviewToggle canvasDim earth hero camera =
 
     in
     { unif
-        | rotation = Mat4.identity
+        | preRotation = Mat4.identity
     }
 
 
@@ -236,15 +263,21 @@ fireUnif overviewToggle canvasDim earth hero camera =
         -- but we move and scale it in the hero space to the exact
         -- correct location.
         preScale =
-            Mat4.scale
-                (vec3 (hero.power / 2)
-                    (hero.power / 2)
-                    (hero.power / 2)
-                )
+            List.foldl
+                Mat4.mul
                 Mat4.identity
+                [ (Mat4.scale
+                      (vec3 (hero.power / 2)
+                            (hero.power / 2)
+                            (hero.power / 2)
+                      )
+                      Mat4.identity
+                   )
+                , unif.preScale
+                ]
 
         preTranslation =
-            Mat4.translate (vec3 0 1.7 0) Mat4.identity
+            Mat4.translate (vec3 0 0.019 0) Mat4.identity
     in
     { unif
         | preScale = preScale
@@ -667,11 +700,8 @@ makeOverviewCamera canvasDim earth hero =
 makeHeroCamera : CanvasDimensions -> Earth -> Hero -> Camera -> Mat4
 makeHeroCamera canvasDim earth hero camera =
     let
-        azimoth =
-            camera.azimoth
 
-        elevation =
-            camera.elevation
+        -- Compute some earth related helpers
 
         earthLocationX =
             1000 * (cos earth.rotationAroundSun + sin earth.rotationAroundSun)
@@ -687,54 +717,58 @@ makeHeroCamera canvasDim earth hero camera =
                 earthLocationY
                 earthLocationZ
 
-        -- Generate a general rotation matrix that can transform
-        -- the hero, the camera and even the up vector.
         earthAxis =
             Mat4.transform
-                (Mat4.makeRotate ((23.5 / 180) * pi) (vec3 0 0 1))
+                (Mat4.makeRotate ((earthTiltAngle / 180) * pi) (vec3 0 0 1))
                 Vec3.j
-
-        latitudeAxis =
-            Vec3.cross earthAxis (vec3 1 0 0)
-
-        alignRotation =
-            Mat4.makeRotate ((23.5 / 180) * pi) (vec3 0 0 1)
-
-        latitudeRotation =
-            Mat4.makeRotate (pi / 2 - hero.latitude) latitudeAxis
-
-        longitudeRotation =
-            Mat4.makeRotate hero.longitude earthAxis
 
         earthRotationRotation =
             Mat4.makeRotate earth.rotationAroundAxis earthAxis
 
-        rotateAround =
-            List.foldl
-                Mat4.mul
-                Mat4.identity
-                [ alignRotation
-                , latitudeRotation
-                , longitudeRotation
-                , earthRotationRotation
-                ]
+        -- Use quaternions to figure out hero orientation, and thus
+        -- camera orientation
 
-        -- Find out the target location
-        targetTransformation =
-            List.foldl
-                Mat4.mul
-                Mat4.identity
-                [ Mat4.translate (vec3 0 hero.altitude 0) Mat4.identity
-                , rotateAround
-                , Mat4.translate earthLoc Mat4.identity
-                ]
+        tiltQuat = 
+            (Quaternion.vecToVec
+             (vec3 0 1 0)
+             (hero.location)
+            )
 
-        targetLocation =
-            Mat4.transform targetTransformation (vec3 0 0 0)
+        aroundQuat = 
+             (Quaternion.vecToVec
+              (Quaternion.transform tiltQuat (vec3 0 0 1))
+              (hero.orientation)
+             )
 
-        -- Find out the camera location.
-        -- Sits behind the hero.
+        orientationQuat = Quaternion.product aroundQuat tiltQuat
+
+        -- Find up direction
+
+        up =
+            Vec3.j |>
+            Mat4.transform (Quaternion.toMatrix orientationQuat) |>
+            Mat4.transform (Mat4.makeRotate ((earthTiltAngle / 180) * pi) (vec3 0 0 1)) |>
+            Mat4.transform earthRotationRotation
+
+        -- Find target (hero)
+
+        targetLoc = 
+            (vec3 0 0 0) |>
+            Mat4.transform (Quaternion.toMatrix orientationQuat) |>
+            Vec3.add (Vec3.scale hero.altitude hero.location) |>
+            Mat4.transform (Mat4.makeRotate ((earthTiltAngle / 180) * pi) (vec3 0 0 1)) |>
+            Mat4.transform earthRotationRotation |>
+            Vec3.add earthLoc
+
+        -- Find out the camera location. Sits behind the hero.
         -- Also apply the user controlled parameters azimoth and elevation.
+
+        azimoth =
+            camera.azimoth
+
+        elevation =
+            camera.elevation
+
         locStart =
             vec3 0 0 1.0
 
@@ -748,25 +782,16 @@ makeHeroCamera canvasDim earth hero camera =
                 )
                 locAz
 
-        cameraTransformation =
-            List.foldl
-                Mat4.mul
-                Mat4.identity
-                [ Mat4.translate (vec3 0 hero.altitude 0) Mat4.identity
-                , rotateAround
-                , Mat4.translate earthLoc Mat4.identity
-                ]
+        cameraLoc = 
+            locElv |>
+            Mat4.transform (Quaternion.toMatrix orientationQuat) |>
+            Vec3.add (Vec3.scale hero.altitude hero.location) |>
+            Mat4.transform (Mat4.makeRotate ((earthTiltAngle / 180) * pi) (vec3 0 0 1)) |>
+            Mat4.transform earthRotationRotation |>
+            Vec3.add earthLoc
 
-        cameraLocation =
-            Mat4.transform cameraTransformation locElv
-
-        -- And finally the up direction.
-        up =
-            Mat4.transform rotateAround Vec3.j
     in
-    Mat4.makeLookAt cameraLocation
-        targetLocation
-        up
+        Mat4.makeLookAt cameraLoc targetLoc up
 
 
 meshPositionMap : (Vec3 -> Vec3) -> MeshList -> MeshList
