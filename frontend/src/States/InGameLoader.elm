@@ -340,7 +340,7 @@ update msg values =
                 envColor =
                     vec3 results.envelope.envelopeR results.envelope.envelopeG results.envelope.envelopeB
 
-                location = 
+                location =
                     Vec3.normalize (vec3 1 0 0)
 
                 orientation =

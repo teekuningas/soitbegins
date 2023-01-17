@@ -75,7 +75,7 @@ type alias Hero =
     , moveSpeed : Float
     , moveDirection : Vec3
     , orientation : Vec3
-    , location : Vec3 
+    , location : Vec3
     , rotationTheta : Float
     , power : Float
     , envColor : Vec3

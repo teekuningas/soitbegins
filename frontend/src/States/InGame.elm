@@ -7,14 +7,13 @@ import Communication.Types exposing (Connection, User)
 import HUD.Controller
 import HUD.Page exposing (embedInCanvas)
 import HUD.Types exposing (Canvas, CanvasDimensions, RenderData)
-import Math.Matrix4 as Mat4 exposing (Mat4)
-import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import Html exposing (Html, div, span, text)
 import Html.Attributes exposing (class, id)
 import Html.Events exposing (onMouseDown)
 import Html.Events.Extra.Mouse as Mouse
 import Html.Events.Extra.Touch as Touch
 import List
+import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 import Platform.Cmd
 import Platform.Sub
@@ -129,12 +128,11 @@ view data user canvas world connection =
             else
                 []
 
-        entity = 
-            WebGL.entityWith 
+        entity =
+            WebGL.entityWith
                 [ WebGL.Settings.DepthTest.default
                 , WebGL.Settings.cullFace WebGL.Settings.back
                 ]
-           
     in
     embedInCanvas
         containerAttrs

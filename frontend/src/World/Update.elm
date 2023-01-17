@@ -2,10 +2,9 @@ module World.Update exposing (updateWorld)
 
 import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
-
-import World.Types exposing (Earth, World)
-import World.Quaternion as Quaternion exposing (Quaternion(..))
 import World.LinearAlgebra as LinearAlgebra
+import World.Quaternion as Quaternion exposing (Quaternion(..))
+import World.Types exposing (Earth, World)
 
 
 interpolate : Float -> Float -> Float -> Float -> Float
@@ -94,62 +93,52 @@ updateWorld serverUpdateInterval elapsed previousElapsed msgEarth previousEarthA
                 )
 
         -- Compute new location
-
         tiltQuat =
-            (Quaternion.vecToVec
-             (vec3 0 1 0)
-             (hero.location)
-            )
+            Quaternion.vecToVec
+                (vec3 0 1 0)
+                hero.location
 
         aroundQuat =
-             (Quaternion.vecToVec
-              (Quaternion.transform tiltQuat (vec3 0 0 1))
-              (hero.orientation)
-             )
+            Quaternion.vecToVec
+                (Quaternion.transform tiltQuat (vec3 0 0 1))
+                hero.orientation
 
-        orientationQuat = Quaternion.product aroundQuat tiltQuat
+        orientationQuat =
+            Quaternion.product aroundQuat tiltQuat
 
         heroLoc =
-            (vec3 0 0 0) |>
-            Quaternion.transform orientationQuat |>
-            Vec3.add hero.location
+            vec3 0 0 0
+                |> Quaternion.transform orientationQuat
+                |> Vec3.add hero.location
 
         targetLoc =
-            hero.moveDirection |>
-            Vec3.scale (1/1000) |>
-            Quaternion.transform orientationQuat |>
-            Vec3.add hero.location
+            hero.moveDirection
+                |> Vec3.scale (1 / 1000)
+                |> Quaternion.transform orientationQuat
+                |> Vec3.add hero.location
 
-        distance = 
+        distance =
             Vec3.scale (timeInBetween * hero.moveSpeed) (Vec3.sub targetLoc heroLoc)
 
         newLocation =
             Vec3.normalize (Vec3.add heroLoc distance)
 
         -- Compute new orientation
-
-        (span1, span2) = 
+        ( span1, span2 ) =
             LinearAlgebra.findOrthogonalSpan newLocation
 
         newOrientation =
-
             -- Start with previous orientation
-
-            hero.orientation |>
- 
-            -- Make exactly same rotation as with the location
- 
-            Quaternion.transform (Quaternion.vecToVec hero.location newLocation) |>
-
-            -- To compensate for numerical inaccuracies,
-            -- project to plane perpendicular to new location
-            -- vector
-      
-            LinearAlgebra.projOntoPlane span1 span2 |>
-            Vec3.normalize
+            hero.orientation
+                |> -- Make exactly same rotation as with the location
+                   Quaternion.transform (Quaternion.vecToVec hero.location newLocation)
+                |> -- To compensate for numerical inaccuracies,
+                   -- project to plane perpendicular to new location
+                   -- vector
+                   LinearAlgebra.projOntoPlane span1 span2
+                |> Vec3.normalize
 
         -- Wiggling parameter
-
         newRotationTheta =
             sin (elapsed / 1000) / 20
 
@@ -163,4 +152,3 @@ updateWorld serverUpdateInterval elapsed previousElapsed msgEarth previousEarthA
             }
     in
     { world | hero = newHero, earth = newEarth }
-
