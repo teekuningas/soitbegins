@@ -1,6 +1,5 @@
 module World.LinearAlgebra exposing (findOrthogonalSpan, projOntoPlane)
 
-import Math.Matrix4 as Mat4 exposing (Mat4)
 import Math.Vector3 as Vec3 exposing (Vec3, vec3)
 
 
@@ -20,7 +19,7 @@ findOrthogonalSpanZ vec =
         b3 = 
             1
     in
-        (Vec3.normalize (vec3 1 0 -b1), Vec3.normalize (vec3 0 1 -b2))
+        ((vec3 1 0 -b1), (vec3 0 1 -b2))
 
 findOrthogonalSpanY : Vec3 -> (Vec3, Vec3)
 findOrthogonalSpanY vec =
@@ -38,7 +37,7 @@ findOrthogonalSpanY vec =
         b3 = 
             a3/a2
     in
-        (Vec3.normalize (vec3 1 -b1 0), Vec3.normalize (vec3 0 -b3 1))
+        ((vec3 1 -b1 0), (vec3 0 -b3 1))
 
 findOrthogonalSpanX : Vec3 -> (Vec3, Vec3)
 findOrthogonalSpanX vec =
@@ -56,7 +55,7 @@ findOrthogonalSpanX vec =
         b3 = 
             a3/a1
     in
-        (Vec3.normalize (vec3 -b2 1 0), Vec3.normalize (vec3 -b3 0 1))
+        ((vec3 -b2 1 0), (vec3 -b3 0 1))
 
 
 findOrthogonalSpan : Vec3 -> (Vec3, Vec3)
@@ -70,10 +69,11 @@ findOrthogonalSpan vec =
             Vec3.getY vecNorm
         z =
             Vec3.getZ vecNorm
+
      in 
-        if (z > 0.1) then
+        if ((abs z) > 0.1) then
             findOrthogonalSpanZ vecNorm
-        else if (y > 0.1) then
+        else if ((abs y) > 0.1) then
             findOrthogonalSpanY vecNorm
         else
             findOrthogonalSpanX vecNorm
@@ -81,7 +81,16 @@ findOrthogonalSpan vec =
 
 projOntoPlane : Vec3 -> Vec3 -> Vec3 -> Vec3
 projOntoPlane u1 u2 y =
-    Vec3.add
-        (Vec3.scale (Vec3.dot y u1) u1)
-        (Vec3.scale (Vec3.dot y u2) u2)
+    let
+        w1 = 
+            Vec3.normalize u1
+        w2 = 
+            Vec3.normalize (Vec3.cross (Vec3.cross u1 u2) u1)
+
+        projected = 
+            Vec3.add
+                (Vec3.scale (Vec3.dot y w1) w1)
+                (Vec3.scale (Vec3.dot y w2) w2)
+    in
+        projected
 

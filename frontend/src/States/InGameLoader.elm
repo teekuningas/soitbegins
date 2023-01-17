@@ -131,12 +131,9 @@ update msg values =
                     values.preparing
 
                 msgEarth =
-                       { rotationAroundSun = 0
-                       , rotationAroundAxis = 0
-                       }
-                    -- { rotationAroundSun = message.earth.rotationAroundSun
-                    -- , rotationAroundAxis = message.earth.rotationAroundAxis
-                    -- }
+                    { rotationAroundSun = message.earth.rotationAroundSun
+                    , rotationAroundAxis = message.earth.rotationAroundAxis
+                    }
             in
             case preparing.connection of
                 Just preparingConnection ->
@@ -343,12 +340,18 @@ update msg values =
                 envColor =
                     vec3 results.envelope.envelopeR results.envelope.envelopeG results.envelope.envelopeB
 
+                location = 
+                    Vec3.normalize (vec3 1 0 0)
+
+                orientation =
+                    Vec3.normalize (vec3 0 -1 0)
+
                 hero =
                     { altitude = 102
                     , moveSpeed = 0.05
-                    , moveDirection = (vec3 0 0 -0.001)
-                    , orientation = Vec3.normalize (Vec3.cross (vec3 -1 0 0) (vec3 0 -1 0))
-                    , location = Vec3.normalize (vec3 1 0 0)
+                    , moveDirection = Vec3.normalize (vec3 1 0 -1)
+                    , orientation = orientation
+                    , location = location
                     , rotationTheta = 0
                     , power = 1
                     , envColor = envColor

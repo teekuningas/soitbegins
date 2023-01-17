@@ -83,17 +83,17 @@ updateWorld serverUpdateInterval elapsed previousElapsed msgEarth previousEarthA
                 )
 
         newAltitudeChange =
-            (newPower - 1) / 1000
+            (newPower - 1) / 500
 
         newAltitude =
             max 101
-                (min 110
+                (min 200
                     (hero.altitude
                         + (timeInBetween * newAltitudeChange)
                     )
                 )
 
-        -- Compute movement
+        -- Compute new location
 
         tiltQuat =
             (Quaternion.vecToVec
@@ -116,6 +116,7 @@ updateWorld serverUpdateInterval elapsed previousElapsed msgEarth previousEarthA
 
         targetLoc =
             hero.moveDirection |>
+            Vec3.scale (1/1000) |>
             Quaternion.transform orientationQuat |>
             Vec3.add hero.location
 
@@ -125,19 +126,29 @@ updateWorld serverUpdateInterval elapsed previousElapsed msgEarth previousEarthA
         newLocation =
             Vec3.normalize (Vec3.add heroLoc distance)
 
+        -- Compute new orientation
+
         (span1, span2) = 
             LinearAlgebra.findOrthogonalSpan newLocation
 
         newOrientation =
+
+            -- Start with previous orientation
+
             hero.orientation |>
-            -- Vec3.add hero.location |>
+ 
+            -- Make exactly same rotation as with the location
+ 
             Quaternion.transform (Quaternion.vecToVec hero.location newLocation) |>
-            -- (\x -> Vec3.sub x newLocation) |>
-            Vec3.normalize |>
-            LinearAlgebra.projOntoPlane span1 span2 
-            
-        test2 = Debug.log ("newLocation: " ++ (Debug.toString newLocation)) 0
-        test4 = Debug.log ("newOrientation: " ++ (Debug.toString newOrientation)) 0
+
+            -- To compensate for numerical inaccuracies,
+            -- project to plane perpendicular to new location
+            -- vector
+      
+            LinearAlgebra.projOntoPlane span1 span2 |>
+            Vec3.normalize
+
+        -- Wiggling parameter
 
         newRotationTheta =
             sin (elapsed / 1000) / 20

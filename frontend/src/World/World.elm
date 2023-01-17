@@ -23,7 +23,7 @@ import World.Quaternion as Quaternion exposing (Quaternion(..))
 
 
 earthTiltAngle : Float
-earthTiltAngle = 0
+earthTiltAngle = 23.5
 
 
 generalUnif : Bool -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
@@ -37,7 +37,8 @@ generalUnif overviewToggle canvasDim earth hero camera =
             if overviewToggle == True then
                 Mat4.makePerspective 45 aspect 0.1 10000
             else
-                Mat4.makePerspective 20 aspect 0.1 100
+                -- Mat4.makePerspective 20 aspect 0.1 1000
+                Mat4.makePerspective 20 aspect 0.1 1000
 
 
         cameraMat =
@@ -759,6 +760,7 @@ makeHeroCamera canvasDim earth hero camera =
             Mat4.transform (Mat4.makeRotate ((earthTiltAngle / 180) * pi) (vec3 0 0 1)) |>
             Mat4.transform earthRotationRotation |>
             Vec3.add earthLoc
+
 
         -- Find out the camera location. Sits behind the hero.
         -- Also apply the user controlled parameters azimoth and elevation.

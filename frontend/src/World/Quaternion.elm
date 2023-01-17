@@ -70,9 +70,11 @@ getScalar q =
 
 vecToVec : Vec3 -> Vec3 -> Quaternion
 vecToVec v1 v2 =
-    if (Vec3.dot v1 v2) >= 0.999999 then
+    -- try to balance between numerical problems 
+    -- and accuracy
+    if (Vec3.dot v1 v2) >= 0.99999999999 then
         identity
-    else if (Vec3.dot v1 v2) <= -0.999999 then
+    else if (Vec3.dot v1 v2) <= -0.99999999999 then
         let
             helperVec =
                 (vec3 0.3 0.7 0.1)
