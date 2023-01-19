@@ -42,23 +42,24 @@ def process_incoming(incoming):
 # run exactly once for each incoming socket connection
 async def socket_fun(websocket, path):
 
-    # receive a message
-    incoming = await websocket.recv()
+    while True:
+        # receive a message
+        incoming = await websocket.recv()
 
-    print("Received: ")
-    pprint(incoming)
+        print("Received: ")
+        pprint(incoming)
 
-    # update the state with incoming messages
-    msgdict = process_incoming(incoming)
+        # update the state with incoming messages
+        msgdict = process_incoming(incoming)
 
-    # convert to json
-    message = json.dumps(msgdict)
+        # convert to json
+        message = json.dumps(msgdict)
 
-    # send the state to the client
-    await websocket.send(message)
+        # send the state to the client
+        await websocket.send(message)
 
-    print("Sending: ")
-    pprint(message)
+        print("Sending: ")
+        pprint(message)
 
 
 # when the script is run

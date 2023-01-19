@@ -74,26 +74,25 @@ objFile.then(obj => {
 
 // To decouple player logic from world logic,
 // we update the world parameters here outside of elm realm.
-const intervalID = window.setInterval(myCallback, serverUpdateInterval);
 
-var oldTime = Date.now();
+const socket = new WebSocket(serverApi); 
+
+socket.addEventListener('message', function (event) {
+  const data = JSON.parse(event.data); 
+  app.ports.messageReceiver.send(JSON.stringify(data));
+});
+
+socket.addEventListener('error', function (event) {
+  const data = { "status": "fail" };
+  app.ports.messageReceiver.send(JSON.stringify(data));
+  socket.close();
+});
+
 function myCallback() {
-  let newTime = Date.now(); 
-  let elapsed = newTime - oldTime;
-
-  const socket = new WebSocket(serverApi); 
-  socket.addEventListener('open', function (event) {
-      socket.send('{}');
-  });
-  socket.addEventListener('message', function (event) {
-    const data = JSON.parse(event.data); 
-    app.ports.messageReceiver.send(JSON.stringify(data));
-    socket.close();
-  });
-  socket.addEventListener('error', function (event) {
-    const data = { "status": "fail" };
-    app.ports.messageReceiver.send(JSON.stringify(data));
-    socket.close();
-  });
+  if (socket.readyState !== WebSocket.CLOSED) {
+    socket.send('{}');
+  }
 }
+
+const intervalID = window.setInterval(myCallback, serverUpdateInterval);
 
