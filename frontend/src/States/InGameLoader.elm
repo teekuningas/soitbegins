@@ -347,9 +347,9 @@ update msg values =
                     Vec3.normalize (vec3 0 -1 0)
 
                 hero =
-                    { altitude = 102
-                    , moveSpeed = 0.05
-                    , moveDirection = Vec3.normalize (vec3 1 0 -1)
+                    { altitude = 105
+                    , moveSpeed = 0.01
+                    , moveDirection = Vec3.normalize (vec3 0 0 -1)
                     , orientation = orientation
                     , location = location
                     , rotationTheta = 0

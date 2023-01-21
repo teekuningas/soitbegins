@@ -74,8 +74,8 @@ updateWorld serverUpdateInterval elapsed previousElapsed msgEarth previousEarthA
                 0
 
         newPower =
-            max 0
-                (min 2
+            max 0.5
+                (min 1.5
                     (hero.power
                         + (timeInBetween * newPowerChange)
                     )
@@ -85,8 +85,8 @@ updateWorld serverUpdateInterval elapsed previousElapsed msgEarth previousEarthA
             (newPower - 1) / 500
 
         newAltitude =
-            max 101
-                (min 200
+            max 105
+                (min 150
                     (hero.altitude
                         + (timeInBetween * newAltitudeChange)
                     )

@@ -150,33 +150,36 @@ view data user canvas world connection =
         [ entity
             World.vertexShader
             World.fragmentShader
-            (World.heroMesh hero.envColor)
-            (World.heroUnif overviewToggle canvasDim earth hero camera)
+            -- This induces heroMesh to be constructed on every frame
+            -- so coloring must go through uniforms instead
+            -- (World.heroMesh hero.envColor)
+            (World.heroMesh)
+            (World.heroUnif overviewToggle 100 canvasDim earth hero camera)
         , entity
             World.vertexShader
             World.fragmentShader
             World.fireMesh
-            (World.fireUnif overviewToggle canvasDim earth hero camera)
-        , entity
-            World.vertexShader
-            World.fragmentShader
-            World.localCoordinateMesh
-            (World.localCoordinateUnif overviewToggle canvasDim earth hero camera)
+            (World.fireUnif overviewToggle 100 canvasDim earth hero camera)
+        -- , entity
+        --     World.vertexShader
+        --     World.fragmentShader
+        --     World.localCoordinateMesh
+        --     (World.localCoordinateUnif overviewToggle 100 canvasDim earth hero camera)
         , entity
             World.vertexShader
             World.fragmentShader
             earthMesh
-            (World.earthUnif overviewToggle canvasDim earth hero camera)
+            (World.earthUnif overviewToggle 1000 canvasDim earth hero camera)
         , entity
             World.vertexShader
             World.fragmentShader
             World.axisMesh
-            (World.axisUnif overviewToggle canvasDim earth hero camera)
+            (World.axisUnif overviewToggle 10000 canvasDim earth hero camera)
         , entity
             World.vertexShader
             World.fragmentShader
             World.sunMesh
-            (World.sunUnif overviewToggle canvasDim earth hero camera)
+            (World.sunUnif overviewToggle 10000 canvasDim earth hero camera)
         , entity
             HUD.Controller.vertexShader
             HUD.Controller.fragmentShader

@@ -27,8 +27,8 @@ earthTiltAngle =
     23.5
 
 
-generalUnif : Bool -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
-generalUnif overviewToggle canvasDim earth hero camera =
+generalUnif : Bool -> Float -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
+generalUnif overviewToggle depth canvasDim earth hero camera =
     let
         aspect =
             toFloat canvasDim.width
@@ -39,8 +39,7 @@ generalUnif overviewToggle canvasDim earth hero camera =
                 Mat4.makePerspective 45 aspect 0.1 10000
 
             else
-                -- Mat4.makePerspective 20 aspect 0.1 1000
-                Mat4.makePerspective 20 aspect 0.1 1000
+                Mat4.makePerspective 20 aspect 0.1 depth
 
         cameraMat =
             if overviewToggle == True then
@@ -75,11 +74,11 @@ generalUnif overviewToggle canvasDim earth hero camera =
     }
 
 
-sunUnif : Bool -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
-sunUnif overviewToggle canvasDim earth hero camera =
+sunUnif : Bool -> Float -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
+sunUnif overviewToggle depth canvasDim earth hero camera =
     let
         unif =
-            generalUnif overviewToggle canvasDim earth hero camera
+            generalUnif overviewToggle depth canvasDim earth hero camera
 
         -- Sun lies at the origin but is scaled
         scale =
@@ -88,11 +87,11 @@ sunUnif overviewToggle canvasDim earth hero camera =
     { unif | scale = scale }
 
 
-earthUnif : Bool -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
-earthUnif overviewToggle canvasDim earth hero camera =
+earthUnif : Bool -> Float -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
+earthUnif overviewToggle depth canvasDim earth hero camera =
     let
         unif =
-            generalUnif overviewToggle canvasDim earth hero camera
+            generalUnif overviewToggle depth canvasDim earth hero camera
 
         -- The earth mesh comes in wrong position so fix here..
         preRotation =
@@ -137,33 +136,24 @@ earthUnif overviewToggle canvasDim earth hero camera =
     }
 
 
-axisUnif : Bool -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
-axisUnif overviewToggle canvasDim earth hero camera =
+axisUnif : Bool -> Float -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
+axisUnif overviewToggle depth canvasDim earth hero camera =
     let
         unif =
-            earthUnif overviewToggle canvasDim earth hero camera
+            earthUnif overviewToggle depth canvasDim earth hero camera
     in
     { unif | preRotation = Mat4.identity }
 
 
-heroUnif : Bool -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
-heroUnif overviewToggle canvasDim earth hero camera =
+heroUnif : Bool -> Float -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
+heroUnif overviewToggle depth canvasDim earth hero camera =
     let
         unif =
-            generalUnif overviewToggle canvasDim earth hero camera
+            generalUnif overviewToggle depth canvasDim earth hero camera
 
         -- Hero size
         preScale =
             Mat4.scale (vec3 0.01 0.01 0.01) Mat4.identity
-
-        -- Hero wiggling
-        preRotation =
-            List.foldl
-                Mat4.mul
-                Mat4.identity
-                [ Mat4.makeRotate (2 * hero.rotationTheta) (vec3 1 0 0)
-                , Mat4.makeRotate (3 * hero.rotationTheta) (vec3 0 1 0)
-                ]
 
         -- Use quaternions to figure out orientation
         tiltQuat =
@@ -180,7 +170,10 @@ heroUnif overviewToggle canvasDim earth hero camera =
             Quaternion.product aroundQuat tiltQuat
 
         rotation =
-            Quaternion.toMatrix orientationQuat
+            Mat4.identity
+                |> Mat4.mul (Mat4.makeRotate (2 * hero.rotationTheta) (vec3 1 0 0))
+                |> Mat4.mul (Mat4.makeRotate (3 * hero.rotationTheta) (vec3 0 1 0))
+                |> Mat4.mul (Quaternion.toMatrix orientationQuat)
 
         -- Translate hero to correct position in the earth space
         translation =
@@ -223,7 +216,6 @@ heroUnif overviewToggle canvasDim earth hero camera =
     in
     { unif
         | preScale = preScale
-        , preRotation = preRotation
         , rotation = rotation
         , translation = translation
         , postRotation = postRotation
@@ -231,22 +223,22 @@ heroUnif overviewToggle canvasDim earth hero camera =
     }
 
 
-localCoordinateUnif : Bool -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
-localCoordinateUnif overviewToggle canvasDim earth hero camera =
+localCoordinateUnif : Bool -> Float -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
+localCoordinateUnif overviewToggle depth canvasDim earth hero camera =
     let
         unif =
-            heroUnif overviewToggle canvasDim earth hero camera
+            heroUnif overviewToggle depth canvasDim earth hero camera
     in
     { unif
         | preRotation = Mat4.identity
     }
 
 
-fireUnif : Bool -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
-fireUnif overviewToggle canvasDim earth hero camera =
+fireUnif : Bool -> Float -> CanvasDimensions -> Earth -> Hero -> Camera -> Uniforms
+fireUnif overviewToggle depth canvasDim earth hero camera =
     let
         unif =
-            heroUnif overviewToggle canvasDim earth hero camera
+            heroUnif overviewToggle depth canvasDim earth hero camera
 
         -- The power source fire is approximately where the hero origin is
         -- but we move and scale it in the hero space to the exact
@@ -265,11 +257,11 @@ fireUnif overviewToggle canvasDim earth hero camera =
                 ]
 
         preTranslation =
-            Mat4.translate (vec3 0 0.019 0) Mat4.identity
+            Mat4.translate (vec3 0 0.025 0) Mat4.identity
     in
     { unif
-        | preScale = preScale
-        , preTranslation = preTranslation
+      | preTranslation = preTranslation
+      , preScale = preScale
     }
 
 
@@ -281,22 +273,46 @@ axisMesh =
 
         -- red
     in
-    [ meshPositionMap (Vec3.add (vec3 0 1.25 0))
-        (meshPositionMap (Vec3.scale 0.05) (icosaMeshList axisColor))
+    [ meshPositionMap (Vec3.add (vec3 0 1.1 0))
+        (meshPositionMap (Vec3.scale 0.03) (icosaMeshList axisColor))
+    , meshPositionMap (Vec3.add (vec3 0 1.2 0))
+        (meshPositionMap (Vec3.scale 0.03) (icosaMeshList axisColor))
+    , meshPositionMap (Vec3.add (vec3 0 1.3 0))
+        (meshPositionMap (Vec3.scale 0.03) (icosaMeshList axisColor))
+    , meshPositionMap (Vec3.add (vec3 0 1.4 0))
+        (meshPositionMap (Vec3.scale 0.03) (icosaMeshList axisColor))
     , meshPositionMap (Vec3.add (vec3 0 1.5 0))
-        (meshPositionMap (Vec3.scale 0.05) (icosaMeshList axisColor))
-    , meshPositionMap (Vec3.add (vec3 0 1.75 0))
-        (meshPositionMap (Vec3.scale 0.05) (icosaMeshList axisColor))
+        (meshPositionMap (Vec3.scale 0.03) (icosaMeshList axisColor))
+    , meshPositionMap (Vec3.add (vec3 0 1.6 0))
+        (meshPositionMap (Vec3.scale 0.03) (icosaMeshList axisColor))
+    , meshPositionMap (Vec3.add (vec3 0 1.7 0))
+        (meshPositionMap (Vec3.scale 0.03) (icosaMeshList axisColor))
+    , meshPositionMap (Vec3.add (vec3 0 1.8 0))
+        (meshPositionMap (Vec3.scale 0.03) (icosaMeshList axisColor))
+    , meshPositionMap (Vec3.add (vec3 0 1.9 0))
+        (meshPositionMap (Vec3.scale 0.03) (icosaMeshList axisColor))
     , meshPositionMap (Vec3.add (vec3 0 2.0 0))
-        (meshPositionMap (Vec3.scale 0.05) (icosaMeshList axisColor))
-    , meshPositionMap (Vec3.add (vec3 0 -1.25 0))
-        (meshPositionMap (Vec3.scale 0.05) (icosaMeshList axisColor))
+        (meshPositionMap (Vec3.scale 0.03) (icosaMeshList axisColor))
+    , meshPositionMap (Vec3.add (vec3 0 -1.1 0))
+        (meshPositionMap (Vec3.scale 0.03) (icosaMeshList axisColor))
+    , meshPositionMap (Vec3.add (vec3 0 -1.2 0))
+        (meshPositionMap (Vec3.scale 0.03) (icosaMeshList axisColor))
+    , meshPositionMap (Vec3.add (vec3 0 -1.3 0))
+        (meshPositionMap (Vec3.scale 0.03) (icosaMeshList axisColor))
+    , meshPositionMap (Vec3.add (vec3 0 -1.4 0))
+        (meshPositionMap (Vec3.scale 0.03) (icosaMeshList axisColor))
     , meshPositionMap (Vec3.add (vec3 0 -1.5 0))
-        (meshPositionMap (Vec3.scale 0.05) (icosaMeshList axisColor))
-    , meshPositionMap (Vec3.add (vec3 0 -1.75 0))
-        (meshPositionMap (Vec3.scale 0.05) (icosaMeshList axisColor))
+        (meshPositionMap (Vec3.scale 0.03) (icosaMeshList axisColor))
+    , meshPositionMap (Vec3.add (vec3 0 -1.6 0))
+        (meshPositionMap (Vec3.scale 0.03) (icosaMeshList axisColor))
+    , meshPositionMap (Vec3.add (vec3 0 -1.7 0))
+        (meshPositionMap (Vec3.scale 0.03) (icosaMeshList axisColor))
+    , meshPositionMap (Vec3.add (vec3 0 -1.8 0))
+        (meshPositionMap (Vec3.scale 0.03) (icosaMeshList axisColor))
+    , meshPositionMap (Vec3.add (vec3 0 -1.9 0))
+        (meshPositionMap (Vec3.scale 0.03) (icosaMeshList axisColor))
     , meshPositionMap (Vec3.add (vec3 0 -2.0 0))
-        (meshPositionMap (Vec3.scale 0.05) (icosaMeshList axisColor))
+        (meshPositionMap (Vec3.scale 0.03) (icosaMeshList axisColor))
     ]
         |> List.concat
         |> WebGL.triangles
@@ -322,7 +338,6 @@ fireMesh =
         fireColor =
             Vec3.scale (1 / 255) (vec3 245 121 0)
 
-        -- orange
     in
     [ icosaMeshList fireColor
     ]
@@ -330,18 +345,11 @@ fireMesh =
         |> WebGL.triangles
 
 
-heroMesh : Vec3 -> Mesh Vertex
-heroMesh envelopeColor =
-    let
-        basketColor =
-            Vec3.scale (1 / 255) (vec3 133 87 35)
-
-        burnerColor =
-            Vec3.scale (1 / 255) (vec3 113 121 126)
-    in
-    [ basketMeshList basketColor
-    , envelopeMeshList envelopeColor
-    , burnerMeshList burnerColor
+heroMesh : Mesh Vertex
+heroMesh =
+    [ basketMeshList
+    , envelopeMeshList
+    , burnerMeshList
     ]
         |> List.concat
         |> WebGL.triangles
@@ -388,9 +396,270 @@ localCoordinateMeshList =
     [ bgMeshList, fgMeshList ] |> List.concat
 
 
-burnerMeshList : Vec3 -> MeshList
-burnerMeshList color =
+burnerMeshList : MeshList
+burnerMeshList =
     let
+        bottomColor =
+            Vec3.scale (1 / 255) (vec3 113 121 126)
+
+        middleColor =
+            Vec3.scale (1 / 255) (vec3 30 30 30)
+
+        topColor =
+            Vec3.scale (1 / 255) (vec3 200 200 200)
+
+        frontRightBottom =
+            cubeMeshList bottomColor |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.1 1 0.1)) x) |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeTranslate (vec3 0 0.5 0)) x) |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeRotate 0.3 (vec3 -1 0 1)) x) |>
+            meshPositionMap (Vec3.add (vec3 1 0 1))
+
+        frontLeftBottom =
+            cubeMeshList bottomColor |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.1 1 0.1)) x) |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeTranslate (vec3 0 0.5 0)) x) |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeRotate 0.3 (vec3 -1 0 -1)) x) |>
+            meshPositionMap (Vec3.add (vec3 -1 0 1))
+
+        backLeftBottom =
+            cubeMeshList bottomColor |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.1 1 0.1)) x) |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeTranslate (vec3 0 0.5 0)) x) |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeRotate 0.3 (vec3 1 0 -1)) x) |>
+            meshPositionMap (Vec3.add (vec3 -1 0 -1))
+
+        backRightBottom =
+            cubeMeshList bottomColor |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.1 1 0.1)) x) |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeTranslate (vec3 0 0.5 0)) x) |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeRotate 0.3 (vec3 1 0 1)) x) |>
+            meshPositionMap (Vec3.add (vec3 1 0 -1))
+
+        middlePlate =
+            cubeMeshList middleColor |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.8 0.1 0.8)) x) |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeTranslate (vec3 0 1.5 0)) x)
+
+        middleBurner =
+            cubeMeshList middleColor |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.2 0.2 0.2)) x) |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeTranslate (vec3 0 1.7 0)) x)
+
+        frontRightTop =
+            cubeMeshList topColor |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.05 2 0.05)) x) |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeTranslate (vec3 0 3.5 0)) x) |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeRotate 0.05 (vec3 1 0 -1)) x) |>
+            meshPositionMap (Vec3.add (vec3 0.7 0 0.7))
+
+        frontLeftTop =
+            cubeMeshList topColor |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.05 2 0.05)) x) |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeTranslate (vec3 0 3.5 0)) x) |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeRotate 0.05 (vec3 1 0 1)) x) |>
+            meshPositionMap (Vec3.add (vec3 -0.7 0 0.7))
+
+        backLeftTop =
+            cubeMeshList topColor |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.05 2 0.05)) x) |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeTranslate (vec3 0 3.5 0)) x) |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeRotate 0.05 (vec3 -1 0 1)) x) |>
+            meshPositionMap (Vec3.add (vec3 -0.7 0 -0.7))
+
+        backRightTop =
+            cubeMeshList topColor |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.05 2 0.05)) x) |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeTranslate (vec3 0 3.5 0)) x) |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeRotate 0.05 (vec3 -1 0 -1)) x) |>
+            meshPositionMap (Vec3.add (vec3 0.7 0 -0.7))
+
+
+    in
+    ( List.concat 
+          [ frontRightBottom
+          , frontLeftBottom
+          , backLeftBottom
+          , backRightBottom
+          , middlePlate
+          , middleBurner
+          , frontRightTop
+          , frontLeftTop
+          , backLeftTop
+          , backRightTop
+          ] ) |> 
+    meshPositionMap (Vec3.add (vec3 0 0 0))
+
+
+envelopeMeshList : MeshList
+envelopeMeshList =
+    let 
+        envelopeColor = 
+            Vec3.scale (1 / 255) (vec3 160 221 100)
+
+        insideColor =
+            Vec3.scale (2/3) envelopeColor
+
+        insideSphere = 
+            icosaMeshList insideColor |>
+            subdivideProject insideColor |>
+            subdivideProject insideColor |>
+            subdivideProject insideColor |>
+            meshPositionMap (Vec3.scale (99/100)) |>
+            insideOut
+
+        outsideSphere =
+            icosaMeshList envelopeColor |>
+            subdivideProject envelopeColor |>
+            subdivideProject envelopeColor |>
+            subdivideProject envelopeColor
+
+        insideOut : MeshList -> MeshList
+        insideOut meshList = 
+            let 
+                firstElem = 
+                    List.head meshList
+            in
+            case firstElem of 
+                Nothing -> 
+                    []
+
+                Just triangle ->
+                     let
+                         updatedTriangle =
+                             case triangle of
+                                 (vert1, vert2, vert3) ->
+                                     [ (vert3, vert2, vert1) ]
+                     in
+                         List.append updatedTriangle (insideOut (List.drop 1 meshList)) 
+
+        transmogrifyEnvelope : MeshList -> MeshList
+        transmogrifyEnvelope meshList =
+            let 
+                firstElem = 
+                    List.head meshList
+            in
+            case firstElem of 
+                Nothing -> 
+                    []
+
+                Just triangle ->
+                    let
+                        scale : Vertex -> Vertex
+                        scale vert = 
+                            let 
+                                distance = 
+                                    sqrt ( (Vec3.getX vert.position) * (Vec3.getX vert.position) +
+                                           (Vec3.getZ vert.position) * (Vec3.getZ vert.position) )
+                                x = 
+                                    Vec3.getY vert.position
+                                y1 = 
+                                    ( 1 + cos ( pi * ( 1 + ( x + 1 ) / 2 ) ) ) / 2
+                                y2 = 
+                                    sqrt ( 1 - (( x + 1 ) / 2) * (( x + 1 ) / 2) )
+                                factor = 
+                                    if distance > 0.1 then
+                                        y1 * y2 / distance
+                                    else
+                                        distance
+                            in
+                            { color = vert.color
+                            , position = Mat4.transform (Mat4.makeScale (vec3 factor 1 factor)) vert.position
+                            }
+
+                        updatedTriangle =
+                            case triangle of
+                                (vert1, vert2, vert3) ->
+                                    if (List.any 
+                                            (\x -> Vec3.getY (x.position) > -0.75) 
+                                            [vert1, vert2, vert3]) 
+                                    then
+                                        [ (scale vert1, scale vert2, scale vert3) ]
+
+                                    else
+                                        []
+                    in
+                        List.append updatedTriangle (transmogrifyEnvelope (List.drop 1 meshList)) 
+
+    in
+    List.concat [ insideSphere, outsideSphere ] |>
+    transmogrifyEnvelope |>
+    meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 30 30 30)) x) |>
+    meshPositionMap (Vec3.add (vec3 0 28 0))
+
+
+basketMeshList : MeshList
+basketMeshList =
+    let
+        sidecolor =
+            Vec3.scale (1 / 255) (vec3 133 87 35)
+
+        edgecolor =
+            Vec3.scale (1 / 255) (vec3 20 20 20)
+
+        frontside =
+            cubeMeshList sidecolor |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 1 1 0.1)) x) |>
+            meshPositionMap (Vec3.add (vec3 0 0 1))
+
+        fronthandle =
+            cubeMeshList edgecolor |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 1 0.1 0.1)) x) |>
+            meshPositionMap (Vec3.add (vec3 0 1.1 1))
+
+        backside =
+            cubeMeshList sidecolor |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 1 1 0.1)) x) |>
+            meshPositionMap (Vec3.add (vec3 0 0 -1))
+
+        backhandle =
+            cubeMeshList edgecolor |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 1 0.1 0.1)) x) |>
+            meshPositionMap (Vec3.add (vec3 0 1.1 -1))
+
+        rightside =
+            cubeMeshList sidecolor |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.1 1 1)) x) |>
+            meshPositionMap (Vec3.add (vec3 1 0 0))
+
+        righthandle =
+            cubeMeshList edgecolor |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.1 0.1 1)) x) |>
+            meshPositionMap (Vec3.add (vec3 1 1.1 0))
+
+        leftside =
+            cubeMeshList sidecolor |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.1 1 1)) x) |>
+            meshPositionMap (Vec3.add (vec3 -1 0 0))
+
+        lefthandle =
+            cubeMeshList edgecolor |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.1 0.1 1)) x) |>
+            meshPositionMap (Vec3.add (vec3 -1 1.1 0))
+
+        bottom =
+            cubeMeshList sidecolor |>
+            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 1 0.1 1)) x) |>
+            meshPositionMap (Vec3.add (vec3 0 -1 0))
+
+    in
+    ( List.concat 
+          [ frontside
+          , fronthandle
+          , backside 
+          , backhandle
+          , rightside
+          , righthandle
+          , leftside 
+          , lefthandle
+          , bottom ] ) |> 
+    meshPositionMap (Vec3.add (vec3 0 -1.5 0))
+
+
+cubeMeshList : Vec3 -> MeshList
+cubeMeshList color =
+    let
+
         rft =
             vec3 1 1 1
 
@@ -424,61 +693,7 @@ burnerMeshList color =
             , face color rbt rbb lbb lbt
             ]
     in
-    meshList
-        |> List.concat
-        |> meshPositionMap (Vec3.scale 0.5)
-        |> meshPositionMap (Vec3.add (vec3 0 0.7 0))
-
-
-envelopeMeshList : Vec3 -> MeshList
-envelopeMeshList envelopeColor =
-    meshPositionMap
-        (Vec3.add (vec3 0 7.5 0))
-        (meshPositionMap
-            (Vec3.scale 5)
-            (subdivideProject envelopeColor (icosaMeshList envelopeColor))
-        )
-
-
-basketMeshList : Vec3 -> MeshList
-basketMeshList color =
-    let
-        rft =
-            vec3 1 1 1
-
-        lft =
-            vec3 -1 1 1
-
-        lbt =
-            vec3 -1 1 -1
-
-        rbt =
-            vec3 1 1 -1
-
-        rbb =
-            vec3 1 -1 -1
-
-        rfb =
-            vec3 1 -1 1
-
-        lfb =
-            vec3 -1 -1 1
-
-        lbb =
-            vec3 -1 -1 -1
-
-        meshList =
-            [ face color rft rfb rbb rbt
-            , face color lft lfb rfb rft
-            , face color rbt lbt lft rft
-            , face color rfb lfb lbb rbb
-            , face color lbt lbb lfb lft
-            , face color rbt rbb lbb lbt
-            ]
-    in
-    meshList
-        |> List.concat
-        |> meshPositionMap (Vec3.add (vec3 0 -1.5 0))
+    List.concat meshList
 
 
 face : Vec3 -> Vec3 -> Vec3 -> Vec3 -> Vec3 -> MeshList
@@ -505,40 +720,52 @@ icosaMeshList clr =
             1.0 / phi
 
         v1 =
-            Vertex (Vec3.add clr (vec3 0.0 0.0 0.0)) (Vec3.normalize (vec3 0 b -a))
+            -- Vertex (Vec3.add clr (vec3 0.0 0.0 0.0)) (Vec3.normalize (vec3 0 b -a))
+            Vertex clr (Vec3.normalize (vec3 0 b -a))
 
         v2 =
-            Vertex (Vec3.add clr (vec3 0.02 0.02 0.02)) (Vec3.normalize (vec3 b a 0))
+            -- Vertex (Vec3.add clr (vec3 0.02 0.02 0.02)) (Vec3.normalize (vec3 b a 0))
+            Vertex clr (Vec3.normalize (vec3 b a 0))
 
         v3 =
-            Vertex (Vec3.add clr (vec3 0.04 0.04 0.04)) (Vec3.normalize (vec3 -b a 0))
+            -- Vertex (Vec3.add clr (vec3 0.04 0.04 0.04)) (Vec3.normalize (vec3 -b a 0))
+            Vertex clr (Vec3.normalize (vec3 -b a 0))
 
         v4 =
-            Vertex (Vec3.add clr (vec3 0.06 0.06 0.06)) (Vec3.normalize (vec3 0 b a))
+            -- Vertex (Vec3.add clr (vec3 0.06 0.06 0.06)) (Vec3.normalize (vec3 0 b a))
+            Vertex clr (Vec3.normalize (vec3 0 b a))
 
         v5 =
-            Vertex (Vec3.add clr (vec3 0.08 0.08 0.08)) (Vec3.normalize (vec3 0 -b a))
+            -- Vertex (Vec3.add clr (vec3 0.08 0.08 0.08)) (Vec3.normalize (vec3 0 -b a))
+            Vertex clr (Vec3.normalize (vec3 0 -b a))
 
         v6 =
-            Vertex (Vec3.add clr (vec3 0.1 0.1 0.1)) (Vec3.normalize (vec3 -a 0 b))
+            -- Vertex (Vec3.add clr (vec3 0.1 0.1 0.1)) (Vec3.normalize (vec3 -a 0 b))
+            Vertex clr (Vec3.normalize (vec3 -a 0 b))
 
         v7 =
-            Vertex (Vec3.add clr (vec3 0.12 0.12 0.12)) (Vec3.normalize (vec3 0 -b -a))
+            -- Vertex (Vec3.add clr (vec3 0.12 0.12 0.12)) (Vec3.normalize (vec3 0 -b -a))
+            Vertex clr (Vec3.normalize (vec3 0 -b -a))
 
         v8 =
-            Vertex (Vec3.add clr (vec3 0.14 0.14 0.14)) (Vec3.normalize (vec3 a 0 -b))
+            -- Vertex (Vec3.add clr (vec3 0.14 0.14 0.14)) (Vec3.normalize (vec3 a 0 -b))
+            Vertex clr (Vec3.normalize (vec3 a 0 -b))
 
         v9 =
-            Vertex (Vec3.add clr (vec3 0.16 0.16 0.16)) (Vec3.normalize (vec3 a 0 b))
+            -- Vertex (Vec3.add clr (vec3 0.16 0.16 0.16)) (Vec3.normalize (vec3 a 0 b))
+            Vertex clr (Vec3.normalize (vec3 a 0 b))
 
         v10 =
-            Vertex (Vec3.add clr (vec3 0.18 0.18 0.18)) (Vec3.normalize (vec3 -a 0 -b))
+            -- Vertex (Vec3.add clr (vec3 0.18 0.18 0.18)) (Vec3.normalize (vec3 -a 0 -b))
+            Vertex clr (Vec3.normalize (vec3 -a 0 -b))
 
         v11 =
-            Vertex (Vec3.add clr (vec3 0.2 0.2 0.2)) (Vec3.normalize (vec3 b -a 0))
+            -- Vertex (Vec3.add clr (vec3 0.2 0.2 0.2)) (Vec3.normalize (vec3 b -a 0))
+            Vertex clr (Vec3.normalize (vec3 b -a 0))
 
         v12 =
-            Vertex (Vec3.add clr (vec3 0.22 0.22 0.22)) (Vec3.normalize (vec3 -b -a 0))
+            -- Vertex (Vec3.add clr (vec3 0.22 0.22 0.22)) (Vec3.normalize (vec3 -b -a 0))
+            Vertex clr (Vec3.normalize (vec3 -b -a 0))
     in
     [ ( v3, v2, v1 )
     , ( v2, v3, v4 )
@@ -750,7 +977,8 @@ makeHeroCamera canvasDim earth hero camera =
             camera.elevation
 
         locStart =
-            vec3 0 0 1.0
+            -- vec3 0 0 1.0
+            vec3 0 0 2.0
 
         locAz =
             Mat4.transform (Mat4.makeRotate azimoth (vec3 0 1 0)) locStart
