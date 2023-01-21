@@ -153,13 +153,14 @@ view data user canvas world connection =
             -- This induces heroMesh to be constructed on every frame
             -- so coloring must go through uniforms instead
             -- (World.heroMesh hero.envColor)
-            (World.heroMesh)
+            World.heroMesh
             (World.heroUnif overviewToggle 100 canvasDim earth hero camera)
         , entity
             World.vertexShader
             World.fragmentShader
             World.fireMesh
             (World.fireUnif overviewToggle 100 canvasDim earth hero camera)
+
         -- , entity
         --     World.vertexShader
         --     World.fragmentShader

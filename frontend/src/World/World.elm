@@ -260,8 +260,8 @@ fireUnif overviewToggle depth canvasDim earth hero camera =
             Mat4.translate (vec3 0 0.025 0) Mat4.identity
     in
     { unif
-      | preTranslation = preTranslation
-      , preScale = preScale
+        | preTranslation = preTranslation
+        , preScale = preScale
     }
 
 
@@ -337,7 +337,6 @@ fireMesh =
     let
         fireColor =
             Vec3.scale (1 / 255) (vec3 245 121 0)
-
     in
     [ icosaMeshList fireColor
     ]
@@ -409,157 +408,164 @@ burnerMeshList =
             Vec3.scale (1 / 255) (vec3 200 200 200)
 
         frontRightBottom =
-            cubeMeshList bottomColor |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.1 1 0.1)) x) |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeTranslate (vec3 0 0.5 0)) x) |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeRotate 0.3 (vec3 -1 0 1)) x) |>
-            meshPositionMap (Vec3.add (vec3 1 0 1))
+            cubeMeshList bottomColor
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.1 1 0.1)) x)
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeTranslate (vec3 0 0.5 0)) x)
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeRotate 0.3 (vec3 -1 0 1)) x)
+                |> meshPositionMap (Vec3.add (vec3 1 0 1))
 
         frontLeftBottom =
-            cubeMeshList bottomColor |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.1 1 0.1)) x) |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeTranslate (vec3 0 0.5 0)) x) |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeRotate 0.3 (vec3 -1 0 -1)) x) |>
-            meshPositionMap (Vec3.add (vec3 -1 0 1))
+            cubeMeshList bottomColor
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.1 1 0.1)) x)
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeTranslate (vec3 0 0.5 0)) x)
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeRotate 0.3 (vec3 -1 0 -1)) x)
+                |> meshPositionMap (Vec3.add (vec3 -1 0 1))
 
         backLeftBottom =
-            cubeMeshList bottomColor |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.1 1 0.1)) x) |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeTranslate (vec3 0 0.5 0)) x) |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeRotate 0.3 (vec3 1 0 -1)) x) |>
-            meshPositionMap (Vec3.add (vec3 -1 0 -1))
+            cubeMeshList bottomColor
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.1 1 0.1)) x)
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeTranslate (vec3 0 0.5 0)) x)
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeRotate 0.3 (vec3 1 0 -1)) x)
+                |> meshPositionMap (Vec3.add (vec3 -1 0 -1))
 
         backRightBottom =
-            cubeMeshList bottomColor |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.1 1 0.1)) x) |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeTranslate (vec3 0 0.5 0)) x) |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeRotate 0.3 (vec3 1 0 1)) x) |>
-            meshPositionMap (Vec3.add (vec3 1 0 -1))
+            cubeMeshList bottomColor
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.1 1 0.1)) x)
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeTranslate (vec3 0 0.5 0)) x)
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeRotate 0.3 (vec3 1 0 1)) x)
+                |> meshPositionMap (Vec3.add (vec3 1 0 -1))
 
         middlePlate =
-            cubeMeshList middleColor |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.8 0.1 0.8)) x) |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeTranslate (vec3 0 1.5 0)) x)
+            cubeMeshList middleColor
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.8 0.1 0.8)) x)
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeTranslate (vec3 0 1.5 0)) x)
 
         middleBurner =
-            cubeMeshList middleColor |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.2 0.2 0.2)) x) |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeTranslate (vec3 0 1.7 0)) x)
+            cubeMeshList middleColor
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.2 0.2 0.2)) x)
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeTranslate (vec3 0 1.7 0)) x)
 
         frontRightTop =
-            cubeMeshList topColor |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.05 2 0.05)) x) |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeTranslate (vec3 0 3.5 0)) x) |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeRotate 0.05 (vec3 1 0 -1)) x) |>
-            meshPositionMap (Vec3.add (vec3 0.7 0 0.7))
+            cubeMeshList topColor
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.05 2 0.05)) x)
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeTranslate (vec3 0 3.5 0)) x)
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeRotate 0.05 (vec3 1 0 -1)) x)
+                |> meshPositionMap (Vec3.add (vec3 0.7 0 0.7))
 
         frontLeftTop =
-            cubeMeshList topColor |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.05 2 0.05)) x) |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeTranslate (vec3 0 3.5 0)) x) |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeRotate 0.05 (vec3 1 0 1)) x) |>
-            meshPositionMap (Vec3.add (vec3 -0.7 0 0.7))
+            cubeMeshList topColor
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.05 2 0.05)) x)
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeTranslate (vec3 0 3.5 0)) x)
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeRotate 0.05 (vec3 1 0 1)) x)
+                |> meshPositionMap (Vec3.add (vec3 -0.7 0 0.7))
 
         backLeftTop =
-            cubeMeshList topColor |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.05 2 0.05)) x) |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeTranslate (vec3 0 3.5 0)) x) |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeRotate 0.05 (vec3 -1 0 1)) x) |>
-            meshPositionMap (Vec3.add (vec3 -0.7 0 -0.7))
+            cubeMeshList topColor
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.05 2 0.05)) x)
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeTranslate (vec3 0 3.5 0)) x)
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeRotate 0.05 (vec3 -1 0 1)) x)
+                |> meshPositionMap (Vec3.add (vec3 -0.7 0 -0.7))
 
         backRightTop =
-            cubeMeshList topColor |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.05 2 0.05)) x) |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeTranslate (vec3 0 3.5 0)) x) |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeRotate 0.05 (vec3 -1 0 -1)) x) |>
-            meshPositionMap (Vec3.add (vec3 0.7 0 -0.7))
-
-
+            cubeMeshList topColor
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.05 2 0.05)) x)
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeTranslate (vec3 0 3.5 0)) x)
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeRotate 0.05 (vec3 -1 0 -1)) x)
+                |> meshPositionMap (Vec3.add (vec3 0.7 0 -0.7))
     in
-    ( List.concat 
-          [ frontRightBottom
-          , frontLeftBottom
-          , backLeftBottom
-          , backRightBottom
-          , middlePlate
-          , middleBurner
-          , frontRightTop
-          , frontLeftTop
-          , backLeftTop
-          , backRightTop
-          ] ) |> 
-    meshPositionMap (Vec3.add (vec3 0 0 0))
+    List.concat
+        [ frontRightBottom
+        , frontLeftBottom
+        , backLeftBottom
+        , backRightBottom
+        , middlePlate
+        , middleBurner
+        , frontRightTop
+        , frontLeftTop
+        , backLeftTop
+        , backRightTop
+        ]
+        |> meshPositionMap (Vec3.add (vec3 0 0 0))
 
 
 envelopeMeshList : MeshList
 envelopeMeshList =
-    let 
-        envelopeColor = 
+    let
+        envelopeColor =
             Vec3.scale (1 / 255) (vec3 160 221 100)
 
         insideColor =
-            Vec3.scale (2/3) envelopeColor
+            Vec3.scale (2 / 3) envelopeColor
 
-        insideSphere = 
-            icosaMeshList insideColor |>
-            subdivideProject insideColor |>
-            subdivideProject insideColor |>
-            subdivideProject insideColor |>
-            meshPositionMap (Vec3.scale (99/100)) |>
-            insideOut
+        insideSphere =
+            icosaMeshList insideColor
+                |> subdivideProject insideColor
+                |> subdivideProject insideColor
+                |> subdivideProject insideColor
+                |> meshPositionMap (Vec3.scale (99 / 100))
+                |> insideOut
 
         outsideSphere =
-            icosaMeshList envelopeColor |>
-            subdivideProject envelopeColor |>
-            subdivideProject envelopeColor |>
-            subdivideProject envelopeColor
+            icosaMeshList envelopeColor
+                |> subdivideProject envelopeColor
+                |> subdivideProject envelopeColor
+                |> subdivideProject envelopeColor
 
         insideOut : MeshList -> MeshList
-        insideOut meshList = 
-            let 
-                firstElem = 
+        insideOut meshList =
+            let
+                firstElem =
                     List.head meshList
             in
-            case firstElem of 
-                Nothing -> 
+            case firstElem of
+                Nothing ->
                     []
 
                 Just triangle ->
-                     let
-                         updatedTriangle =
-                             case triangle of
-                                 (vert1, vert2, vert3) ->
-                                     [ (vert3, vert2, vert1) ]
-                     in
-                         List.append updatedTriangle (insideOut (List.drop 1 meshList)) 
+                    let
+                        updatedTriangle =
+                            case triangle of
+                                ( vert1, vert2, vert3 ) ->
+                                    [ ( vert3, vert2, vert1 ) ]
+                    in
+                    List.append updatedTriangle (insideOut (List.drop 1 meshList))
 
         transmogrifyEnvelope : MeshList -> MeshList
         transmogrifyEnvelope meshList =
-            let 
-                firstElem = 
+            let
+                firstElem =
                     List.head meshList
             in
-            case firstElem of 
-                Nothing -> 
+            case firstElem of
+                Nothing ->
                     []
 
                 Just triangle ->
                     let
                         scale : Vertex -> Vertex
-                        scale vert = 
-                            let 
-                                distance = 
-                                    sqrt ( (Vec3.getX vert.position) * (Vec3.getX vert.position) +
-                                           (Vec3.getZ vert.position) * (Vec3.getZ vert.position) )
-                                x = 
+                        scale vert =
+                            let
+                                distance =
+                                    sqrt
+                                        (Vec3.getX vert.position
+                                            * Vec3.getX vert.position
+                                            + Vec3.getZ vert.position
+                                            * Vec3.getZ vert.position
+                                        )
+
+                                x =
                                     Vec3.getY vert.position
-                                y1 = 
-                                    ( 1 + cos ( pi * ( 1 + ( x + 1 ) / 2 ) ) ) / 2
-                                y2 = 
-                                    sqrt ( 1 - (( x + 1 ) / 2) * (( x + 1 ) / 2) )
-                                factor = 
+
+                                y1 =
+                                    (1 + cos (pi * (1 + (x + 1) / 2))) / 2
+
+                                y2 =
+                                    sqrt (1 - ((x + 1) / 2) * ((x + 1) / 2))
+
+                                factor =
                                     if distance > 0.1 then
                                         y1 * y2 / distance
+
                                     else
                                         distance
                             in
@@ -569,23 +575,23 @@ envelopeMeshList =
 
                         updatedTriangle =
                             case triangle of
-                                (vert1, vert2, vert3) ->
-                                    if (List.any 
-                                            (\x -> Vec3.getY (x.position) > -0.75) 
-                                            [vert1, vert2, vert3]) 
+                                ( vert1, vert2, vert3 ) ->
+                                    if
+                                        List.any
+                                            (\x -> Vec3.getY x.position > -0.75)
+                                            [ vert1, vert2, vert3 ]
                                     then
-                                        [ (scale vert1, scale vert2, scale vert3) ]
+                                        [ ( scale vert1, scale vert2, scale vert3 ) ]
 
                                     else
                                         []
                     in
-                        List.append updatedTriangle (transmogrifyEnvelope (List.drop 1 meshList)) 
-
+                    List.append updatedTriangle (transmogrifyEnvelope (List.drop 1 meshList))
     in
-    List.concat [ insideSphere, outsideSphere ] |>
-    transmogrifyEnvelope |>
-    meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 30 30 30)) x) |>
-    meshPositionMap (Vec3.add (vec3 0 28 0))
+    List.concat [ insideSphere, outsideSphere ]
+        |> transmogrifyEnvelope
+        |> meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 30 30 30)) x)
+        |> meshPositionMap (Vec3.add (vec3 0 28 0))
 
 
 basketMeshList : MeshList
@@ -598,68 +604,67 @@ basketMeshList =
             Vec3.scale (1 / 255) (vec3 20 20 20)
 
         frontside =
-            cubeMeshList sidecolor |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 1 1 0.1)) x) |>
-            meshPositionMap (Vec3.add (vec3 0 0 1))
+            cubeMeshList sidecolor
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 1 1 0.1)) x)
+                |> meshPositionMap (Vec3.add (vec3 0 0 1))
 
         fronthandle =
-            cubeMeshList edgecolor |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 1 0.1 0.1)) x) |>
-            meshPositionMap (Vec3.add (vec3 0 1.1 1))
+            cubeMeshList edgecolor
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 1 0.1 0.1)) x)
+                |> meshPositionMap (Vec3.add (vec3 0 1.1 1))
 
         backside =
-            cubeMeshList sidecolor |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 1 1 0.1)) x) |>
-            meshPositionMap (Vec3.add (vec3 0 0 -1))
+            cubeMeshList sidecolor
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 1 1 0.1)) x)
+                |> meshPositionMap (Vec3.add (vec3 0 0 -1))
 
         backhandle =
-            cubeMeshList edgecolor |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 1 0.1 0.1)) x) |>
-            meshPositionMap (Vec3.add (vec3 0 1.1 -1))
+            cubeMeshList edgecolor
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 1 0.1 0.1)) x)
+                |> meshPositionMap (Vec3.add (vec3 0 1.1 -1))
 
         rightside =
-            cubeMeshList sidecolor |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.1 1 1)) x) |>
-            meshPositionMap (Vec3.add (vec3 1 0 0))
+            cubeMeshList sidecolor
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.1 1 1)) x)
+                |> meshPositionMap (Vec3.add (vec3 1 0 0))
 
         righthandle =
-            cubeMeshList edgecolor |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.1 0.1 1)) x) |>
-            meshPositionMap (Vec3.add (vec3 1 1.1 0))
+            cubeMeshList edgecolor
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.1 0.1 1)) x)
+                |> meshPositionMap (Vec3.add (vec3 1 1.1 0))
 
         leftside =
-            cubeMeshList sidecolor |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.1 1 1)) x) |>
-            meshPositionMap (Vec3.add (vec3 -1 0 0))
+            cubeMeshList sidecolor
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.1 1 1)) x)
+                |> meshPositionMap (Vec3.add (vec3 -1 0 0))
 
         lefthandle =
-            cubeMeshList edgecolor |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.1 0.1 1)) x) |>
-            meshPositionMap (Vec3.add (vec3 -1 1.1 0))
+            cubeMeshList edgecolor
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 0.1 0.1 1)) x)
+                |> meshPositionMap (Vec3.add (vec3 -1 1.1 0))
 
         bottom =
-            cubeMeshList sidecolor |>
-            meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 1 0.1 1)) x) |>
-            meshPositionMap (Vec3.add (vec3 0 -1 0))
-
+            cubeMeshList sidecolor
+                |> meshPositionMap (\x -> Mat4.transform (Mat4.makeScale (vec3 1 0.1 1)) x)
+                |> meshPositionMap (Vec3.add (vec3 0 -1 0))
     in
-    ( List.concat 
-          [ frontside
-          , fronthandle
-          , backside 
-          , backhandle
-          , rightside
-          , righthandle
-          , leftside 
-          , lefthandle
-          , bottom ] ) |> 
-    meshPositionMap (Vec3.add (vec3 0 -1.5 0))
+    List.concat
+        [ frontside
+        , fronthandle
+        , backside
+        , backhandle
+        , rightside
+        , righthandle
+        , leftside
+        , lefthandle
+        , bottom
+        ]
+        |> meshPositionMap (Vec3.add (vec3 0 -1.5 0))
 
 
 cubeMeshList : Vec3 -> MeshList
 cubeMeshList color =
     let
-
         rft =
             vec3 1 1 1
 
