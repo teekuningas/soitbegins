@@ -215,6 +215,7 @@ handleMove controller camera offsetPos =
                             - controller.previousOffset.x
                         )
                     * pi
+                    * (1 / 4)
                     / 180
 
             else
@@ -228,6 +229,7 @@ handleMove controller camera offsetPos =
                             - controller.previousOffset.y
                         )
                     * pi
+                    * (1 / 4)
                     / 180
 
             else
