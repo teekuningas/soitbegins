@@ -5,7 +5,7 @@ on:
     tags:
       - '*'
     branches:
-      - develop
+      - dockerize-release
 
 jobs:
   backend_build_and_publish:
