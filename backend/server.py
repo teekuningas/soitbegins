@@ -1,8 +1,10 @@
 import asyncio
+import datetime
 import json
+import os
+import sys
 import time
 import websockets
-import datetime
 
 from pprint import pprint
 
@@ -12,11 +14,7 @@ time_at_beginning = datetime.datetime.now().timestamp() * 1000
 
 
 # holds the game state
-state = {
-    'elapsed': 0,
-    'earth': {'rotationAroundSun': 0,
-              'rotationAroundAxis': 0}
-}
+state = {"elapsed": 0, "earth": {"rotationAroundSun": 0, "rotationAroundAxis": 0}}
 
 
 # updates the game state periodically
@@ -25,12 +23,13 @@ async def update():
         await asyncio.sleep(0.1)
 
         # update time
-        state['elapsed'] = (datetime.datetime.now().timestamp() * 1000 - 
-                            time_at_beginning)
+        state["elapsed"] = (
+            datetime.datetime.now().timestamp() * 1000 - time_at_beginning
+        )
 
         # update earth rotation
-        state['earth']['rotationAroundAxis'] = state['elapsed'] / 10000
-        state['earth']['rotationAroundSun'] = state['elapsed'] / 100000
+        state["earth"]["rotationAroundAxis"] = state["elapsed"] / 10000
+        state["earth"]["rotationAroundSun"] = state["elapsed"] / 100000
 
 
 # update game state with incoming messages
@@ -41,7 +40,6 @@ def process_incoming(incoming):
 
 # run exactly once for each incoming socket connection
 async def socket_fun(websocket, path):
-
     while True:
         # receive a message
         incoming = await websocket.recv()
@@ -61,17 +59,24 @@ async def socket_fun(websocket, path):
         print("Sending: ")
         pprint(message)
 
+        sys.stdout.flush()
+
 
 # when the script is run
-if __name__ == '__main__':
+if __name__ == "__main__":
+    address = (
+        os.environ["SERVER_ADDRESS"] if os.environ.get("SERVER_ADDRESS") else "0.0.0.0"
+    )
+
+    port = int(os.environ["SERVER_PORT"]) if os.environ.get("SERVER_PORT") else 8765
 
     # get event loop
     event_loop = asyncio.get_event_loop()
 
-    print("Starting server..")
+    print(f"Serving at {address}:{port}..", flush=True)
 
     # start the server
-    start_server = websockets.serve(socket_fun, 'localhost', 8765)
+    start_server = websockets.serve(socket_fun, address, port)
     event_loop.run_until_complete(start_server)
 
     # start a task that updates the game state

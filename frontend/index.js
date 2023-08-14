@@ -2,14 +2,17 @@ import { Elm } from './src/Main.elm'
 import * as zip from "@zip.js/zip.js";
 import './styles/main.css'
 
+const runtimeServerUpdateInterval = "%%RUNTIME_SERVER_UPDATE_INTERVAL%%";
+const runtimeServerApi = "%%RUNTIME_SERVER_API%%";
+const runtimeModelEarth = "%%RUNTIME_MODEL_EARTH%%";
 
-const serverUpdateInterval = parseInt(process.env.SERVER_UPDATE_INTERVAL);
-const serverApi = process.env.SERVER_API;
-const modelEarth = process.env.MODEL_EARTH;
+const serverUpdateInterval = parseInt(!runtimeServerUpdateInterval.includes("RUNTIME_SERVER_UPDATE_INTERVAL") ? runtimeServerUpdateInterval : "1000");
+const serverApi = !runtimeServerApi.includes("RUNTIME_SERVER_API") ? runtimeServerApi : "ws://localhost:8765";
+const modelEarth = !runtimeModelEarth.includes("RUNTIME_MODEL_EARTH") ? runtimeModelEarth : "http://localhost:1234/earth.zip";
 
 const flags = {
   "serverUpdateInterval": serverUpdateInterval
-}
+};
 
 // Start the Elm application.
 const app = Elm.Main.init({
@@ -67,18 +70,18 @@ objFile.then(obj => {
         console.log("Sleeping for a while..");
         await new Promise(r => setTimeout(r, 1000));
       }
-    } 
-    sendData(); 
+    }
+    sendData();
   });
 });
 
 // To decouple player logic from world logic,
 // we update the world parameters here outside of elm realm.
 
-const socket = new WebSocket(serverApi); 
+const socket = new WebSocket(serverApi);
 
 socket.addEventListener('message', function (event) {
-  const data = JSON.parse(event.data); 
+  const data = JSON.parse(event.data);
   app.ports.messageReceiver.send(JSON.stringify(data));
 });
 
