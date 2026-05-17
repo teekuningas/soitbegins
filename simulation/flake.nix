@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/23.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
@@ -9,7 +9,8 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         pythonEnv = pkgs.python3.withPackages (ps: with ps; [
-          websockets
+          numpy
+          pyzmq
           black
         ]);
       in
@@ -20,14 +21,14 @@
 
         packages = {
           dockerImage = pkgs.dockerTools.buildImage {
-            name = "soitbegins-backend";
+            name = "soitbegins-simulation";
             tag = "latest";
             runAsRoot = ''
               cp -r ${./.} /code
               chmod -R +w /code
             '';
             config = {
-              Cmd = [ "python3" "server.py" ];
+              Cmd = [ "python3" "simulation_server.py" ];
               WorkingDir = "/code";
             };
             copyToRoot = with pkgs; [ pythonEnv bashInteractive curl coreutils ];
@@ -36,4 +37,3 @@
       }
     );
 }
-

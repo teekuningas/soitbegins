@@ -3,8 +3,10 @@ frontend/dist
 frontend/build
 frontend/node_modules
 frontend/.parcel-cache
-workshop/output
-workshop/.soitbegins-env
-backend/result
+shared/output
+server/result
+simulation/result
 __pycache__/
 *.pyc
+result/
+

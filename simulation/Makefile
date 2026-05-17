@@ -1,17 +1,14 @@
-.PHONY: shell
+.PHONY: shell watch format build
+
 shell:
 	nix develop
 
-.PHONY: watch
 watch:
-	python3 server.py
+	python3 simulation_server.py
 
-.PHONY: format
 format:
-	black server.py
-	black scripts/test_client.py
+	nix develop --command black .
 
-.PHONY: build
 build:
 	nix build .#dockerImage
 	podman load -i result
@@ -22,4 +19,3 @@ nix-%:
 		--command $(MAKE) $*
 
 FORCE:
-

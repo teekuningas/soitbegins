@@ -1,7 +1,7 @@
 {
   inputs = {
     flake-utils.url = "github:numtide/flake-utils";
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-23.05";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
   };
 
   outputs = { self, flake-utils, nixpkgs }:
@@ -10,7 +10,7 @@
         pkgs = nixpkgs.legacyPackages.${system};
       in {
         devShell = pkgs.mkShell {
-          packages = [ pkgs.nodejs pkgs.elmPackages.elm ];
+          packages = [ pkgs.nodejs pkgs.elmPackages.elm pkgs.elmPackages.elm-format ];
         };
       }
     );

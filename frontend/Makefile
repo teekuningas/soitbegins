@@ -8,7 +8,7 @@ watch: node_modules
 
 .PHONY: format
 format:
-	./node_modules/.bin/elm-format src/*
+	nix develop --command elm-format --yes src/*
 
 .PHONY: node_modules
 node_modules:

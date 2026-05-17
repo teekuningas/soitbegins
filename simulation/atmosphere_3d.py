@@ -49,6 +49,7 @@ class Params:
 #  Horizontal operators (icosahedral neighbor graph)
 # ───────────────────────────────────────────────
 
+
 def horizontal_gradient(mesh, F):
     """∇F on the icosahedral mesh.  F: (L, C) → (L, C, 3).
 
@@ -77,10 +78,10 @@ def advect_horizontal(mesh, F, wind, dt):
     F: (L, C) scalar  or  (L, C, 3) vector.
     """
     F_new = F.copy()
-    is_vec = (F.ndim == 3)
+    is_vec = F.ndim == 3
 
     for k in range(F.shape[0]):
-        w_edge = np.einsum('ej,ej->e', wind[k, mesh.edge_src], mesh.edge_tangent)
+        w_edge = np.einsum("ej,ej->e", wind[k, mesh.edge_src], mesh.edge_tangent)
         w_up = np.minimum(w_edge, 0.0)
 
         if is_vec:
@@ -100,6 +101,7 @@ def advect_horizontal(mesh, F, wind, dt):
 # ───────────────────────────────────────────────
 #  Vertical operators (1D column — same as original grid model)
 # ───────────────────────────────────────────────
+
 
 def vertical_gradient(F):
     """Central difference in the vertical.  Bounded at surface and top."""
@@ -127,6 +129,7 @@ def advect_vertical(F, w, dt):
 #  Body forces
 # ───────────────────────────────────────────────
 
+
 def coriolis_rotate(wind, mesh, omega, dt):
     """Exact Coriolis rotation on the tangent plane.
 
@@ -152,23 +155,19 @@ def coriolis_rotate(wind, mesh, omega, dt):
 #  The 7-stage pipeline
 # ───────────────────────────────────────────────
 
-def step_atmosphere_3d(mesh, T, wind, w, p, sun_lon):
+
+def step_atmosphere_3d(mesh, T, wind, w, p, sun_dir):
     """One timestep.  Seven stages, all local, all stable."""
 
     # 1. Heat — sun warms surface layer
-    sun_dir = np.array([
-        np.cos(sun_lon) * np.cos(p.tilt),
-        np.sin(sun_lon) * np.cos(p.tilt),
-        np.sin(p.tilt)
-    ])
     T[0] += p.dt * p.solar * np.maximum(0.0, mesh.positions @ sun_dir)
 
     # 2. Cool — exponential decay (all layers)
-    T *= (1.0 - p.dt * p.cooling)
+    T *= 1.0 - p.dt * p.cooling
 
     # 3. Pressure — ∇T accelerates wind
     wind -= p.dt * p.c_sq * horizontal_gradient(mesh, T)
-    w    -= p.dt * p.c_sq * vertical_gradient(T)
+    w -= p.dt * p.c_sq * vertical_gradient(T)
 
     # 4. Body forces
     #    a. Coriolis — exact rotation, preserves KE
@@ -180,25 +179,25 @@ def step_atmosphere_3d(mesh, T, wind, w, p, sun_lon):
     np.clip(w, -w_max, w_max, out=w)
 
     # 5. Advection — upwind, horizontal then vertical
-    T    = advect_horizontal(mesh, T, wind, p.dt)
+    T = advect_horizontal(mesh, T, wind, p.dt)
     wind = advect_horizontal(mesh, wind, wind, p.dt)
-    w    = advect_horizontal(mesh, w, wind, p.dt)
+    w = advect_horizontal(mesh, w, wind, p.dt)
 
-    T    = advect_vertical(T, w, p.dt)
+    T = advect_vertical(T, w, p.dt)
     wind = advect_vertical(wind, w, p.dt)
-    w    = advect_vertical(w, w, p.dt)
+    w = advect_vertical(w, w, p.dt)
 
     # Re-project wind to tangent plane
     # (advection between cells with different tangent planes introduces radial drift)
-    dots = np.einsum('lkj,kj->lk', wind, mesh.positions)
+    dots = np.einsum("lkj,kj->lk", wind, mesh.positions)
     wind -= dots[:, :, np.newaxis] * mesh.positions[np.newaxis, :, :]
 
     # 6. Friction — exponential decay
-    wind *= (1.0 - p.dt * p.drag)
-    w    *= (1.0 - p.dt * p.drag)
+    wind *= 1.0 - p.dt * p.drag
+    w *= 1.0 - p.dt * p.drag
 
     # 7. Boundaries — tropopause and ground
-    w[0, :]  = 0.0
+    w[0, :] = 0.0
     w[-1, :] = 0.0
 
     return T, wind, w

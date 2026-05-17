@@ -39,7 +39,7 @@ def advect_scalar(mesh, F, wind, dt):
 
     Same logic as the 3D version but for a single layer.
     """
-    w_edge = np.einsum('ej,ej->e', wind[mesh.edge_src], mesh.edge_tangent)
+    w_edge = np.einsum("ej,ej->e", wind[mesh.edge_src], mesh.edge_tangent)
     w_up = np.minimum(w_edge, 0.0)
     dF = F[mesh.edge_dst] - F[mesh.edge_src]
     acc = np.zeros(mesh.n_cells, dtype=np.float64)
@@ -59,11 +59,10 @@ def coriolis_rotate(wind, mesh, omega, dt):
     return wind * cos_f - np.cross(mesh.positions, wind) * sin_f
 
 
-def step_atmosphere(mesh, T, wind, p, sun_lon):
+def step_atmosphere(mesh, T, wind, p, sun_dir):
     """One timestep of the single-layer icosahedral atmosphere."""
 
     # 1. Heat
-    sun_dir = np.array([np.cos(sun_lon), np.sin(sun_lon), 0.0])
     T = T + p.dt * p.solar * np.maximum(0.0, mesh.positions @ sun_dir)
 
     # 2. Cool
@@ -83,7 +82,7 @@ def step_atmosphere(mesh, T, wind, p, sun_lon):
     wind = np.column_stack((wx, wy, wz))
 
     # Re-project to tangent plane
-    dots = np.einsum('ij,ij->i', wind, mesh.positions)
+    dots = np.einsum("ij,ij->i", wind, mesh.positions)
     wind = wind - dots[:, np.newaxis] * mesh.positions
 
     # 6. Friction
