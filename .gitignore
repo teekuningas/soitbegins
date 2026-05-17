@@ -6,3 +6,5 @@ frontend/.parcel-cache
 workshop/output
 workshop/.soitbegins-env
 backend/result
+__pycache__/
+*.pyc
