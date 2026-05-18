@@ -14,6 +14,10 @@
           matplotlib
           black
         ]);
+        pythonProd = pkgs.python3.withPackages (ps: with ps; [
+          numpy
+          pyzmq
+        ]);
       in
       {
         devShell = pkgs.mkShell {
@@ -32,7 +36,7 @@
               Cmd = [ "python3" "simulation_server.py" ];
               WorkingDir = "/code";
             };
-            copyToRoot = with pkgs; [ pythonEnv bashInteractive curl coreutils ];
+            copyToRoot = with pkgs; [ pythonProd bashInteractive coreutils ];
           };
         };
       }
