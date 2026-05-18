@@ -96,6 +96,7 @@ jobs:
         pip install rasterio pillow numpy
         cd shared
         python generate_cubemap.py
+        mkdir -p ../frontend/static
         cp output/elevation_*.png ../frontend/static/
 
     - name: Build and push
