@@ -218,7 +218,9 @@ def run_server():
     sun_lon = 0.0
     frame = 0
 
-    tick_rate = 10
+    # 2 Hz: physics steps 2×/sec. dt=π/120 per step → day = 2π/(omega×dt×2) ≈ 300s = 5 min.
+    # Same equilibrium physics as 10 Hz — only real-time pacing changes.
+    tick_rate = 2
     tick_duration = 1.0 / tick_rate
 
     print(
