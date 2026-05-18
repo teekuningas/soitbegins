@@ -33,10 +33,11 @@
               chmod -R +w /code
             '';
             config = {
-              Cmd = [ "python3" "simulation_server.py" ];
+              Cmd = [ "${pythonProd}/bin/python3" "simulation_server.py" ];
               WorkingDir = "/code";
+              Env = [ "PATH=${pythonProd}/bin:${pkgs.coreutils}/bin" ];
             };
-            copyToRoot = with pkgs; [ pythonProd bashInteractive coreutils ];
+            copyToRoot = with pkgs; [ pythonProd coreutils ];
           };
         };
       }
