@@ -8,8 +8,7 @@ watch:
 
 .PHONY: format
 format:
-	nix develop --command black server.py
-	nix develop --command black scripts/test_client.py
+	black server.py scripts/test_client.py
 
 .PHONY: build
 build:

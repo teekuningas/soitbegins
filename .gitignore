@@ -8,5 +8,5 @@ server/result
 simulation/result
 __pycache__/
 *.pyc
+*.csv
 result/
-

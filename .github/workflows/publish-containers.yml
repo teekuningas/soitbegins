@@ -91,6 +91,9 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Copy shared assets
+      run: cp shared/output/elevation_*.png frontend/static/
+
     - name: Build and push
       run: |
         cd frontend

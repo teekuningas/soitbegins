@@ -1,14 +1,11 @@
 import { Elm } from './src/Main.elm'
-import * as zip from "@zip.js/zip.js";
 import './styles/main.css'
 
 const runtimeServerUpdateInterval = "%%RUNTIME_SERVER_UPDATE_INTERVAL%%";
 const runtimeServerApi = "%%RUNTIME_SERVER_API%%";
-const runtimeModelEarth = "%%RUNTIME_MODEL_EARTH%%";
 
 const serverUpdateInterval = parseInt(!runtimeServerUpdateInterval.includes("RUNTIME_SERVER_UPDATE_INTERVAL") ? runtimeServerUpdateInterval : "1000");
 const serverApi = !runtimeServerApi.includes("RUNTIME_SERVER_API") ? runtimeServerApi : "ws://localhost:8765";
-const modelEarth = !runtimeModelEarth.includes("RUNTIME_MODEL_EARTH") ? runtimeModelEarth : "http://localhost:1234/earth.zip";
 
 const flags = {
   "serverUpdateInterval": serverUpdateInterval
@@ -20,59 +17,40 @@ const app = Elm.Main.init({
   flags: flags
 });
 
-// Download and unzip earth heightmap
-async function unzipObjFile() {
-  const reader = new zip.ZipReader(
-    new zip.HttpReader(modelEarth));
-
-  const entries = await reader.getEntries();
-
-  var text;
-  if (entries.length) {
-    text = await entries[0].getData(
-      new zip.TextWriter()
-    );
-    await reader.close();
-    return text;
-  }
-}
-const objFile = unzipObjFile();
-
-console.log("Unzipping done")
-
-const webWorker = 
+// Generate earth mesh from cubemap textures using web worker
+const meshWorker =
   new Worker(
-    new URL("./js/parseObj.js", import.meta.url),
+    new URL("./js/generateMesh.js", import.meta.url),
     {type: 'module'}
   );
 
+const nParts = 4;
+const subdivisions = 5; // 20,480 triangles — good balance of detail and performance
 
-objFile.then(obj => {
+meshWorker.postMessage({
+  cubemapBaseUrl: "",  // Static files served at root by parcel-reporter-static-files-copy
+  subdivisions: subdivisions,
+  nParts: nParts
+});
 
-  const nParts = 4;
+meshWorker.addEventListener("message", function(event) {
+  console.log("Main: Got mesh from worker!");
 
-  webWorker.postMessage({"data": obj, "nParts": nParts});
-
-  webWorker.addEventListener("message", function(event) {
-
-    console.log("Main: Got message from the worker!");
-
-    async function sendData() {
-      for (let i = 0; i < nParts; i++) {
-        const data = {
-          "data": event.data[i],
-          "totalAmount": nParts,
-          "index": i
-        }
-        console.log("Sending part " + i.toString() + " to elm.");
-        app.ports.objReceiver.send(data);
-
-        console.log("Sleeping for a while..");
-        await new Promise(r => setTimeout(r, 1000));
+  async function sendData() {
+    for (let i = 0; i < nParts; i++) {
+      const data = {
+        "data": event.data[i],
+        "totalAmount": nParts,
+        "index": i
       }
+      console.log("Sending part " + i.toString() + " to elm.");
+      app.ports.objReceiver.send(data);
+
+      console.log("Sleeping for a while..");
+      await new Promise(r => setTimeout(r, 1000));
     }
-    sendData();
-  });
+  }
+  sendData();
 });
 
 // To decouple player logic from world logic,

@@ -28,13 +28,16 @@ Energy stability is guaranteed by the same invariants as the grid model:
 Energy in: bounded. Energy out: grows with E. → Finite equilibrium.
 """
 
+import math
 import numpy as np
 from dataclasses import dataclass
 
 
 @dataclass
 class Params:
-    dt: float = 0.4
+    dt: float = (
+        math.pi / 120
+    )  # ~0.026s — gives exactly 60-second days at omega=0.4, 10Hz
     solar: float = 0.15
     cooling: float = 0.02
     c_sq: float = 0.15
@@ -42,7 +45,7 @@ class Params:
     omega: float = 0.4
     g: float = 0.06
     n_layers: int = 8
-    tilt: float = 0.0
+    tilt: float = 23.44 * math.pi / 180  # Earth's axial tilt in radians
 
 
 # ───────────────────────────────────────────────

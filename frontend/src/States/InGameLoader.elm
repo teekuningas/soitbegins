@@ -340,9 +340,16 @@ update msg values =
                 envColor =
                     vec3 results.envelope.envelopeR results.envelope.envelopeG results.envelope.envelopeB
 
+                -- Congo: 20°E longitude, 0° latitude (equator)
+                -- Mesh Z-up → preRotation(-π/2, X) → Y-up: (x,y,z) → (x, z, -y)
+                -- Geographic point: (cos20°, sin20°, 0) → (cos20°, 0, -sin20°)
                 location =
-                    Vec3.normalize (vec3 1 0 0)
+                    Vec3.normalize (vec3 0.9397 0 -0.342)
 
+                -- Camera sits at local +Z (= orientation direction),
+                -- hero faces local -Z (= -orientation = "forward").
+                -- For forward = north = +Y in Y-up frame at equator,
+                -- orientation must be south = -Y.
                 orientation =
                     Vec3.normalize (vec3 0 -1 0)
 

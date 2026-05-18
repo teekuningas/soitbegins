@@ -16,7 +16,6 @@ for file in /app/dist/index.*.js; do
   if [ -f "$file" ]; then
     sed -i "s|%%RUNTIME_SERVER_UPDATE_INTERVAL%%|${SERVER_UPDATE_INTERVAL:-1000}|g" $file
     sed -i "s|%%RUNTIME_SERVER_API%%|${SERVER_API:-ws://localhost:8765}|g" $file
-    sed -i "s|%%RUNTIME_MODEL_EARTH%%|${MODEL_EARTH:-http://localhost:9000/earth.zip}|g" $file
   fi
 done
 

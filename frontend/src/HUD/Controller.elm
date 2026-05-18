@@ -210,7 +210,7 @@ handleMove controller camera offsetPos =
         newAzimoth =
             if controller.dragState == Drag then
                 camera.azimoth
-                    - toFloat
+                    + toFloat
                         (round (Tuple.first offsetPos)
                             - controller.previousOffset.x
                         )
@@ -224,7 +224,7 @@ handleMove controller camera offsetPos =
         newElevation =
             if controller.dragState == Drag then
                 camera.elevation
-                    + toFloat
+                    - toFloat
                         (round (Tuple.second offsetPos)
                             - controller.previousOffset.y
                         )

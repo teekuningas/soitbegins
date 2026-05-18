@@ -11,6 +11,7 @@
         pythonEnv = pkgs.python3.withPackages (ps: with ps; [
           numpy
           pyzmq
+          matplotlib
           black
         ]);
       in

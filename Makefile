@@ -17,7 +17,7 @@ help:
 # Start the frontend dev server (runs in watch mode)
 frontend:
 	@echo "Starting Frontend..."
-	$(MAKE) -C frontend watch
+	cd frontend && nix develop --command $(MAKE) watch
 
 # Start the game server
 server:
@@ -32,12 +32,12 @@ simulation:
 # Generate the assets in the shared directory
 shared:
 	@echo "Generating Shared Assets..."
-	$(MAKE) -C shared cubemap
+	cd shared && nix develop --command $(MAKE) all
 
 # Test the backend physics simulation mesh and engine
 test-sim:
 	@echo "Testing simulation Icosahedron mesh and physics engine..."
-	cd simulation && nix develop --command bash -c "python test_mesh.py && python test_3d_physics.py"
+	cd simulation && nix develop --command $(MAKE) test
 
 # A helper to run all three in one terminal using simple shell backgrounding
 # (Pressing Ctrl+C will kill all)
@@ -50,9 +50,10 @@ dev:
 		wait
 
 format:
-	$(MAKE) -C frontend format
-	$(MAKE) -C server format
-	$(MAKE) -C simulation format
+	cd frontend && nix develop --command $(MAKE) format
+	cd server && nix develop --command $(MAKE) format
+	cd simulation && nix develop --command $(MAKE) format
+	cd shared && nix develop --command $(MAKE) format
 
 clean:
 	rm -rf frontend/node_modules

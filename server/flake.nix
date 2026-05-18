@@ -10,6 +10,7 @@
         pkgs = nixpkgs.legacyPackages.${system};
         pythonEnv = pkgs.python3.withPackages (ps: with ps; [
           websockets
+          pyzmq
           black
         ]);
       in

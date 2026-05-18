@@ -93,9 +93,9 @@ earthUnif overviewToggle depth canvasDim earth hero camera =
         unif =
             generalUnif overviewToggle depth canvasDim earth hero camera
 
-        -- The earth mesh comes in wrong position so fix here..
+        -- Rotate mesh from Z-up to Y-up for rendering (north pole → +Y)
         preRotation =
-            Mat4.makeRotate (pi / 2) (vec3 1 0 0)
+            Mat4.makeRotate (-pi / 2) (vec3 1 0 0)
 
         -- Scale the earth.
         -- I first tried to keep earth as size 1 and decrease
